@@ -101,6 +101,19 @@
   .meal h3{font-family:'Fraunces',serif;font-size:23px;font-weight:600;margin:0}
   .meal small{color:var(--ink-soft);font-size:13.5px}
   .meal .arrow{margin-left:auto;color:var(--herb);font-size:22px}
+  /* ── load-from-url ── */
+  .url-section{margin-top:28px;padding-top:22px;border-top:1px solid var(--line)}
+  .url-section .eyebrow{margin-bottom:8px}
+  .url-row{display:flex;gap:10px}
+  .url-input{flex:1;min-width:0;padding:13px 14px;border:1.5px solid var(--line);
+    border-radius:14px;font-size:15px;font-family:inherit;background:var(--card);
+    color:var(--ink);outline:none;-webkit-appearance:none}
+  .url-input:focus{border-color:var(--herb)}
+  .url-input::placeholder{color:var(--ink-soft)}
+  .url-go{width:50px;flex-shrink:0;border-radius:14px;background:var(--herb);
+    color:#fff;font-size:22px;display:flex;align-items:center;justify-content:center;
+    transition:background .15s}
+  .url-go:hover{background:var(--herb-deep)}
 
   /* ---------- menu list ---------- */
   .menu-head{padding:6px 4px 18px}
@@ -2180,8 +2193,70 @@ function home(){
          <div><h3 class="display">${k[0].toUpperCase()+k.slice(1)}</h3><small>${m.sub}</small></div>
          <div class="arrow">→</div>
        </button>`).join("")}
+   </div>
+   <div class="url-section fade">
+     <div class="eyebrow">or load any recipe</div>
+     <div class="url-row">
+       <input type="url" class="url-input" id="recipeUrl"
+         placeholder="Paste any recipe URL…"
+         onkeydown="if(event.key==='Enter') loadFromUrl()">
+       <button class="url-go" onclick="loadFromUrl()" aria-label="Load recipe">→</button>
+     </div>
    </div>`;
   refreshCoach();
+}
+
+/* ── Load recipe from any URL ──────────────────────────────────────────────── */
+async function loadFromUrl(){
+  const input = $("recipeUrl");
+  let url = input?.value?.trim();
+  if(!url){ toast("Paste a recipe URL first"); input?.focus(); return; }
+  if(!/^https?:\/\//i.test(url)) url = "https://" + url;
+
+  if(API === null){
+    toast("This feature needs the server — deploy to Render first!");
+    return;
+  }
+
+  // Show loading screen
+  app.innerHTML = `
+    <div class="back" onclick="home()">← home</div>
+    <div style="padding:80px 18px;text-align:center;color:var(--ink-soft)">
+      <div style="font-size:40px;margin-bottom:14px">⏳</div>
+      <div style="font-weight:600;margin-bottom:6px">Loading recipe…</div>
+      <div style="font-size:12px;word-break:break-all;max-width:44ch;margin:0 auto;opacity:.6">${url}</div>
+    </div>`;
+
+  try{
+    const resp = await fetch(`/api/recipe?url=${encodeURIComponent(url)}`);
+    if(!resp.ok) throw new Error(`Server returned ${resp.status}`);
+    const recipe = await resp.json();
+    if(!recipe?.title) throw new Error("Couldn't find a recipe on that page — the blog may block scraping.");
+
+    // Fill in any missing fields
+    recipe.source_url = recipe.source_url || url;
+    recipe.blog = recipe.blog || new URL(url).hostname.replace(/^www\./,"");
+    recipe.course = recipe.course || "main";
+
+    // Wire into the app's recipe system so log/plan all work normally
+    S.meal  = S.meal  || "dinner";
+    S.course = "main";
+    S.picks["main"] = recipe;
+    LISTS["main"] = [recipe];
+
+    drawRecipe(recipe);
+    window.scrollTo({top:0, behavior:"smooth"});
+  }catch(e){
+    app.innerHTML = `
+      <div class="back" onclick="home()">← home</div>
+      <div style="padding:60px 18px;text-align:center">
+        <div style="font-size:40px;margin-bottom:12px">😕</div>
+        <div style="font-weight:700;font-size:18px;margin-bottom:10px">Couldn't load that recipe</div>
+        <div style="font-size:13.5px;color:var(--ink-soft);max-width:40ch;margin:0 auto;line-height:1.6">${e.message}</div>
+        <button onclick="home()" style="margin-top:28px;padding:13px 28px;background:var(--herb);
+          color:#fff;border-radius:14px;font-weight:700;font-size:15px">Try another URL</button>
+      </div>`;
+  }
 }
 
 async function openMeal(meal){
