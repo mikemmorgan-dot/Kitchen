@@ -163,6 +163,13 @@
     font-size:15.5px;font-weight:700;box-shadow:0 14px 26px -14px var(--herb);transition:.15s;display:flex;justify-content:center;gap:9px;align-items:center}
   .addbtn:hover{background:var(--herb-deep)}
   .addbtn.done{background:#E7EFDD;color:var(--herb-deep);box-shadow:none}
+  /* log + heart row on recipe detail */
+  .action-row{display:flex;gap:10px;align-items:stretch;margin-top:18px}
+  .action-row .addbtn{flex:1;width:auto;margin-top:0;min-width:0}
+  .detail-heart{width:54px;flex-shrink:0;border-radius:14px;border:1.5px solid var(--line);
+    background:var(--card);font-size:24px;display:flex;align-items:center;
+    justify-content:center;cursor:pointer;transition:background .15s,border-color .15s}
+  .detail-heart.active{background:#FDECEA;border-color:#E07070}
   .sec{margin-top:30px}
   .sec h3{font-family:'Fraunces',serif;font-size:22px;font-weight:600;margin:0 0 12px;display:flex;align-items:baseline;gap:10px}
   .sec h3 .n{font-size:13px;color:var(--terra);font-weight:700;letter-spacing:.12em}
@@ -313,6 +320,43 @@
     font-size:15.5px;cursor:pointer}
   .shop-item input{width:20px;height:20px;accent-color:var(--herb);flex:none}
   .shop-item.got span{text-decoration:line-through;color:var(--ink-soft)}
+  /* ── search bar ──────────────────────────────────── */
+  .search-wrap{position:relative;margin-bottom:14px}
+  .search-bar{width:100%;padding:13px 42px 13px 16px;border:1.5px solid var(--line);
+    border-radius:16px;font-size:16px;font-family:inherit;background:var(--card);
+    color:var(--ink);outline:none;-webkit-appearance:none;box-sizing:border-box;display:block}
+  .search-bar:focus{border-color:var(--herb)}
+  .search-bar::placeholder{color:var(--ink-soft)}
+  .search-clear{position:absolute;right:10px;top:50%;transform:translateY(-50%);
+    font-size:20px;color:var(--ink-soft);background:none;border:none;
+    width:32px;height:32px;display:flex;align-items:center;justify-content:center;cursor:pointer}
+  /* ── recipe cards: image wrapper + heart ─────────── */
+  .card-img-wrap{position:relative}
+  .heart-btn{position:absolute;top:9px;right:9px;width:34px;height:34px;
+    border-radius:50%;border:none;background:rgba(255,255,255,.88);
+    font-size:17px;display:flex;align-items:center;justify-content:center;
+    cursor:pointer;z-index:2;box-shadow:0 2px 8px -2px rgba(0,0,0,.25);
+    -webkit-tap-highlight-color:transparent;transition:transform .15s}
+  .heart-btn:active{transform:scale(.85)}
+  /* ── favourites filter chip ──────────────────────── */
+  .chip.fav-active{background:var(--terra) !important;color:#fff !important;border-color:var(--terra) !important}
+  /* ── recipe detail: log + heart row ─────────────── */
+  .action-row{display:flex;gap:10px;align-items:stretch;margin-top:18px}
+  .action-row .addbtn{flex:1;width:auto;margin-top:0;min-width:0}
+  .detail-heart{width:54px;flex-shrink:0;border-radius:14px;border:1.5px solid var(--line);
+    background:var(--card);font-size:24px;display:flex;align-items:center;
+    justify-content:center;cursor:pointer;transition:background .15s,border-color .15s}
+  .detail-heart.active{background:#FDECEA;border-color:#E07070}
+  /* ── recipe notes ────────────────────────────────── */
+  .notes-sec{margin-top:28px}
+  .notes-sec h3{font-family:'Fraunces',serif;font-size:22px;font-weight:600;margin:0 0 10px;display:flex;align-items:baseline;gap:10px}
+  .notes-area{width:100%;min-height:90px;padding:13px 15px;border:1.5px solid var(--line);
+    border-radius:16px;font-size:15px;font-family:inherit;background:var(--card);
+    color:var(--ink);resize:vertical;box-sizing:border-box;line-height:1.55;outline:none}
+  .notes-area:focus{border-color:var(--herb)}
+  .notes-area::placeholder{color:var(--ink-soft);font-style:italic}
+  .notes-saved{font-size:11.5px;color:var(--herb-deep);margin-top:5px;opacity:0;transition:opacity .3s;font-style:italic}
+
 </style>
 </head>
 <script>
@@ -1528,6 +1572,9 @@ const S = {
   plan:{}, shopChecked:new Set(),     // plan: { "YYYY-MM-DD": { breakfast:[entry], lunch:[], dinner:[] } }
   blogFilter:null, fullMenuList:[],   // active blog filter and unfiltered list
   proteinFilter:null,                 // active protein-source filter
+  searchQuery:null, favFilter:false,  // search text + favourites-only toggle
+  favourites:new Set(),               // Set of recipe keys
+  notes:{},                           // { recipeKey: "note text" }
   goals:{calories:2000,fiber:25,carbs:150,fat:65,water:8,sex:"female"}, // daily targets
   waterToday:{},                      // { 'YYYY-MM-DD': N glasses }
 };
@@ -1573,7 +1620,7 @@ function serialState(){
       planClean[day][m]=list.map(({recipe,...rest})=>rest);
     });
   });
-  return {bw:S.bw, log:S.log, plan:planClean, shopChecked:[...S.shopChecked], goals:S.goals, waterToday:S.waterToday};
+  return {bw:S.bw, log:S.log, plan:planClean, shopChecked:[...S.shopChecked], goals:S.goals, waterToday:S.waterToday, favourites:[...S.favourites], notes:S.notes};
 }
 
 function applyState(data){
@@ -1590,6 +1637,8 @@ function applyState(data){
     });
   }
   if(data.shopChecked) S.shopChecked=new Set(data.shopChecked);
+  if(data.favourites)  S.favourites=new Set(data.favourites);
+  if(data.notes)       Object.assign(S.notes, data.notes);
   if(data.goals)     Object.assign(S.goals, data.goals);
   if(data.waterToday) S.waterToday=data.waterToday;
   // rebuild S.added (today's logged recipe keys) from the saved log
@@ -1956,11 +2005,18 @@ function home(){
 }
 
 async function openMeal(meal){
-  S.meal=meal; S.course="main"; S.blogFilter=null; S.proteinFilter=null; S.fullMenuList=[];
+  S.meal=meal; S.course="main"; S.blogFilter=null; S.proteinFilter=null;
+  S.fullMenuList=[]; S.searchQuery=null; S.favFilter=false;
   app.innerHTML=`<div class="back" onclick="home()">← meals</div>
     <div class="menu-head fade">
       <div class="eyebrow">${meal}</div>
       <h2 class="display">${({breakfast:"Morning's",lunch:"Midday",dinner:"Tonight's",salad:"Today's"}[meal]||"Today's")} <span class="italic">menu</span></h2>
+    </div>
+    <div class="search-wrap">
+      <input type="search" class="search-bar" id="searchInput"
+        placeholder="🔍  Search recipes or ingredients…"
+        oninput="filterSearch(this.value)" autocomplete="off">
+      <button class="search-clear" id="searchClear" onclick="filterSearch('')" style="display:none">×</button>
     </div>
     <div class="filter-bar" id="filter-bar"></div>
     <div class="filter-bar protein-bar" id="protein-bar" style="padding-top:0"></div>
@@ -2002,11 +2058,64 @@ const PROTEIN_OPTS=[
 /* ---- shared filter application ---- */
 function applyFilters(){
   let list = S.fullMenuList;
+  if(S.favFilter)     list = list.filter(r=>S.favourites.has(recipeKey(r)));
   if(S.blogFilter)    list = list.filter(r=>r.blog===S.blogFilter);
   if(S.proteinFilter) list = list.filter(r=>proteinType(r)===S.proteinFilter);
+  if(S.searchQuery){
+    const q = S.searchQuery.toLowerCase();
+    list = list.filter(r=>
+      r.title.toLowerCase().includes(q) ||
+      (r.blog||"").toLowerCase().includes(q) ||
+      (r.ingredients||[]).some(i=>i.toLowerCase().includes(q))
+    );
+  }
   LISTS[S.course] = list;
   const el=$("cards"); if(!el) return;
   el.innerHTML = renderCardItems(list, S.course);
+}
+
+function filterSearch(q){
+  S.searchQuery = q.trim()||null;
+  // Show/hide clear button
+  const clr=$("searchClear"), inp=$("searchInput");
+  if(clr) clr.style.display = S.searchQuery ? "flex":"none";
+  if(inp && inp.value!==q) inp.value = q;
+  applyFilters();
+}
+
+function filterFavourites(){
+  S.favFilter = !S.favFilter;
+  // Clear blog filter when toggling favourites (they compose but avoid confusion)
+  S.blogFilter = null;
+  refreshFavChip();
+  refreshProteinBar();
+  applyFilters();
+}
+
+function toggleFav(key, e){
+  if(e){ e.stopPropagation(); e.preventDefault(); }
+  const nowFav = !S.favourites.has(key);
+  nowFav ? S.favourites.add(key) : S.favourites.delete(key);
+  save();
+  // Update any heart buttons showing this recipe
+  document.querySelectorAll(`.heart-btn[data-fk]`).forEach(btn=>{
+    if(btn.dataset.fk===key){ btn.textContent=nowFav?'❤️':'🤍'; btn.classList.toggle('active',nowFav); }
+  });
+  // Update the detail page heart if open
+  const dh=document.querySelector('.detail-heart');
+  if(dh && dh.dataset.fk===key){ dh.textContent=nowFav?'❤️':'🤍'; dh.classList.toggle('active',nowFav); }
+  refreshFavChip();
+}
+
+function refreshFavChip(){
+  const fb=$("filter-bar"); if(!fb||!S.fullMenuList.length) return;
+  const favCount=S.fullMenuList.filter(r=>S.favourites.has(recipeKey(r))).length;
+  const blogs=[...new Set(S.fullMenuList.map(r=>r.blog).filter(Boolean))];
+  fb.innerHTML=[
+    favCount>0?`<button class="chip${S.favFilter?' fav-active':''}" onclick="filterFavourites()">❤️ Favourites<span class="chip-cnt">${favCount}</span></button>`:"",
+    `<button class="chip" data-blog="" aria-pressed="${!S.blogFilter&&!S.favFilter}" onclick="filterBlog('')">All</button>`,
+    ...blogs.map(b=>`<button class="chip" data-blog="${b}" aria-pressed="${S.blogFilter===b}" onclick="filterBlog('${b}')">${BLOG_LABELS[b]||b}</button>`)
+  ].filter(Boolean).join("");
 }
 
 /* Rebuild protein chips with live counts against the blog-filtered base list.
@@ -2045,16 +2154,30 @@ function filterProtein(protein){
 // Renders just the card HTML (used by applyFilters + renderCards)
 function renderCardItems(list, course){
   if(!list.length){
+    if(S.favFilter && !S.blogFilter && !S.proteinFilter && !S.searchQuery)
+      return `<div style="grid-column:1/-1;padding:40px 4px;text-align:center;color:var(--ink-soft)">
+        <div style="font-size:36px;margin-bottom:10px">🤍</div>
+        <div style="font-style:italic">No favourites yet.<br>Tap ❤️ on any recipe to save it here.</div></div>`;
     const parts=[
+      S.favFilter && "Favourites",
       S.blogFilter && (BLOG_LABELS[S.blogFilter]||S.blogFilter),
       S.proteinFilter && (PROTEIN_OPTS.find(o=>o.v===S.proteinFilter)?.label),
+      S.searchQuery && `"${S.searchQuery}"`,
     ].filter(Boolean);
-    const why = parts.length ? parts.join(" + ") : "this category";
-    return `<div style="grid-column:1/-1;padding:30px 2px;color:var(--ink-soft);font-style:italic">No ${why} recipes here — try a different filter.</div>`;
+    const why=parts.join(" + ")||"this category";
+    return `<div style="grid-column:1/-1;padding:30px 2px;color:var(--ink-soft);font-style:italic">No ${why} recipes — try a different filter.</div>`;
   }
-  return list.map((r,i)=>`
-    <button class="card" onclick='openRecipe(${JSON.stringify(course)},${i})'>
-      ${imgEl(r.image||r.thumb,r.title,"thumb",560,r.blog)}
+  return list.map((r,i)=>{
+    const key=recipeKey(r), isFav=S.favourites.has(key);
+    return `
+    <div class="card" onclick='openRecipe(${JSON.stringify(course)},${i})' role="button" tabindex="0">
+      <div class="card-img-wrap">
+        ${imgEl(r.image||r.thumb,r.title,"thumb",560,r.blog)}
+        <button class="heart-btn${isFav?' active':''}" data-fk="${key.replace(/"/g,'&quot;')}"
+          onclick="toggleFav(this.dataset.fk,event)" aria-label="${isFav?'Remove from':'Save to'} favourites">
+          ${isFav?'❤️':'🤍'}
+        </button>
+      </div>
       <div class="card-body">
         <div class="blog">${r.blog||""}</div>
         <h4>${r.title}</h4>
@@ -2063,22 +2186,14 @@ function renderCardItems(list, course){
           ${r.nutrition?.protein_g?`<span class="pill protein">💪 ${r.nutrition.protein_g}g protein / serving</span>`:""}
         </div>
       </div>
-    </button>`).join("");
+    </div>`;
+  }).join("");
 }
 
 function renderCards(list, course){
   S.fullMenuList = list; S.blogFilter = null; S.proteinFilter = null;
   LISTS[course] = list;
-  // Blog filter chips
-  const fb = $("filter-bar");
-  if(fb){
-    const blogs = [...new Set(list.map(r=>r.blog).filter(Boolean))];
-    fb.innerHTML = blogs.length > 1 ? [
-      `<button class="chip" data-blog="" aria-pressed="true" onclick="filterBlog('')">All</button>`,
-      ...blogs.map(b=>`<button class="chip" data-blog="${b}" aria-pressed="false" onclick="filterBlog('${b}')">${BLOG_LABELS[b]||b}</button>`)
-    ].join("") : "";
-  }
-  // Protein filter chips
+  refreshFavChip();
   refreshProteinBar();
   const el = $("cards") || app;
   el.innerHTML = renderCardItems(list, course);
@@ -2211,9 +2326,15 @@ function drawRecipe(r){
      <span id="metaProt">💪 <b>${protein}g</b> protein / serving</span>
    </div>
 
-   <button class="addbtn ${added?'done':''}" id="addbtn" onclick="addProtein()">
-     ${added?`✓ Logged one serving · ${protein}g protein today`:`＋ Log one serving · ${protein}g protein`}
-   </button>
+   <div class="action-row">
+     <button class="addbtn ${added?'done':''}" id="addbtn" onclick="addProtein()">
+       ${added?`✓ Logged one serving · ${protein}g protein today`:`＋ Log one serving · ${protein}g protein`}
+     </button>
+     <button class="detail-heart${S.favourites.has(key)?' active':''}" data-fk="${key.replace(/"/g,'&quot;')}"
+       onclick="toggleFav(this.dataset.fk)" aria-label="Favourite">
+       ${S.favourites.has(key)?'❤️':'🤍'}
+     </button>
+   </div>
 
    <div class="planrow">
      <select id="planDay" aria-label="Day to plan for">${dayOptions()}</select>
@@ -2264,6 +2385,15 @@ function drawRecipe(r){
      </div>
    </section>
 
+   <section class="notes-sec">
+     <h3><span class="n">YOUR</span> Notes</h3>
+     <textarea class="notes-area" id="notesArea"
+       placeholder="Kids loved this · double the garlic · use less chili next time…"
+       oninput="saveNote('${key}',this.value)"
+     >${(S.notes[key]||"").replace(/</g,"&lt;")}</textarea>
+     <div class="notes-saved" id="notesSaved">✓ Saved</div>
+   </section>
+
    <a class="leave" href="${r.source_url}" target="_blank" rel="noopener">
      Open the full post on ${r.blog} ↗
    </a>
@@ -2274,6 +2404,18 @@ function drawRecipe(r){
 }
 
 function nextCoursePrompt(){ return ""; }
+
+let _noteTimer=null;
+function saveNote(key, text){
+  S.notes[key] = text || undefined;
+  if(!text) delete S.notes[key];
+  clearTimeout(_noteTimer);
+  _noteTimer = setTimeout(()=>{
+    save();
+    const el=document.getElementById("notesSaved");
+    if(el){ el.style.opacity="1"; setTimeout(()=>el.style.opacity="0",1500); }
+  }, 600);
+}
 
 async function gotoCourse(course){
   S.course=course;
