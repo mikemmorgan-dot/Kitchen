@@ -48,6 +48,7 @@ const MEAL_SOURCES = {
     "https://detoxinista.com/category/all-recipes/course/main-entrees/",
     "https://www.skinnytaste.com/recipes/dinner-recipes/",
     "https://pinchofyum.com/recipes/dinner",
+    "https://www.fufuskitchen.com/category/dinner/",
   ],
   salad: [
     "https://www.eatingbirdfood.com/category/meal-type/salads/",
@@ -55,6 +56,7 @@ const MEAL_SOURCES = {
     "https://detoxinista.com/category/all-recipes/course/salads-dressings/",
     "https://www.skinnytaste.com/recipes/salad/",
     "https://pinchofyum.com/recipes/salad",
+    "https://www.fufuskitchen.com/category/salads/",
   ],
 };
 
@@ -237,6 +239,28 @@ self.addEventListener("fetch", e => {
   }
   e.respondWith(fetch(e.request));
 });
+
+// Receive notification requests from the app
+self.addEventListener("message", e => {
+  if (e.data?.type === "WATER_NOTIF") {
+    self.registration.showNotification(e.data.title, {
+      body:  e.data.body,
+      icon:  e.data.icon  || "/apple-touch-icon.jpg",
+      badge: e.data.badge || "/apple-touch-icon.jpg",
+      tag:   "water-reminder",
+      requireInteraction: false,
+    });
+  }
+});
+
+// Tap notification → open the app
+self.addEventListener("notificationclick", e => {
+  e.notification.close();
+  e.waitUntil(clients.matchAll({type:"window"}).then(list => {
+    for (const c of list) if (c.url === "/" && "focus" in c) return c.focus();
+    if (clients.openWindow) return clients.openWindow("/");
+  }));
+});
   `);
 });
 
@@ -315,6 +339,13 @@ app.get("/img", async (req, res) => {
     if (buf.length < 3_000_000) imgCache.set(url, { type, buf });
     res.set("Content-Type", type).set("Cache-Control", "public, max-age=604800").end(buf);
   } catch { res.status(502).end(); }
+});
+
+// Serve PWA manifest
+app.get("/manifest.json", (_, res) => {
+  res.set("Content-Type", "application/manifest+json");
+  res.set("Cache-Control", "public, max-age=3600");
+  res.sendFile("manifest.json", { root: "." });
 });
 
 // Serve the app

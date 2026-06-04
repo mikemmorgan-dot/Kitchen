@@ -4,6 +4,12 @@
 <meta charset="utf-8" />
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
 <meta name="color-scheme" content="only light" />
+<link rel="apple-touch-icon" href="/apple-touch-icon.jpg">
+<link rel="icon" type="image/jpeg" href="/icon.jpg">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="default">
+<meta name="apple-mobile-web-app-title" content="Morgan's Kitchen">
+<link rel="manifest" href="/manifest.json">
 <title>Morgan's Kitchen — what shall we cook?</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
@@ -120,6 +126,18 @@
           font-size:16px;font-family:inherit;background:var(--parchment);color:var(--ink);text-align:center}
   .g-unit{font-size:13px;color:var(--ink-soft)}
   .g-tip{font-size:11.5px;color:var(--ink-soft);margin-top:7px;font-style:italic;line-height:1.5}
+  /* water reminder row */
+  .reminder-row{display:flex;align-items:center;gap:12px;margin-top:12px;
+    padding-top:12px;border-top:1px solid var(--line);justify-content:space-between}
+  .reminder-row .lbl{font-size:14px;font-weight:600;margin-bottom:2px}
+  .reminder-row .sub{font-size:11.5px;color:var(--ink-soft)}
+  .time-pick{padding:7px 10px;border:1.5px solid var(--line);border-radius:10px;
+    font-size:14px;font-family:inherit;background:var(--card);color:var(--ink);outline:none}
+  .time-pick:focus{border-color:var(--herb)}
+  .notif-toggle{padding:9px 18px;border-radius:999px;font-size:13px;font-weight:700;
+    border:1.5px solid var(--line);background:var(--paper);color:var(--ink-soft);
+    transition:background .2s,border-color .2s,color .2s;white-space:nowrap}
+  .notif-toggle.on{background:var(--herb);color:#fff;border-color:var(--herb)}
   .g-sex-row{display:flex;gap:8px;margin:12px 0 4px}
   .g-sex{flex:1;padding:10px;border-radius:13px;font-size:13.5px;font-weight:700;
     border:1.5px solid var(--line);background:var(--paper);color:var(--ink-soft);cursor:pointer}
@@ -1233,6 +1251,87 @@ const DEMO = {
       ingredients:["4 chicken breasts, pounded thin","2 cups mushrooms, sliced","1/2 cup Marsala wine","1/2 cup chicken broth","2 tbsp flour","2 tbsp butter"],
       instructions:[{name:null,steps:["Dredge chicken in flour; pan-fry until golden.","Sauté mushrooms; deglaze with Marsala and broth.","Return chicken and simmer until sauce thickens."]}],
       nutrition:{calories:350,protein_g:36,carbs_g:12,fat_g:14,fiber_g:2}, video:null, rating:{value:4.9,count:640} },
+
+    // ── Fufu's Kitchen ────────────────────────────────────────────────────────
+    { title:"Moroccan Roasted Chicken with Potatoes", blog:"fufuskitchen",
+      source_url:"https://www.fufuskitchen.com/moroccan-roasted-chicken/",
+      image:"https://www.fufuskitchen.com/wp-content/uploads/2026/05/Moroccan-Roasted-Chicken-Served-on-a-Plate.jpg",
+      servings:6, times:{prep:"20 mins",cook:"1 hr 20 mins",total:"1 hr 40 mins"},
+      ingredients:["1 whole chicken, cut into pieces","4 large potatoes, quartered","3 carrots, chunked","1 cup plain yogurt","4 cloves garlic","1.5 tsp cumin","1 tsp turmeric","1 tsp smoked paprika","1 tsp coriander","2 tbsp olive oil","fresh herbs to garnish"],
+      instructions:[{name:null,steps:["Marinate chicken in yogurt mixed with all spices, garlic and olive oil for 1+ hour.","Layer potatoes and carrots in a roasting pan; arrange chicken on top.","Roast at 400°F for 1 hr 20 min, basting halfway, until golden and cooked through."]}],
+      nutrition:{calories:480,protein_g:42,carbs_g:28,fat_g:22,fiber_g:4}, video:null, rating:{value:5,count:28} },
+
+    { title:"One Pan Roasted Chicken and Potatoes", blog:"fufuskitchen",
+      source_url:"https://www.fufuskitchen.com/one-pan-roasted-chicken-and-potatoes/",
+      image:"",
+      servings:4, times:{prep:"15 mins",cook:"45 mins",total:"60 mins"},
+      ingredients:["8 bone-in chicken thighs","4 potatoes, wedged","4 cloves garlic","1 lemon, sliced","3 tbsp olive oil","1.5 tsp cumin","1 tsp oregano","1 tsp paprika","salt and pepper"],
+      instructions:[{name:null,steps:["Toss chicken and potatoes with olive oil, garlic and spices on a sheet pan.","Arrange lemon slices over the top.","Roast at 425°F for 40–45 min until skin is crispy and potatoes are golden."]}],
+      nutrition:{calories:500,protein_g:40,carbs_g:30,fat_g:24,fiber_g:3}, video:null, rating:{value:5,count:35} },
+
+    { title:"Spicy Salmon Bowl", blog:"fufuskitchen",
+      source_url:"https://www.fufuskitchen.com/spicy-salmon-bowl/",
+      image:"https://www.fufuskitchen.com/wp-content/uploads/2023/03/IMG_9027-768x1024.jpg",
+      servings:2, times:{prep:"10 mins",cook:"15 mins",total:"25 mins"},
+      ingredients:["2 salmon fillets, cubed","2 cups cooked rice","1 cucumber, diced","1 avocado, sliced","2 tbsp soy sauce","1 tbsp sriracha","2 tbsp mayo","1 tbsp sesame oil","sesame seeds","green onions"],
+      instructions:[{name:null,steps:["Cube salmon; season and sear in a hot pan 2–3 min per side until cooked.","Whisk sriracha and mayo; mix soy sauce and sesame oil over rice.","Build bowls with rice, cucumber, avocado and salmon; drizzle with sauces."]}],
+      nutrition:{calories:560,protein_g:38,carbs_g:46,fat_g:24,fiber_g:4}, video:null, rating:{value:5,count:48} },
+
+    { title:"Braised Chuck Roast", blog:"fufuskitchen",
+      source_url:"https://www.fufuskitchen.com/braised-chuck-roast-fall-apart-tender/",
+      image:"",
+      servings:6, times:{prep:"20 mins",cook:"3 hrs",total:"3 hrs 20 mins"},
+      ingredients:["3 lb chuck roast","2 onions, sliced","3 carrots, chunked","6 cloves garlic","2 cups beef broth","2 tbsp tomato paste","2 sprigs rosemary","2 sprigs thyme","salt and pepper","olive oil"],
+      instructions:[{name:null,steps:["Sear roast on all sides in a Dutch oven until deeply browned; set aside.","Sauté onions, carrots and garlic; add tomato paste and broth.","Return beef, add herbs, cover and braise at 325°F for 3 hours until fork-tender."]}],
+      nutrition:{calories:450,protein_g:44,carbs_g:10,fat_g:26,fiber_g:2}, video:null, rating:{value:5,count:22} },
+
+    { title:"Lamb Tagine", blog:"fufuskitchen",
+      source_url:"https://www.fufuskitchen.com/lamb-tagine/",
+      image:"https://www.fufuskitchen.com/wp-content/uploads/2023/11/2BD70830-2EE2-49D2-A116-008813B3ACEA.png",
+      servings:6, times:{prep:"20 mins",cook:"1 hr 30 mins",total:"1 hr 50 mins"},
+      ingredients:["2 lb lamb shoulder, cubed","1/2 cup dried apricots","1/3 cup almonds","1 large onion","2 ripe tomatoes","2 tbsp ras el hanout","1 tsp cinnamon","1 tbsp honey","fresh cilantro","couscous to serve"],
+      instructions:[{name:null,steps:["Brown lamb in a heavy pot; add onion, spices and tomatoes.","Stir in apricots, almonds, honey and enough water to cover.","Simmer covered 1.5 hours until lamb is tender and sauce is fragrant."]}],
+      nutrition:{calories:480,protein_g:36,carbs_g:26,fat_g:26,fiber_g:5}, video:null, rating:{value:5,count:19} },
+
+    { title:"Baked Lamb and Vegetables", blog:"fufuskitchen",
+      source_url:"https://www.fufuskitchen.com/baked-lamb-and-vegetables/",
+      image:"",
+      servings:6, times:{prep:"20 mins",cook:"2 hrs",total:"2 hrs 20 mins"},
+      ingredients:["2.5 lb lamb shoulder, bone-in","4 potatoes, chunked","2 carrots","1 onion, sliced","3 ripe tomatoes, chopped","3 tbsp olive oil","1.5 tsp cumin","1 tsp turmeric","1 tsp allspice","salt and pepper"],
+      instructions:[{name:null,steps:["Season lamb generously with spices; sear in a roasting pan.","Surround with potatoes, carrots, onion and tomatoes; drizzle with oil.","Cover tightly and braise at 350°F for 2 hours; uncover last 20 min."]}],
+      nutrition:{calories:520,protein_g:38,carbs_g:30,fat_g:28,fiber_g:4}, video:null, rating:{value:5,count:14} },
+
+    { title:"Molokhia", blog:"fufuskitchen",
+      source_url:"https://www.fufuskitchen.com/molokhia/",
+      image:"",
+      servings:6, times:{prep:"15 mins",cook:"30 mins",total:"45 mins"},
+      ingredients:["1 lb frozen molokhia (jute leaves)","4 cups chicken broth","1 whole chicken, cooked and shredded","6 cloves garlic","1 tbsp ground coriander","2 tbsp butter","lemon juice","vermicelli rice to serve"],
+      instructions:[{name:null,steps:["Bring broth to a boil; add molokhia and stir well.","Fry garlic with coriander in butter until fragrant; add to pot ('ta'liya').","Simmer 10–15 min; serve over rice with shredded chicken and lemon."]}],
+      nutrition:{calories:310,protein_g:26,carbs_g:32,fat_g:9,fiber_g:6}, video:null, rating:{value:5,count:32} },
+
+    { title:"Jaj Mahshi (Rice Stuffed Chicken)", blog:"fufuskitchen",
+      source_url:"https://www.fufuskitchen.com/jaj-mahshi-rice-stuffed-chicken/",
+      image:"",
+      servings:6, times:{prep:"30 mins",cook:"2 hrs",total:"2 hrs 30 mins"},
+      ingredients:["1 whole chicken","1.5 cups basmati rice","1/2 lb ground beef","1/3 cup pine nuts, toasted","1 tsp cinnamon","1 tsp allspice","1 tsp turmeric","3 tbsp butter","salt and pepper"],
+      instructions:[{name:null,steps:["Brown ground beef with spices; add par-cooked rice and pine nuts.","Stuff chicken cavity loosely; tie the legs.","Roast at 375°F for 1.5–2 hours until golden and juices run clear."]}],
+      nutrition:{calories:580,protein_g:44,carbs_g:40,fat_g:28,fiber_g:2}, video:null, rating:{value:5,count:18} },
+
+    { title:"Cheat Kousa Bil Laban", blog:"fufuskitchen",
+      source_url:"https://www.fufuskitchen.com/cheat-kousa-bil-laban/",
+      image:"",
+      servings:6, times:{prep:"30 mins",cook:"1 hr",total:"1 hr 30 mins"},
+      ingredients:["6 zucchini, hollowed","1 lb ground beef","1/2 cup rice","1 tsp cinnamon","1 tsp allspice","3 cups plain yogurt","3 cloves garlic","1 tbsp dried mint","butter"],
+      instructions:[{name:null,steps:["Mix ground beef with rice, cinnamon, allspice and salt; stuff zucchini.","Simmer stuffed zucchini in salted water until cooked through.","Heat yogurt with garlic and dried mint; ladle over zucchini to serve."]}],
+      nutrition:{calories:380,protein_g:28,carbs_g:28,fat_g:16,fiber_g:2}, video:null, rating:{value:5,count:24} },
+
+    { title:"Slow-Roast Leg of Lamb", blog:"fufuskitchen",
+      source_url:"https://www.fufuskitchen.com/slow-roast-leg-of-lamb/",
+      image:"",
+      servings:8, times:{prep:"20 mins",cook:"4 hrs",total:"4 hrs 20 mins"},
+      ingredients:["4 lb bone-in leg of lamb","6 cloves garlic, slivered","2 tbsp olive oil","1 tbsp cumin","1 tsp coriander","1 tsp turmeric","1 lemon, juiced","fresh rosemary","basmati rice to serve"],
+      instructions:[{name:null,steps:["Stud lamb with garlic slivers; rub all over with oil and spices.","Place in a roasting pan; add a little water; cover tightly with foil.","Slow-roast at 325°F for 4 hours until falling off the bone; uncover last 30 min."]}],
+      nutrition:{calories:480,protein_g:44,carbs_g:8,fat_g:30,fiber_g:1}, video:null, rating:{value:5,count:16} },
     // ── Pinch of Yum ─────────────────────────────────────────────────────────
     { title:"Yellow Curry Meatballs with Peanut Shallot Crispies", blog:"pinchofyum",
       source_url:"https://pinchofyum.com/yellow-curry-meatballs",
@@ -1496,6 +1595,87 @@ const DEMO = {
       instructions:[{name:null,steps:["Roast squash at 400°F for 20–25 min until caramelized.","Arrange arugula on a platter; top with squash and cranberries.","Scatter pepitas and goat cheese; drizzle with dressing."]}],
       nutrition:{calories:300,protein_g:9,carbs_g:36,fat_g:15,fiber_g:6}, video:null, rating:{value:4.9,count:62} },
 
+    // ── Fufu's Kitchen ────────────────────────────────────────────────────────
+    { title:"Authentic Fattoush Salad", blog:"fufuskitchen",
+      source_url:"https://www.fufuskitchen.com/authentic-fattoush-salad/",
+      image:"https://www.fufuskitchen.com/wp-content/uploads/2022/04/fattousdh.webp",
+      servings:4, times:{prep:"15 mins",cook:null,total:"15 mins"},
+      ingredients:["1 head romaine, chopped","2 ripe tomatoes, diced","1 cucumber, diced","4 radishes, sliced","1/4 cup fresh parsley","1/4 cup fresh mint","2 cups pita chips","3 tbsp olive oil","2 tbsp lemon juice","1 tsp sumac","1 tsp pomegranate molasses"],
+      instructions:[{name:null,steps:["Combine romaine, tomatoes, cucumber, radishes, parsley and mint.","Whisk olive oil, lemon juice, sumac and pomegranate molasses together.","Toss with dressing and top with pita chips; serve immediately."]}],
+      nutrition:{calories:180,protein_g:4,carbs_g:22,fat_g:9,fiber_g:4}, video:null, rating:{value:5,count:9} },
+
+    { title:"Mediterranean Chickpea Salad", blog:"fufuskitchen",
+      source_url:"https://www.fufuskitchen.com/mediterranean-chickpea-salad/",
+      image:"https://www.fufuskitchen.com/wp-content/uploads/2026/01/Untitled-design-2-1.png",
+      servings:4, times:{prep:"15 mins",cook:null,total:"15 mins"},
+      ingredients:["2 cans chickpeas, drained","1 cucumber, diced","1 cup cherry tomatoes, halved","1/2 cup crumbled feta","1/4 cup red onion, diced","1/4 cup fresh parsley","3 tbsp olive oil","2 tbsp lemon juice","1 tsp cumin"],
+      instructions:[{name:null,steps:["Drain and rinse chickpeas well.","Combine with cucumber, tomatoes, onion and parsley.","Dress with olive oil, lemon and cumin; fold in feta and serve."]}],
+      nutrition:{calories:280,protein_g:12,carbs_g:30,fat_g:14,fiber_g:8}, video:null, rating:{value:5,count:22} },
+
+    { title:"Cucumber Yogurt Salad (Khyar bi Laban)", blog:"fufuskitchen",
+      source_url:"https://www.fufuskitchen.com/cucumber-yogurt-salad-khyar-bi-laban/",
+      image:"",
+      servings:4, times:{prep:"10 mins",cook:null,total:"10 mins"},
+      ingredients:["2 English cucumbers, diced","2 cups plain yogurt","3 cloves garlic, minced","1/4 cup fresh mint, chopped","1 tsp dried mint","1 tbsp olive oil","salt to taste"],
+      instructions:[{name:null,steps:["Dice cucumbers, salt lightly and drain 5 min.","Mix yogurt with garlic, fresh and dried mint and salt.","Fold in cucumbers; drizzle with olive oil to serve."]}],
+      nutrition:{calories:90,protein_g:5,carbs_g:8,fat_g:5,fiber_g:1}, video:null, rating:{value:5,count:15} },
+
+    { title:"Burrata Salad", blog:"fufuskitchen",
+      source_url:"https://www.fufuskitchen.com/burrata-salad/",
+      image:"",
+      servings:4, times:{prep:"10 mins",cook:null,total:"10 mins"},
+      ingredients:["2 balls burrata cheese","4 heirloom tomatoes, sliced","fresh basil leaves","3 tbsp olive oil","2 tbsp balsamic glaze","flaky sea salt","black pepper"],
+      instructions:[{name:null,steps:["Arrange tomato slices on a platter.","Place burrata in the centre and scatter basil over the top.","Drizzle generously with olive oil and balsamic; finish with flaky salt."]}],
+      nutrition:{calories:230,protein_g:10,carbs_g:8,fat_g:18,fiber_g:1}, video:null, rating:{value:5,count:18} },
+
+    { title:"Mediterranean Roasted Eggplant Salad", blog:"fufuskitchen",
+      source_url:"https://www.fufuskitchen.com/mediterranean-roasted-eggplant-salad/",
+      image:"",
+      servings:4, times:{prep:"10 mins",cook:"30 mins",total:"40 mins"},
+      ingredients:["2 large eggplants, cubed","1 cup cherry tomatoes","2 tbsp tahini","2 cloves garlic","1 lemon, juiced","1/4 cup fresh parsley","3 tbsp olive oil","1 tsp cumin"],
+      instructions:[{name:null,steps:["Toss eggplant and tomatoes with olive oil; roast at 425°F for 25–30 min.","Whisk tahini, garlic and lemon juice into a smooth dressing.","Arrange roasted veg on a plate, drizzle with tahini and scatter parsley."]}],
+      nutrition:{calories:180,protein_g:4,carbs_g:18,fat_g:12,fiber_g:6}, video:null, rating:{value:5,count:12} },
+
+    { title:"Tahini Salad", blog:"fufuskitchen",
+      source_url:"https://www.fufuskitchen.com/tahini-salad/",
+      image:"",
+      servings:4, times:{prep:"10 mins",cook:null,total:"10 mins"},
+      ingredients:["4 cups romaine, chopped","2 cucumbers, diced","3 ripe tomatoes, diced","1/4 cup fresh parsley","1/4 cup tahini","1 lemon, juiced","1 clove garlic","3 tbsp water","salt"],
+      instructions:[{name:null,steps:["Blend tahini with lemon juice, garlic, water and salt until smooth and pourable.","Combine romaine, cucumber, tomatoes and parsley in a large bowl.","Toss generously with tahini dressing just before serving."]}],
+      nutrition:{calories:195,protein_g:6,carbs_g:14,fat_g:14,fiber_g:4}, video:null, rating:{value:5,count:14} },
+
+    { title:"Turkish Salad", blog:"fufuskitchen",
+      source_url:"https://www.fufuskitchen.com/turkish-salad/",
+      image:"",
+      servings:4, times:{prep:"10 mins",cook:null,total:"10 mins"},
+      ingredients:["4 ripe tomatoes, diced","2 cucumbers, diced","1 bunch green onions, sliced","2 green peppers, diced","1/2 cup fresh parsley","3 tbsp olive oil","2 tbsp lemon juice","1 tsp sumac","salt"],
+      instructions:[{name:null,steps:["Chop all vegetables into small, uniform pieces.","Combine tomatoes, cucumber, green onions, peppers and parsley.","Dress with olive oil, lemon juice, sumac and salt; toss well."]}],
+      nutrition:{calories:120,protein_g:3,carbs_g:12,fat_g:8,fiber_g:3}, video:null, rating:{value:5,count:11} },
+
+    { title:"Arabic Salad", blog:"fufuskitchen",
+      source_url:"https://www.fufuskitchen.com/arabic-salad/",
+      image:"",
+      servings:4, times:{prep:"10 mins",cook:null,total:"10 mins"},
+      ingredients:["1 head romaine, finely chopped","2 large tomatoes, finely diced","2 cucumbers, finely diced","4 green onions, sliced","1/4 cup fresh parsley","3 tbsp olive oil","2 tbsp lemon juice","1 tsp dried mint","salt"],
+      instructions:[{name:null,steps:["Finely chop all vegetables — the smaller the better for this classic.","Combine romaine, tomatoes, cucumber, onions and parsley.","Dress with olive oil, lemon juice and dried mint; season and serve."]}],
+      nutrition:{calories:100,protein_g:3,carbs_g:10,fat_g:7,fiber_g:3}, video:null, rating:{value:5,count:8} },
+
+    { title:"Mediterranean Freekeh Salad", blog:"fufuskitchen",
+      source_url:"https://www.fufuskitchen.com/mediterranean-freekeh-salad/",
+      image:"",
+      servings:6, times:{prep:"15 mins",cook:"25 mins",total:"40 mins"},
+      ingredients:["1.5 cups freekeh","1/2 cup pomegranate seeds","1/2 cup fresh parsley","1/4 cup fresh mint","1/3 cup red onion, diced","3 tbsp olive oil","2 tbsp lemon juice","1 tsp cumin","salt and pepper"],
+      instructions:[{name:null,steps:["Cook freekeh per package directions; spread to cool completely.","Combine with pomegranate, parsley, mint and red onion.","Dress with olive oil, lemon and cumin; season and toss well."]}],
+      nutrition:{calories:280,protein_g:9,carbs_g:44,fat_g:9,fiber_g:8}, video:null, rating:{value:5,count:10} },
+
+    { title:"Herby Potato Salad", blog:"fufuskitchen",
+      source_url:"https://www.fufuskitchen.com/herby-potato-salad/",
+      image:"",
+      servings:6, times:{prep:"15 mins",cook:"20 mins",total:"35 mins"},
+      ingredients:["2 lb baby potatoes, boiled","1/2 cup fresh parsley","1/4 cup fresh cilantro","3 green onions, sliced","3 tbsp olive oil","2 tbsp lemon juice","1 tsp cumin","1/2 tsp paprika","salt"],
+      instructions:[{name:null,steps:["Boil potatoes until fork-tender; halve or quarter while still warm.","Combine with all herbs and green onions.","Dress with olive oil, lemon, cumin and paprika while warm; toss gently."]}],
+      nutrition:{calories:195,protein_g:4,carbs_g:30,fat_g:7,fiber_g:3}, video:null, rating:{value:5,count:16} },
+
     // ── Skinnytaste ───────────────────────────────────────────────────────────
     { title:"Thai Flank Steak Salad", blog:"skinnytaste",
       source_url:"https://www.skinnytaste.com/thai-flank-steak-salad/",
@@ -1575,7 +1755,8 @@ const S = {
   searchQuery:null, favFilter:false,  // search text + favourites-only toggle
   favourites:new Set(),               // Set of recipe keys
   notes:{},                           // { recipeKey: "note text" }
-  goals:{calories:2000,fiber:25,carbs:150,fat:65,water:8,sex:"female"}, // daily targets
+  goals:{calories:2000,fiber:25,carbs:150,fat:65,water:8,sex:"female",
+         reminderEnabled:false,reminderTime:"14:00"}, // daily targets
   waterToday:{},                      // { 'YYYY-MM-DD': N glasses }
 };
 const app = document.getElementById("app");
@@ -1989,9 +2170,8 @@ function home(){
   S.meal=null;S.course="main";S.picks={main:null,salad:null,dessert:null};
   app.innerHTML=`
    <section class="hero fade">
-     <div class="eyebrow">Family of four · fresh &amp; high-protein</div>
-     <h1 class="display">What shall we<br><span class="italic">cook</span> today?</h1>
-     <p>Pick a meal and choose from a hand-picked menu — no scrolling through ten blogs.</p>
+     <h1 class="display">What should we<br><span class="italic">cook</span> today?</h1>
+     <p>Pick a meal and choose from a hand-picked menu — because life shouldn't be wasted scrolling through endless food blogs!</p>
    </section>
    <div class="meals stagger">
      ${Object.entries(MEALS).map(([k,m])=>`
@@ -2576,6 +2756,19 @@ function renderGoals(){
         <span class="g-unit">glasses</span>
       </div>
       <div class="g-tip">Recommended: 8 glasses/day (women) · 10 glasses/day (men).</div>
+      <div class="reminder-row">
+        <div>
+          <div class="lbl">Daily reminder</div>
+          <div class="sub">${g.reminderEnabled ? `Fires at ${fmtTime(g.reminderTime||'14:00')} each day` : 'Off — tap to enable'}</div>
+        </div>
+        <div style="display:flex;align-items:center;gap:8px">
+          <input type="time" class="time-pick" value="${g.reminderTime||'14:00'}"
+            onchange="setReminderTime(this.value)" ${!g.reminderEnabled?'disabled':''}>
+          <button class="notif-toggle${g.reminderEnabled?' on':''}" onclick="toggleWaterReminder()">
+            ${g.reminderEnabled?'On':'Off'}
+          </button>
+        </div>
+      </div>
     </div>`;
 }
 function setSex(s){
@@ -2615,6 +2808,71 @@ function setGoal(key,val){
   const unit=key==='calories'?' kcal':'g';
   if(fill){ fill.style.width=pct+'%'; if(key==='water'||key==='fiber')fill.classList.remove('over'); }
   if(ofEl) ofEl.textContent=` / ${v}${unit}`;
+}
+
+/* ── Water reminder ─────────────────────────────────────────────────────────── */
+function fmtTime(t){
+  if(!t) return "";
+  const [h,m]=t.split(':').map(Number);
+  return `${h%12||12}:${String(m).padStart(2,'0')} ${h>=12?'PM':'AM'}`;
+}
+
+let _waterTimer=null;
+
+async function toggleWaterReminder(){
+  if(S.goals.reminderEnabled){
+    S.goals.reminderEnabled=false;
+    clearTimeout(_waterTimer); _waterTimer=null;
+    save(); renderGoals(); toast("Water reminder off."); return;
+  }
+  if(!('Notification' in window)){
+    toast("Notifications aren't supported on this browser."); return;
+  }
+  const perm = Notification.permission==="granted"
+    ? "granted"
+    : await Notification.requestPermission();
+  if(perm!=="granted"){
+    toast("Allow notifications in Settings to enable reminders."); return;
+  }
+  S.goals.reminderEnabled=true;
+  save(); scheduleWaterReminder(); renderGoals();
+  toast(`💧 Reminder set for ${fmtTime(S.goals.reminderTime||'14:00')} daily!`);
+}
+
+function setReminderTime(t){
+  S.goals.reminderTime=t; save();
+  if(S.goals.reminderEnabled) scheduleWaterReminder();
+}
+
+function scheduleWaterReminder(){
+  clearTimeout(_waterTimer); _waterTimer=null;
+  if(!S.goals.reminderEnabled) return;
+  const [h,m]=(S.goals.reminderTime||"14:00").split(':').map(Number);
+  const now=new Date(), next=new Date(now);
+  next.setHours(h,m,0,0);
+  if(next<=now) next.setDate(next.getDate()+1);
+  _waterTimer=setTimeout(()=>{
+    _fireWaterReminder();
+    _waterTimer=setInterval(_fireWaterReminder, 24*60*60*1000);
+  }, next-now);
+}
+
+function _fireWaterReminder(){
+  if(!S.goals.reminderEnabled || Notification.permission!=="granted") return;
+  const water=(S.waterToday||{})[today()]||0;
+  const goal=S.goals.water||8;
+  if(water>=goal) return; // already hit goal today
+  const remaining=goal-water;
+  const body=water===0
+    ? `You haven't logged any water yet today. Goal: ${goal} glasses 💧`
+    : `${water}/${goal} glasses so far — ${remaining} more to go!`;
+  const opts={body, icon:'/apple-touch-icon.jpg', badge:'/apple-touch-icon.jpg',
+               tag:'water-reminder', requireInteraction:false};
+  if(navigator.serviceWorker?.controller){
+    navigator.serviceWorker.controller.postMessage({type:'WATER_NOTIF',title:'💧 Time to hydrate!', ...opts});
+  } else {
+    new Notification('💧 Time to hydrate!', opts);
+  }
 }
 
 function logWater(dir){
@@ -2887,6 +3145,7 @@ function renderWeek(){
   await loadState();                // restore saved state first
   setNav();
   refreshCoach();
+  if(S.goals.reminderEnabled) scheduleWaterReminder(); // restart daily reminder
   try { home(); }
   catch(err){
     document.getElementById("app").innerHTML =

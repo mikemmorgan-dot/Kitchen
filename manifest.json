@@ -1,0 +1,24 @@
+{
+  "name": "Morgan's Kitchen",
+  "short_name": "Morgan's Kitchen",
+  "description": "Family meal planning — recipes, nutrition tracking, and shopping lists",
+  "start_url": "/",
+  "display": "standalone",
+  "background_color": "#FBF6EC",
+  "theme_color": "#FBF6EC",
+  "orientation": "portrait",
+  "icons": [
+    {
+      "src": "/apple-touch-icon.jpg",
+      "sizes": "180x180",
+      "type": "image/jpeg",
+      "purpose": "any"
+    },
+    {
+      "src": "/icon.jpg",
+      "sizes": "512x512",
+      "type": "image/jpeg",
+      "purpose": "any maskable"
+    }
+  ]
+}
