@@ -2438,15 +2438,16 @@ function renderGoals(){
 }
 function setSex(s){
   S.goals.sex = s;
-  // Apply sex-appropriate default targets (user can still override each one)
-  if(s === "male"){
-    S.goals.calories = S.goals.calories === 2000 ? 2500 : S.goals.calories;
-    S.goals.fiber    = S.goals.fiber    === 25   ? 38   : S.goals.fiber;
-    S.goals.water    = S.goals.water    === 8    ? 10   : S.goals.water;
+  const isMale = s === "male";
+  // Auto-update defaults only if still at either known default (25 or 28 for fiber)
+  if(isMale){
+    if(S.goals.calories === 2000)          S.goals.calories = 2500;
+    if(S.goals.fiber === 25 || S.goals.fiber === 28) S.goals.fiber = 38;
+    if(S.goals.water  === 8)               S.goals.water    = 10;
   } else {
-    S.goals.calories = S.goals.calories === 2500 ? 2000 : S.goals.calories;
-    S.goals.fiber    = S.goals.fiber    === 38   ? 25   : S.goals.fiber;
-    S.goals.water    = S.goals.water    === 10   ? 8    : S.goals.water;
+    if(S.goals.calories === 2500)          S.goals.calories = 2000;
+    if(S.goals.fiber === 38)               S.goals.fiber    = 25;
+    if(S.goals.water  === 10)              S.goals.water    = 8;
   }
   save();
   renderGoals();
