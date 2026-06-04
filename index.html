@@ -1,0 +1,2664 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
+<meta name="color-scheme" content="only light" />
+<title>Morgan's Kitchen — what shall we cook?</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Fraunces:ital,opsz,wght@0,9..144,400;0,9..144,500;0,9..144,600;1,9..144,400&family=Hanken+Grotesk:wght@400;500;600;700&display=swap" rel="stylesheet">
+<style>
+  :root{
+    color-scheme: only light;
+    --paper:#FBF6EC; --paper-2:#EFE6D2; --card:#FFFFFF;
+    --ink:#211E18; --ink-soft:#5C564A;
+    --herb:#3F5C3A; --herb-deep:#2E4429; --terra:#C2693F; --terra-soft:#E9C9B4;
+    --line:#E6DCC7; --shadow:0 18px 40px -24px rgba(60,45,20,.45);
+    --r:20px;
+  }
+  *{box-sizing:border-box;-webkit-tap-highlight-color:transparent}
+  /* Force light mode on all iOS versions — 'transparent' in gradients becomes
+     transparent-black in dark mode, so we replace it with rgba of --paper */
+  html{
+    color-scheme:only light;
+    background:#FBF6EC;   /* explicit fallback so iOS never goes dark */
+  }
+  html,body{margin:0}
+  body{
+    font-family:'Hanken Grotesk',sans-serif;color:#211E18;
+    background:
+      radial-gradient(120% 80% at 80% -10%, #FAEAD3 0%, rgba(251,246,236,0) 60%),
+      radial-gradient(90% 70% at -10% 110%, #EBF0E2 0%, rgba(251,246,236,0) 55%),
+      #FBF6EC;
+    min-height:100dvh;line-height:1.5;
+  }
+  /* Belt-and-suspenders: override any residual dark-mode UA stylesheet */
+  @media (prefers-color-scheme: dark) {
+    html,body{ background:#FBF6EC !important; color:#211E18 !important; }
+    :root{ color-scheme:only light; }
+  }
+  .wrap{max-width:760px;margin:0 auto;padding:0 18px 120px}
+  .display{font-family:'Fraunces',serif;font-weight:500;letter-spacing:-.01em;line-height:1.05}
+  .italic{font-style:italic}
+  button{font-family:inherit;cursor:pointer;border:none;background:none;color:inherit}
+
+  /* ---------- top bar / multi-ring goal tracker ---------- */
+  header{position:sticky;top:0;z-index:30;backdrop-filter:blur(10px);
+    background:linear-gradient(var(--paper),rgba(251,246,236,.86));
+    border-bottom:1px solid var(--line)}
+  .bar{max-width:760px;margin:0 auto;padding:10px 16px;display:flex;align-items:center;gap:10px}
+  .brand{font-family:'Fraunces',serif;font-size:17px;font-weight:600;letter-spacing:-.02em;white-space:nowrap}
+  .brand b{color:var(--herb)}
+  .coach{margin-left:auto;display:flex;align-items:center;gap:9px;min-width:0;
+    cursor:pointer;-webkit-tap-highlight-color:transparent}
+  /* SVG rings */
+  .rings-svg{flex-shrink:0;display:block}
+  .rt{fill:none;stroke-width:6;stroke-opacity:.15}
+  .rf{fill:none;stroke-width:6;stroke-linecap:round;
+      transition:stroke-dashoffset .85s cubic-bezier(.4,0,.2,1)}
+  /* ring legend stats */
+  .coach-txt{text-align:right;display:flex;flex-direction:column;gap:2px}
+  .hs{font-size:10.5px;font-weight:700;white-space:nowrap;line-height:1.35;letter-spacing:-.01em}
+  .hs-cal{color:#E05C42}
+  .hs-prot{color:#5E9E6B}
+  .hs-fib{color:#4A90D9}
+  .hs-wat{color:#4EC5D4}
+
+  /* ---------- generic ---------- */
+  .eyebrow{font-size:12px;letter-spacing:.18em;text-transform:uppercase;color:var(--terra);font-weight:700}
+  .back{display:inline-flex;align-items:center;gap:8px;color:var(--herb-deep);font-weight:700;
+    font-size:16px;margin:16px 0 4px;padding:12px 18px 12px 14px;background:var(--card);
+    border:1.5px solid var(--line);border-radius:999px;box-shadow:0 2px 8px -4px rgba(60,45,20,.18);
+    min-height:48px;-webkit-tap-highlight-color:transparent}
+  .back:hover{color:var(--herb)}
+  .fade{animation:fade .5s both}
+  @keyframes fade{from{opacity:0;transform:translateY(10px)}to{opacity:1;transform:none}}
+  .stagger>*{animation:fade .55s both}
+  .stagger>*:nth-child(2){animation-delay:.06s}
+  .stagger>*:nth-child(3){animation-delay:.12s}
+  .stagger>*:nth-child(4){animation-delay:.18s}
+  .stagger>*:nth-child(5){animation-delay:.24s}
+  .stagger>*:nth-child(6){animation-delay:.30s}
+
+  /* ---------- home ---------- */
+  .hero{padding:46px 4px 8px}
+  .hero h1{font-size:clamp(34px,8vw,52px);margin:.1em 0 .15em}
+  .hero p{color:var(--ink-soft);font-size:16px;max-width:42ch;margin:0}
+  .meals{display:grid;gap:14px;margin-top:28px}
+  .meal{display:flex;align-items:center;gap:18px;background:var(--card);border:1px solid var(--line);
+    border-radius:var(--r);padding:20px 22px;box-shadow:var(--shadow);transition:transform .18s,box-shadow .18s;text-align:left;width:100%}
+  .meal:hover{transform:translateY(-3px);box-shadow:0 26px 50px -26px rgba(60,45,20,.5)}
+  .meal:active{transform:translateY(0)}
+  .meal .em{font-size:30px;width:58px;height:58px;flex:none;display:grid;place-items:center;
+    background:var(--paper-2);border-radius:16px}
+  .meal h3{font-family:'Fraunces',serif;font-size:23px;font-weight:600;margin:0}
+  .meal small{color:var(--ink-soft);font-size:13.5px}
+  .meal .arrow{margin-left:auto;color:var(--herb);font-size:22px}
+
+  /* ---------- menu list ---------- */
+  .menu-head{padding:6px 4px 18px}
+  .menu-head h2{font-size:clamp(28px,6.5vw,40px);margin:.15em 0}
+  .filter-bar{display:flex;gap:8px;overflow-x:auto;padding:4px 4px 14px;
+    -webkit-overflow-scrolling:touch;scrollbar-width:none;scroll-snap-type:x mandatory}
+  .filter-bar::-webkit-scrollbar{display:none}
+  .filter-bar .chip{flex:none;scroll-snap-align:start;font-size:13px;padding:7px 14px;white-space:nowrap}
+  .chip-cnt{font-size:11px;font-weight:600;opacity:.65;margin-left:3px}
+  /* ── Goals page ── */
+  .g-card{background:var(--card);border-radius:20px;padding:20px;margin-bottom:12px;box-shadow:0 2px 12px -6px rgba(60,45,20,.14)}
+  .g-row{display:flex;align-items:center;gap:10px;margin-bottom:4px}
+  .g-ico{font-size:22px;line-height:1;flex-shrink:0}
+  .g-lbl{font-size:14px;font-weight:700;flex:1;color:var(--ink)}
+  .g-val{font-size:16px;font-weight:800}
+  .g-of{font-size:12px;font-weight:500;color:var(--ink-soft)}
+  .g-bar{height:9px;background:rgba(0,0,0,.07);border-radius:99px;overflow:hidden;margin:10px 0 14px}
+  .g-fill{height:100%;border-radius:99px;transition:width .5s ease;background:var(--herb-deep)}
+  .g-fill.over{background:var(--terra)}
+  .g-field{display:flex;align-items:center;gap:8px}
+  .g-field label{font-size:12px;color:var(--ink-soft);white-space:nowrap;flex-shrink:0}
+  .g-num{width:88px;padding:9px 12px;border:1.5px solid var(--line);border-radius:12px;
+          font-size:16px;font-family:inherit;background:var(--parchment);color:var(--ink);text-align:center}
+  .g-unit{font-size:13px;color:var(--ink-soft)}
+  .g-tip{font-size:11.5px;color:var(--ink-soft);margin-top:7px;font-style:italic;line-height:1.5}
+  .g-stepper{display:flex;align-items:center;gap:0;margin:10px 0 6px;background:var(--parchment);border-radius:14px;overflow:hidden}
+  .g-step{width:52px;height:52px;font-size:24px;font-weight:700;color:var(--herb-deep);flex-shrink:0;display:flex;align-items:center;justify-content:center}
+  .g-water-n{flex:1;text-align:center;font-size:32px;font-weight:800;line-height:1}
+  .g-water-sub{display:block;font-size:11px;color:var(--ink-soft);margin-top:2px}
+  .chip{display:inline-flex;align-items:center;gap:7px;border:1.5px solid var(--line);
+    background:var(--card);border-radius:999px;padding:9px 15px;font-weight:600;font-size:14px;transition:.15s}
+  .chip[aria-pressed="true"]{border-color:var(--herb);background:var(--herb);color:#fff}
+  .cards{display:grid;grid-template-columns:1fr 1fr;gap:14px;margin-top:8px}
+  @media(max-width:520px){.cards{grid-template-columns:1fr}}
+  .card{background:var(--card);border:1px solid var(--line);border-radius:var(--r);overflow:hidden;
+    box-shadow:var(--shadow);transition:transform .18s,box-shadow .18s;text-align:left;display:flex;flex-direction:column}
+  .card:hover{transform:translateY(-4px);box-shadow:0 28px 52px -26px rgba(60,45,20,.55)}
+  .thumb{aspect-ratio:4/3;width:100%;object-fit:cover;background:linear-gradient(135deg,var(--paper-2),var(--terra-soft));display:block}
+  .thumb-fallback{aspect-ratio:4/3;display:grid;place-items:center;font-family:'Fraunces',serif;
+    font-size:34px;color:var(--herb-deep);background:linear-gradient(135deg,#EAF0DF,var(--terra-soft))}
+  .card-body{padding:14px 15px 16px}
+  .card h4{font-family:'Fraunces',serif;font-size:19px;font-weight:600;margin:0 0 2px;line-height:1.15}
+  .card .blog{color:var(--terra);font-size:12.5px;font-weight:700;text-transform:lowercase}
+  .pills{display:flex;gap:7px;margin-top:11px;flex-wrap:wrap}
+  .pill{font-size:12px;font-weight:600;color:var(--ink-soft);background:var(--paper-2);
+    border-radius:999px;padding:4px 10px;display:inline-flex;gap:5px;align-items:center}
+  .pill.protein{background:#E7EFDD;color:var(--herb-deep)}
+
+  /* ---------- recipe detail ---------- */
+  .tabs{display:flex;gap:8px;margin:14px 0 4px}
+  .tab{padding:8px 16px;border-radius:999px;font-weight:600;font-size:14px;background:var(--card);border:1.5px solid var(--line)}
+  .tab[aria-selected="true"]{background:var(--herb-deep);color:#fff;border-color:var(--herb-deep)}
+  .r-hero{position:relative;border-radius:var(--r);overflow:hidden;box-shadow:var(--shadow);margin-top:6px}
+  .r-hero img{width:100%;aspect-ratio:16/10;object-fit:cover;display:block}
+  .r-hero .grad{position:absolute;inset:0;background:linear-gradient(transparent 40%,rgba(20,15,8,.78))}
+  .r-hero .cap{position:absolute;left:20px;right:20px;bottom:18px;color:#fff}
+  .r-hero .cap .blog{color:#F3D9C6;font-weight:700;font-size:13px;text-transform:lowercase}
+  .r-hero .cap h2{font-family:'Fraunces',serif;font-weight:600;font-size:clamp(24px,6vw,34px);margin:2px 0 0;text-shadow:0 2px 18px rgba(0,0,0,.4)}
+  .metarow{display:flex;gap:18px;flex-wrap:wrap;color:var(--ink-soft);font-size:13.5px;font-weight:600;margin:16px 2px 0}
+  .metarow b{color:var(--ink)}
+  .addbtn{width:100%;margin-top:18px;background:var(--herb);color:#fff;border-radius:14px;padding:15px;
+    font-size:15.5px;font-weight:700;box-shadow:0 14px 26px -14px var(--herb);transition:.15s;display:flex;justify-content:center;gap:9px;align-items:center}
+  .addbtn:hover{background:var(--herb-deep)}
+  .addbtn.done{background:#E7EFDD;color:var(--herb-deep);box-shadow:none}
+  .sec{margin-top:30px}
+  .sec h3{font-family:'Fraunces',serif;font-size:22px;font-weight:600;margin:0 0 12px;display:flex;align-items:baseline;gap:10px}
+  .sec h3 .n{font-size:13px;color:var(--terra);font-weight:700;letter-spacing:.12em}
+  .serve-row{display:flex;align-items:center;justify-content:space-between;gap:14px;margin-bottom:12px}
+  .serve-note{font-size:12.5px;color:var(--ink-soft);margin-top:4px;max-width:38ch}
+  .serve-row>div:first-child{flex:1;min-width:0}
+  .serve-control{flex:none;display:flex;flex-direction:column;align-items:center;gap:5px}
+  .serve-label{font-size:11px;letter-spacing:.12em;text-transform:uppercase;color:var(--ink-soft);font-weight:700}
+  .scaler{display:inline-flex;align-items:center;flex:none;border:1.5px solid var(--line);border-radius:999px;background:var(--card);overflow:hidden}
+  .scaler button{flex:none;width:42px;height:38px;font-weight:700;font-size:22px;line-height:1;color:var(--herb);display:grid;place-items:center}
+  .scaler button:active{background:var(--paper-2)}
+  .scaler #svCount{min-width:34px;padding:0 2px;text-align:center;font-weight:700;font-size:16px;white-space:nowrap}
+  ul.ingredients{list-style:none;padding:0;margin:0;border-top:1px solid var(--line)}
+  ul.ingredients li{padding:12px 4px;border-bottom:1px solid var(--line);display:flex;gap:12px;align-items:flex-start;font-size:15.5px}
+  ul.ingredients li::before{content:'';width:9px;height:9px;margin-top:8px;border-radius:50%;background:var(--terra-soft);border:2px solid var(--terra);flex:none}
+  .steps{counter-reset:s;display:grid;gap:16px}
+  .step{display:flex;gap:14px}
+  .step .num{counter-increment:s;flex:none;width:32px;height:32px;border-radius:50%;background:var(--herb-deep);color:#fff;
+    font-family:'Fraunces',serif;font-weight:600;display:grid;place-items:center}
+  .step .num::before{content:counter(s)}
+  .step p{margin:3px 0;font-size:15.5px}
+  .grp-name{font-weight:700;color:var(--herb-deep);margin:6px 0 -4px;font-size:14px;text-transform:uppercase;letter-spacing:.05em}
+  .video{position:relative;padding-top:56.25%;border-radius:var(--r);overflow:hidden;box-shadow:var(--shadow);margin-top:6px}
+  .video iframe{position:absolute;inset:0;width:100%;height:100%;border:0}
+  .nutri{display:grid;grid-template-columns:repeat(4,1fr);gap:10px}
+  @media(max-width:520px){.nutri{grid-template-columns:repeat(2,1fr)}}
+  .nutri div{background:var(--card);border:1px solid var(--line);border-radius:14px;padding:14px 12px;text-align:center}
+  .nutri .v{font-family:'Fraunces',serif;font-size:24px;font-weight:600}
+  .nutri .v.hi{color:var(--herb)}
+  .nutri .k{font-size:11.5px;color:var(--ink-soft);text-transform:uppercase;letter-spacing:.08em;margin-top:2px;font-weight:600}
+  .nutri div.fetching{animation:nutri-pulse 1.3s ease-in-out infinite}
+  @keyframes nutri-pulse{0%,100%{opacity:.55}50%{opacity:1}}
+  .leave{display:flex;align-items:center;justify-content:center;gap:8px;margin-top:26px;
+    border:1.5px solid var(--line);border-radius:14px;padding:14px;font-weight:600;color:var(--ink-soft);background:var(--card)}
+  .leave:hover{color:var(--terra);border-color:var(--terra-soft)}
+  .toast{position:fixed;left:50%;bottom:26px;transform:translateX(-50%) translateY(160%);
+    background:var(--herb-deep);color:#fff;padding:13px 20px;border-radius:14px;font-weight:600;
+    box-shadow:var(--shadow);transition:transform .35s cubic-bezier(.2,1.3,.5,1),opacity .25s;
+    z-index:50;font-size:14.5px;opacity:0;visibility:hidden;pointer-events:none}
+  .toast.show{transform:translateX(-50%) translateY(0);opacity:1;visibility:visible}
+  .nudge{background:#FBEFE6;border:1px solid var(--terra-soft);border-radius:14px;padding:14px 16px;
+    margin:14px 0 2px;font-size:14.5px;color:#7a4a2c}
+
+  /* ---------- bottom navigation ---------- */
+  nav.tabbar{position:fixed;left:0;right:0;bottom:0;z-index:40;display:flex;justify-content:center;
+    gap:6px;padding:8px 10px calc(8px + env(safe-area-inset-bottom));
+    background:linear-gradient(rgba(251,246,236,.4),var(--paper) 40%);backdrop-filter:blur(12px);
+    border-top:1px solid var(--line)}
+  nav.tabbar button{flex:1;max-width:150px;display:flex;flex-direction:column;align-items:center;gap:3px;
+    padding:6px 4px;border-radius:14px;color:var(--ink-soft);font-weight:600;font-size:11.5px}
+  nav.tabbar button .ic{font-size:19px;line-height:1}
+  nav.tabbar button[aria-current="true"]{color:var(--herb-deep);background:#E7EFDD}
+
+  /* ---------- Today / Week ---------- */
+  .page-h{padding:24px 4px 6px}
+  .page-h .eyebrow{margin-bottom:4px}
+  .page-h h2{font-family:'Fraunces',serif;font-size:clamp(30px,7vw,42px);font-weight:600;margin:.05em 0}
+  .summary{display:flex;align-items:center;gap:16px;background:var(--card);border:1px solid var(--line);
+    border-radius:var(--r);padding:18px 20px;box-shadow:var(--shadow);margin-top:8px}
+  .summary .big{font-family:'Fraunces',serif;font-size:34px;font-weight:600;line-height:1}
+  .summary .big small{font-size:16px;color:var(--ink-soft)}
+  .summary .lbl{font-size:13px;color:var(--ink-soft);margin-top:3px}
+  .pbar{height:10px;border-radius:999px;background:var(--paper-2);overflow:hidden;margin-top:10px}
+  .pbar>div{height:100%;background:var(--herb);border-radius:999px;transition:width .5s}
+  .meal-group{margin-top:22px}
+  .meal-group h3{font-family:'Fraunces',serif;font-size:19px;font-weight:600;margin:0 0 8px;display:flex;align-items:baseline;gap:8px}
+  .meal-group h3 .sum{margin-left:auto;font-family:'Hanken Grotesk';font-size:13px;color:var(--herb-deep);font-weight:700}
+  .logline{display:flex;align-items:center;gap:10px;background:var(--card);border:1px solid var(--line);
+    border-radius:14px;padding:11px 14px;margin-bottom:8px}
+  .logline .t{font-weight:600;font-size:14.5px}
+  .logline .b{color:var(--terra);font-size:12px;font-weight:700}
+  .logline .p{margin-left:auto;background:#E7EFDD;color:var(--herb-deep);font-weight:700;font-size:12.5px;
+    border-radius:999px;padding:4px 10px;white-space:nowrap}
+  .logline .course{font-size:11px;color:var(--ink-soft);text-transform:uppercase;letter-spacing:.06em}
+  /* planned-but-not-yet-logged entries in Today */
+  .logline.planned{background:var(--paper);border:1.5px dashed var(--line)}
+  .logline.planned .b{color:var(--ink-soft)}
+  .plan-tag{margin-left:auto;font-size:11px;font-weight:600;color:var(--ink-soft);
+    background:var(--paper-2);border-radius:999px;padding:3px 10px;white-space:nowrap;flex-shrink:0}
+  .empty{color:var(--ink-soft);font-size:14px;padding:6px 2px 2px;font-style:italic}
+  .cook-cta{display:flex;align-items:center;justify-content:center;gap:8px;width:100%;margin-top:8px;
+    background:var(--herb);color:#fff;border-radius:14px;padding:14px;font-weight:700;font-size:15px}
+  .cook-cta:hover{background:var(--herb-deep)}
+  /* weekly chart */
+  .chart-wrap{background:var(--card);border:1px solid var(--line);border-radius:var(--r);
+    box-shadow:var(--shadow);padding:16px 14px 10px;margin-top:8px}
+  .chart-wrap svg{width:100%;height:auto;display:block}
+  .day-block{margin-top:14px;border-top:1px solid var(--line);padding-top:12px}
+  .day-block .dh{display:flex;align-items:baseline;gap:8px;margin-bottom:6px}
+  .day-block .dh b{font-family:'Fraunces',serif;font-size:16px;font-weight:600}
+  .day-block .dh .tot{margin-left:auto;font-size:13px;font-weight:700;color:var(--herb-deep)}
+  .day-block .dh .tot.under{color:var(--terra)}
+  .day-block .m{font-size:13.5px;color:var(--ink-soft);padding:2px 0}
+  .day-block .m b{color:var(--ink);font-weight:600}
+
+  /* plan picker on recipe */
+  .planrow{display:flex;gap:8px;margin-top:10px}
+  .planrow select{flex:1;border:1.5px solid var(--line);border-radius:14px;padding:0 12px;
+    font:inherit;font-size:14.5px;font-weight:600;background:var(--card);color:var(--ink)}
+  .planbtn{flex:none;border:1.5px solid var(--herb);color:var(--herb-deep);background:var(--card);
+    border-radius:14px;padding:13px 16px;font-weight:700;font-size:14.5px}
+  .planbtn:active{background:#E7EFDD}
+  /* planner */
+  .shop-btn{width:100%;margin-top:10px;background:var(--terra);color:#fff;border-radius:14px;
+    padding:15px;font-weight:700;font-size:15.5px;box-shadow:0 14px 26px -16px var(--terra)}
+  .shop-btn:hover{filter:brightness(.96)}
+  /* export row */
+  .export-row{display:flex;gap:8px;overflow-x:auto;padding:12px 2px 16px;scrollbar-width:none}
+  .export-row::-webkit-scrollbar{display:none}
+  .exp-btn{flex:none;padding:9px 16px;border-radius:999px;font-size:13px;font-weight:600;
+           border:1.5px solid;white-space:nowrap;background:var(--card);
+           -webkit-tap-highlight-color:transparent}
+  .exp-share{color:var(--herb-deep);border-color:var(--herb-deep)}
+  .exp-copy{color:var(--ink-soft);border-color:var(--line)}
+  .exp-walmart{color:#0071CE;border-color:#0071CE}
+  .exp-instacart{color:#2E7D32;border-color:#2E7D32}
+  .plan-day{background:var(--card);border:1px solid var(--line);border-radius:var(--r);
+    box-shadow:var(--shadow);padding:14px 16px;margin-top:14px}
+  .pd-head{display:flex;align-items:baseline;gap:8px;margin-bottom:8px}
+  .pd-head b{font-family:'Fraunces',serif;font-size:18px;font-weight:600}
+  .pd-date{color:var(--ink-soft);font-size:12px}
+  .pd-tot{margin-left:auto;font-size:12.5px;font-weight:700;color:var(--herb-deep)}
+  .pd-tot.under{color:var(--terra)}
+  .day-nutri{display:flex;gap:0;flex-wrap:wrap;margin:5px 0 8px;font-size:12px;color:var(--ink-soft)}
+  .day-nutri span{white-space:nowrap;padding-right:10px}
+  .day-nutri span:not(:last-child)::after{content:"·";padding-left:10px;opacity:.4}
+  .day-nutri b{color:var(--ink);font-weight:700}
+  .plan-meal{margin-top:8px}
+  .pm-label{font-size:11px;letter-spacing:.1em;text-transform:uppercase;color:var(--terra);font-weight:700}
+  .plan-item{display:flex;align-items:center;gap:10px;background:var(--paper);border:1px solid var(--line);
+    border-radius:12px;padding:9px 12px;margin-top:5px}
+  .plan-item .t{font-weight:600;font-size:14px}
+  .plan-item .b{color:var(--ink-soft);font-size:11.5px}
+  .plan-item .rm{margin-left:auto;flex:none;width:30px;height:30px;border-radius:50%;font-size:18px;
+    color:var(--ink-soft);background:var(--card);border:1px solid var(--line);line-height:1}
+  .plan-item .rm:active{background:#FBEFE6;color:var(--terra)}
+  /* shopping list */
+  .shop-sec{margin-top:18px}
+  .shop-sec h3{font-family:'Fraunces',serif;font-size:18px;font-weight:600;margin:0 0 8px;
+    display:flex;align-items:center;gap:8px;border-bottom:1px solid var(--line);padding-bottom:6px}
+  .shop-sec h3 span{font-family:'Hanken Grotesk';font-size:12px;color:#fff;background:var(--herb);
+    border-radius:999px;padding:1px 9px;font-weight:700}
+  .shop-item{display:flex;align-items:center;gap:12px;padding:11px 4px;border-bottom:1px solid var(--line);
+    font-size:15.5px;cursor:pointer}
+  .shop-item input{width:20px;height:20px;accent-color:var(--herb);flex:none}
+  .shop-item.got span{text-decoration:line-through;color:var(--ink-soft)}
+</style>
+</head>
+<body>
+
+<header>
+  <div class="bar">
+    <div class="brand">Morgan's <b>Kitchen</b></div>
+    <!-- multi-ring goal tracker — tap to open Goals page -->
+    <div class="coach" onclick="go('goals')" title="View your goals">
+      <svg class="rings-svg" viewBox="0 0 76 76" width="68" height="68" aria-label="Daily nutrition rings">
+        <!-- Calories — outermost, terra -->
+        <circle class="rt" cx="38" cy="38" r="35" stroke="#E05C42"/>
+        <circle class="rf" id="rCal"  cx="38" cy="38" r="35" stroke="#E05C42"
+          stroke-dasharray="219.9" stroke-dashoffset="219.9" transform="rotate(-90 38 38)"/>
+        <!-- Protein — herb green -->
+        <circle class="rt" cx="38" cy="38" r="26" stroke="#5E9E6B"/>
+        <circle class="rf" id="rProt" cx="38" cy="38" r="26" stroke="#5E9E6B"
+          stroke-dasharray="163.4" stroke-dashoffset="163.4" transform="rotate(-90 38 38)"/>
+        <!-- Fiber — blue -->
+        <circle class="rt" cx="38" cy="38" r="17" stroke="#4A90D9"/>
+        <circle class="rf" id="rFib"  cx="38" cy="38" r="17" stroke="#4A90D9"
+          stroke-dasharray="106.8" stroke-dashoffset="106.8" transform="rotate(-90 38 38)"/>
+        <!-- Water — teal, innermost -->
+        <circle class="rt" cx="38" cy="38" r="8"  stroke="#4EC5D4"/>
+        <circle class="rf" id="rWat"  cx="38" cy="38" r="8"  stroke="#4EC5D4"
+          stroke-dasharray="50.3"  stroke-dashoffset="50.3"  transform="rotate(-90 38 38)"/>
+      </svg>
+      <div class="coach-txt">
+        <span id="hCal"  class="hs hs-cal" >– cal</span>
+        <span id="hProt" class="hs hs-prot">– prot</span>
+        <span id="hFib"  class="hs hs-fib" >– fiber</span>
+        <span id="hWat"  class="hs hs-wat" >– water</span>
+      </div>
+    </div>
+  </div>
+  <!-- hidden BW input for state management -->
+  <input id="bw" type="hidden" value="140">
+</header>
+
+<div class="wrap" id="app"><p style="padding:40px 4px;color:#5C564A;font-family:Georgia,serif">Loading your kitchen…</p></div>
+<noscript><p style="padding:40px;font-family:Georgia,serif">This app needs JavaScript enabled.</p></noscript>
+<div class="toast" id="toast"></div>
+
+<nav class="tabbar" id="tabbar">
+  <button id="tab-cook" onclick="go('cook')"><span class="ic">🍽️</span>Cook</button>
+  <button id="tab-plan" onclick="go('plan')"><span class="ic">🗓️</span>Plan</button>
+  <button id="tab-today" onclick="go('today')"><span class="ic">📋</span>Today</button>
+  <button id="tab-week" onclick="go('week')"><span class="ic">📈</span>Week</button>
+  <button id="tab-goals" onclick="go('goals')"><span class="ic">🎯</span>Goals</button>
+</nav>
+
+<script>
+/* ============================================================
+   DEMO DATA  (used when the backend isn't running)
+   Each object is EXACTLY the shape recipe-parser.js outputs, so
+   this same render code runs on live data with zero changes.
+   Instruction prose is paraphrased/original; ingredients are facts.
+============================================================ */
+const DEMO = {
+  breakfast: [
+    // ── Eating Bird Food ──────────────────────────────────────────────────────
+    { title:"Easy Chia Pudding", blog:"eatingbirdfood",
+      source_url:"https://www.eatingbirdfood.com/basic-chia-seed-pudding/",
+      image:"https://www.eatingbirdfood.com/wp-content/uploads/2023/12/chia-pudding-hero.jpg",
+      servings:2, times:{prep:"5 mins",cook:null,total:"1 hr 10 mins"},
+      ingredients:["1/4 cup chia seeds","1 cup milk of choice","1/2 tsp vanilla extract","1 tbsp maple syrup","fresh berries, to top"],
+      instructions:[{name:null,steps:["Stir chia seeds, milk, vanilla and maple syrup in a jar.","Rest 5 minutes, then stir again to break up clumps.","Chill at least 1 hour and top with berries."]}],
+      nutrition:{calories:210,protein_g:12,carbs_g:24,fat_g:9,fiber_g:11}, video:null, rating:{value:4.44,count:610} },
+
+    { title:"Summer Overnight Oats", blog:"eatingbirdfood",
+      source_url:"https://www.eatingbirdfood.com/summer-overnight-oats/",
+      image:"https://www.eatingbirdfood.com/wp-content/uploads/2023/12/overnight-oats-hero-1.jpg",
+      servings:1, times:{prep:"5 mins",cook:null,total:"8 hrs"},
+      ingredients:["1/2 cup rolled oats","1/2 cup milk","1/4 cup Greek yogurt","1 tbsp chia seeds","1/2 tbsp maple syrup","fruit, to top"],
+      instructions:[{name:null,steps:["Combine oats, milk, yogurt, chia and maple in a jar.","Refrigerate overnight.","Top with fruit before eating."]}],
+      nutrition:{calories:340,protein_g:18,carbs_g:46,fat_g:9,fiber_g:9}, video:null, rating:{value:4.9,count:240} },
+
+    { title:"Easy Baked Oatmeal", blog:"eatingbirdfood",
+      source_url:"https://www.eatingbirdfood.com/baked-oatmeal/",
+      image:"https://www.eatingbirdfood.com/wp-content/uploads/2023/06/easy-baked-oatmeal-hero.jpg",
+      servings:6, times:{prep:"10 mins",cook:"40 mins",total:"50 mins"},
+      ingredients:["2 cups rolled oats","2 cups milk","2 eggs","1 mashed banana","1 tsp baking powder","1 tsp cinnamon","1/4 cup maple syrup"],
+      instructions:[{name:null,steps:["Heat oven to 350°F and grease a baking dish.","Mix wet and dry ingredients, then pour into the dish.","Bake 35–40 min until set and golden."]}],
+      nutrition:{calories:250,protein_g:9,carbs_g:38,fat_g:7,fiber_g:5}, video:null, rating:{value:4.8,count:512} },
+
+    { title:"Baked Oatmeal Cups, 4 Ways", blog:"eatingbirdfood",
+      source_url:"https://www.eatingbirdfood.com/baked-oatmeal-cups-4-ways/",
+      image:"https://www.eatingbirdfood.com/wp-content/uploads/2021/05/baked-oatmeal-cups-new.jpg",
+      servings:12, times:{prep:"10 mins",cook:"30 mins",total:"40 mins"},
+      ingredients:["3 cups rolled oats","2 eggs","1.5 cups milk","1/3 cup maple syrup","1 tsp baking powder","mix-ins of choice"],
+      instructions:[{name:null,steps:["Heat oven to 375°F and line a muffin tin.","Stir everything together and fold in your mix-ins.","Divide into cups and bake 25–30 min."]}],
+      nutrition:{calories:160,protein_g:6,carbs_g:25,fat_g:4,fiber_g:3}, video:null, rating:{value:4.7,count:333} },
+
+    { title:"Lemon Poppy Seed Baked Oatmeal", blog:"eatingbirdfood",
+      source_url:"https://www.eatingbirdfood.com/lemon-poppy-seed-baked-oatmeal/",
+      image:"https://www.eatingbirdfood.com/wp-content/uploads/2026/04/lemon-poppy-seed-baked-oatmeal-hero.jpg",
+      servings:6, times:{prep:"10 mins",cook:"38 mins",total:"48 mins"},
+      ingredients:["2 cups rolled oats","1.5 cups milk","2 eggs","1 lemon, zested and juiced","2 tbsp poppy seeds","1/3 cup maple syrup","1 tsp vanilla"],
+      instructions:[{name:null,steps:["Mix wet ingredients with lemon zest and juice.","Stir in oats, poppy seeds and maple syrup; pour into a greased dish.","Bake at 350°F for 35–38 min until set."]}],
+      nutrition:{calories:240,protein_g:9,carbs_g:36,fat_g:7,fiber_g:4}, video:null, rating:{value:4.8,count:92} },
+
+    { title:"Scrambled Egg Whites", blog:"eatingbirdfood",
+      source_url:"https://www.eatingbirdfood.com/scrambled-egg-whites/",
+      image:"https://www.eatingbirdfood.com/wp-content/uploads/2024/05/scrambled-egg-whites-hero-new.jpg",
+      servings:1, times:{prep:"5 mins",cook:"5 mins",total:"10 mins"},
+      ingredients:["6 egg whites","1 tbsp milk","1 tsp butter","salt and pepper","fresh chives, to top"],
+      instructions:[{name:null,steps:["Whisk egg whites with milk, salt and pepper.","Melt butter in a non-stick pan over medium-low heat.","Cook slowly, folding gently until just set; top with chives."]}],
+      nutrition:{calories:120,protein_g:24,carbs_g:2,fat_g:3,fiber_g:0}, video:null, rating:{value:4.9,count:45} },
+
+    { title:"Breakfast Salad", blog:"eatingbirdfood",
+      source_url:"https://www.eatingbirdfood.com/sauteed-breakfast-salad/",
+      image:"https://www.eatingbirdfood.com/wp-content/uploads/2022/06/breakfast-salad-closeup-overhead-300x300.jpg",
+      servings:2, times:{prep:"10 mins",cook:"10 mins",total:"20 mins"},
+      ingredients:["4 cups mixed greens","2 eggs","1/2 cup chickpeas","1/4 avocado","2 tbsp lemon tahini dressing","salt and pepper"],
+      instructions:[{name:null,steps:["Sauté chickpeas until crispy.","Fry eggs to your liking.","Toss greens with dressing, top with chickpeas, avocado and egg."]}],
+      nutrition:{calories:310,protein_g:18,carbs_g:22,fat_g:18,fiber_g:9}, video:null, rating:{value:4.8,count:67} },
+
+    { title:"Protein Muffins", blog:"eatingbirdfood",
+      source_url:"https://www.eatingbirdfood.com/protein-muffins/",
+      image:"https://www.eatingbirdfood.com/wp-content/uploads/2022/06/protein-muffins-angle-muffin-in-wrapper-300x300.jpg",
+      servings:12, times:{prep:"10 mins",cook:"22 mins",total:"32 mins"},
+      ingredients:["1 cup oat flour","1 scoop vanilla protein powder","2 eggs","1/2 cup Greek yogurt","1/4 cup honey","1 tsp baking powder","1/2 cup blueberries"],
+      instructions:[{name:null,steps:["Mix dry ingredients in one bowl, wet in another.","Combine and fold in blueberries.","Divide into a lined muffin tin; bake at 350°F for 20–22 min."]}],
+      nutrition:{calories:140,protein_g:11,carbs_g:16,fat_g:4,fiber_g:2}, video:null, rating:{value:4.7,count:188} },
+
+    { title:"Protein Chia Pudding", blog:"eatingbirdfood",
+      source_url:"https://www.eatingbirdfood.com/protein-chia-pudding/",
+      image:"https://www.eatingbirdfood.com/wp-content/uploads/2023/01/protein-chia-pudding-straight-on-300x300.jpg",
+      servings:1, times:{prep:"5 mins",cook:null,total:"4 hrs"},
+      ingredients:["1/4 cup chia seeds","1 cup milk","1 scoop vanilla protein powder","1 tbsp honey","raspberries, to top"],
+      instructions:[{name:null,steps:["Whisk protein powder into the milk until smooth.","Stir in chia seeds and honey.","Refrigerate at least 4 hours; top with raspberries."]}],
+      nutrition:{calories:320,protein_g:32,carbs_g:26,fat_g:10,fiber_g:12}, video:null, rating:{value:4.9,count:134} },
+
+    // ── The Mediterranean Dish ────────────────────────────────────────────────
+    { title:"Asparagus Frittata with Goat Cheese", blog:"themediterraneandish",
+      source_url:"https://www.themediterraneandish.com/asparagus-frittata/",
+      image:"https://www.themediterraneandish.com/wp-content/uploads/2026/04/TMD-Asparagus-and-Herb-Frittata-Leads-04-Horizontal.jpg",
+      servings:6, times:{prep:"10 mins",cook:"20 mins",total:"30 mins"},
+      ingredients:["8 eggs","1 bunch asparagus, trimmed","1/3 cup crumbled goat cheese","2 tbsp olive oil","fresh herbs","salt and pepper"],
+      instructions:[{name:null,steps:["Sauté asparagus in an oven-safe skillet.","Pour in whisked eggs and dot with goat cheese.","Bake at 375°F for 15–18 min until set."]}],
+      nutrition:{calories:200,protein_g:14,carbs_g:4,fat_g:14,fiber_g:1}, video:null, rating:{value:4.9,count:64} },
+
+    { title:"Savory Oatmeal Bowls", blog:"themediterraneandish",
+      source_url:"https://www.themediterraneandish.com/savory-oatmeal-bowls/",
+      image:"https://www.themediterraneandish.com/wp-content/uploads/2024/10/SAvoryOatmealBowls-16.jpg",
+      servings:2, times:{prep:"5 mins",cook:"15 mins",total:"20 mins"},
+      ingredients:["1 cup rolled oats","2 cups broth","2 eggs","1 cup spinach","1/4 cup feta","olive oil"],
+      instructions:[{name:null,steps:["Simmer oats in broth until creamy.","Wilt spinach and fry the eggs.","Top oats with spinach, egg and feta."]}],
+      nutrition:{calories:330,protein_g:17,carbs_g:34,fat_g:14,fiber_g:5}, video:null, rating:{value:4.8,count:51} },
+
+    { title:"Spanakopita Egg Muffins", blog:"themediterraneandish",
+      source_url:"https://www.themediterraneandish.com/spanakopita-egg-muffins/",
+      image:"https://www.themediterraneandish.com/wp-content/uploads/2023/12/TMD-December-Spanakopita-Egg-Muffins-Leads-01-Angle.jpg",
+      servings:6, times:{prep:"15 mins",cook:"25 mins",total:"40 mins"},
+      ingredients:["8 eggs","2 cups chopped spinach","1/2 cup feta","1/4 cup dill","2 green onions","olive oil"],
+      instructions:[{name:null,steps:["Heat oven to 350°F and oil a muffin tin.","Whisk eggs, then stir in spinach, feta, dill and onion.","Fill the tin and bake 22–25 min."]}],
+      nutrition:{calories:130,protein_g:10,carbs_g:2,fat_g:9,fiber_g:1}, video:null, rating:{value:4.9,count:88} },
+
+    { title:"Mediterranean Overnight Oats", blog:"themediterraneandish",
+      source_url:"https://www.themediterraneandish.com/overnight-oats-recipe/",
+      image:"https://www.themediterraneandish.com/wp-content/uploads/2026/01/TMD-Overnight-Oats-Leads-05-Horizontal.jpg",
+      servings:1, times:{prep:"5 mins",cook:null,total:"8 hrs"},
+      ingredients:["1/2 cup rolled oats","2/3 cup milk","1 tbsp chia seeds","1 tsp honey","cinnamon","fruit and nuts to top"],
+      instructions:[{name:null,steps:["Stir oats, milk, chia, honey and cinnamon in a jar.","Chill overnight.","Top with fruit and nuts to serve."]}],
+      nutrition:{calories:300,protein_g:11,carbs_g:45,fat_g:9,fiber_g:8}, video:null, rating:{value:4.85,count:120} },
+
+    { title:"Shakshuka", blog:"themediterraneandish",
+      source_url:"https://www.themediterraneandish.com/shakshuka-recipe/",
+      image:"", servings:4, times:{prep:"10 mins",cook:"20 mins",total:"30 mins"},
+      ingredients:["6 eggs","1 can crushed tomatoes","1 onion, diced","1 bell pepper, diced","2 tsp cumin","1 tsp paprika","fresh parsley"],
+      instructions:[{name:null,steps:["Sauté onion and pepper, then add tomatoes, cumin and paprika.","Simmer 10 min, then make wells and crack in eggs.","Cover and cook until whites set; top with parsley."]}],
+      nutrition:{calories:200,protein_g:14,carbs_g:14,fat_g:10,fiber_g:4}, video:null, rating:{value:4.9,count:430} },
+
+    // ── The East Coast Kitchen ────────────────────────────────────────────────
+    { title:"Rhubarb Breakfast Bowl", blog:"theeastcoastkitchen",
+      source_url:"https://theeastcoastkitchen.com/roasted-rhubarb-for-yogurt-ice-cream-more/",
+      image:"https://theeastcoastkitchen.com/wp-content/uploads/2026/05/Easy-Rhubarb-Breakfast-Bowl-7-edited-1024x576.jpg",
+      servings:2, times:{prep:"10 mins",cook:"15 mins",total:"25 mins"},
+      ingredients:["2 cups chopped rhubarb","2 tbsp honey","1 cup Greek yogurt","1/2 cup granola","1/2 tsp vanilla"],
+      instructions:[{name:null,steps:["Roast rhubarb with honey at 400°F until tender.","Spoon yogurt into bowls.","Top with roasted rhubarb and granola."]}],
+      nutrition:{calories:260,protein_g:14,carbs_g:38,fat_g:6,fiber_g:4}, video:null, rating:{value:4.7,count:38} },
+
+    { title:"Gluten-Free Cheddar Bacon Biscuits", blog:"theeastcoastkitchen",
+      source_url:"https://theeastcoastkitchen.com/gluten-free-biscuits-easy-cheddar-bacon-recipe/",
+      image:"https://theeastcoastkitchen.com/wp-content/uploads/2026/05/Gluten-Free-Buiscuits-4-edited-1024x576.jpg",
+      servings:8, times:{prep:"10 mins",cook:"20 mins",total:"30 mins"},
+      ingredients:["2 cups almond flour","1/2 cup cheddar, shredded","4 strips bacon, cooked and crumbled","2 eggs","2 tsp baking powder","1/4 cup butter"],
+      instructions:[{name:null,steps:["Mix almond flour, baking powder, cheddar and bacon.","Stir in eggs and melted butter to form a dough.","Scoop onto a baking sheet; bake at 375°F for 18–20 min."]}],
+      nutrition:{calories:280,protein_g:12,carbs_g:6,fat_g:24,fiber_g:2}, video:null, rating:{value:4.8,count:55} },
+
+    { title:"Baked Oats with Rhubarb", blog:"theeastcoastkitchen",
+      source_url:"https://theeastcoastkitchen.com/baked-oats-with-rhubarb-for-easy-breakfasts/",
+      image:"https://theeastcoastkitchen.com/wp-content/uploads/2026/05/Rhubarb-Vanilla-Baked-Oatmeal-5-edited-1024x576.jpg",
+      servings:4, times:{prep:"10 mins",cook:"35 mins",total:"45 mins"},
+      ingredients:["2 cups rolled oats","1.5 cups milk","1 cup chopped rhubarb","2 eggs","1/4 cup maple syrup","1 tsp vanilla","1 tsp cinnamon"],
+      instructions:[{name:null,steps:["Mix oats, milk, eggs, maple syrup, vanilla and cinnamon.","Fold in rhubarb and pour into a greased dish.","Bake at 375°F for 32–35 min until golden."]}],
+      nutrition:{calories:290,protein_g:11,carbs_g:44,fat_g:8,fiber_g:5}, video:null, rating:{value:4.8,count:42} },
+
+    { title:"PB Toast with Banana and Chili Crisp", blog:"theeastcoastkitchen",
+      source_url:"https://theeastcoastkitchen.com/peanut-butter-on-toast-recipe-with-banana-and-chili-crisp/",
+      image:"https://theeastcoastkitchen.com/wp-content/uploads/2026/05/11PM-Toast-6-edited-1024x576.jpg",
+      servings:1, times:{prep:"5 mins",cook:null,total:"5 mins"},
+      ingredients:["2 slices sourdough toast","3 tbsp peanut butter","1 banana, sliced","1 tsp honey","chili crisp, to taste"],
+      instructions:[{name:null,steps:["Toast the bread until golden.","Spread with peanut butter and top with banana slices.","Drizzle honey and a little chili crisp over top."]}],
+      nutrition:{calories:420,protein_g:16,carbs_g:55,fat_g:18,fiber_g:5}, video:null, rating:{value:4.9,count:71} },
+
+    { title:"Smoked Salmon Breakfast Wrap", blog:"theeastcoastkitchen",
+      source_url:"https://theeastcoastkitchen.com/smoked-salmon-breakfast-wrap/",
+      image:"https://theeastcoastkitchen.com/wp-content/uploads/2026/01/Smoked-Salmon-Breakfast-Wrap-2-edited-1024x576.jpg",
+      servings:2, times:{prep:"10 mins",cook:"5 mins",total:"15 mins"},
+      ingredients:["2 large tortillas","4 eggs, scrambled","4 oz smoked salmon","2 tbsp cream cheese","1 tbsp capers","fresh dill"],
+      instructions:[{name:null,steps:["Scramble the eggs and season.","Spread cream cheese on each tortilla; add eggs, salmon and capers.","Roll tightly, slice and serve with dill."]}],
+      nutrition:{calories:380,protein_g:28,carbs_g:30,fat_g:16,fiber_g:2}, video:null, rating:{value:4.9,count:62} },
+
+    { title:"Fruit Salad with Mint and Honey", blog:"theeastcoastkitchen",
+      source_url:"https://theeastcoastkitchen.com/fruit-salad-with-mint-honey-and-brandy/",
+      image:"https://theeastcoastkitchen.com/wp-content/uploads/2026/05/Fruit-Salad-4-edited-1024x576.jpg",
+      servings:4, times:{prep:"15 mins",cook:null,total:"15 mins"},
+      ingredients:["2 cups strawberries, halved","1 cup blueberries","1 cup melon, cubed","2 tbsp honey","1 lemon, juiced","fresh mint"],
+      instructions:[{name:null,steps:["Combine all fruit in a large bowl.","Whisk honey and lemon juice together.","Drizzle over the fruit and toss with fresh mint."]}],
+      nutrition:{calories:110,protein_g:2,carbs_g:28,fat_g:0,fiber_g:4}, video:null, rating:{value:4.8,count:88} },
+
+    // ── Detoxinista ───────────────────────────────────────────────────────────
+    { title:"Blueberry Chia Pudding", blog:"detoxinista",
+      source_url:"https://detoxinista.com/blueberry-chia-pudding/",
+      image:"https://detoxinista.com/wp-content/uploads/2026/05/blueberry-chia-pudding-in-jars.jpg",
+      servings:2, times:{prep:"5 mins",cook:null,total:"2 hrs"},
+      ingredients:["1/4 cup chia seeds","1 cup milk","1/2 cup blueberries","1 tbsp maple syrup","1/2 tsp vanilla"],
+      instructions:[{name:null,steps:["Blend blueberries with milk, maple and vanilla.","Stir into chia seeds.","Chill 2 hours until thick."]}],
+      nutrition:{calories:200,protein_g:8,carbs_g:26,fat_g:8,fiber_g:11}, video:null, rating:{value:5,count:42} },
+
+    { title:"Oatmeal Banana Pancakes", blog:"detoxinista",
+      source_url:"https://detoxinista.com/oatmeal-pancakes/",
+      image:"https://detoxinista.com/wp-content/uploads/2022/02/banana-oatmeal-pancakes-recipe.jpg",
+      servings:2, times:{prep:"5 mins",cook:"10 mins",total:"15 mins"},
+      ingredients:["1 cup rolled oats","1 ripe banana","2 eggs","1/2 cup milk","1 tsp baking powder","1/2 tsp cinnamon"],
+      instructions:[{name:null,steps:["Blend all ingredients until smooth.","Pour onto a hot greased griddle.","Flip when bubbles form; cook through."]}],
+      nutrition:{calories:290,protein_g:13,carbs_g:42,fat_g:8,fiber_g:6}, video:null, rating:{value:4.9,count:160} },
+
+    { title:"Banana Oatmeal Muffins", blog:"detoxinista",
+      source_url:"https://detoxinista.com/banana-oatmeal-muffins/",
+      image:"https://detoxinista.com/wp-content/uploads/2023/01/banana-oatmeal-muffins-baked-in-pan.jpg",
+      servings:12, times:{prep:"10 mins",cook:"20 mins",total:"30 mins"},
+      ingredients:["2 cups oats","2 ripe bananas","2 eggs","1/4 cup maple syrup","1 tsp baking soda","1/4 cup milk"],
+      instructions:[{name:null,steps:["Heat oven to 350°F and line a muffin tin.","Blend everything into a smooth batter.","Divide and bake 18–20 min."]}],
+      nutrition:{calories:120,protein_g:4,carbs_g:21,fat_g:2,fiber_g:2}, video:null, rating:{value:4.8,count:205} },
+
+    { title:"Lemon Chia Pudding", blog:"detoxinista",
+      source_url:"https://detoxinista.com/lemon-chia-pudding/",
+      image:"https://detoxinista.com/wp-content/uploads/2026/04/lemon-chia-pudding-recipe.jpg",
+      servings:2, times:{prep:"5 mins",cook:null,total:"2 hrs"},
+      ingredients:["1/4 cup chia seeds","1 cup coconut milk","1 lemon, zested and juiced","2 tbsp maple syrup","1/4 tsp vanilla"],
+      instructions:[{name:null,steps:["Whisk chia seeds, coconut milk, lemon zest, juice, maple and vanilla.","Stir again after 5 minutes to prevent clumps.","Refrigerate at least 2 hours; garnish with lemon slices."]}],
+      nutrition:{calories:230,protein_g:7,carbs_g:28,fat_g:11,fiber_g:11}, video:null, rating:{value:5,count:38} },
+
+    { title:"Buckwheat Waffles", blog:"detoxinista",
+      source_url:"https://detoxinista.com/buckwheat-waffles/",
+      image:"https://detoxinista.com/wp-content/uploads/2022/09/maple-syrup-on-buckwheat-waffles.jpg",
+      servings:4, times:{prep:"5 mins",cook:"15 mins",total:"20 mins"},
+      ingredients:["1.5 cups buckwheat flour","2 eggs","1 cup milk","2 tbsp butter, melted","1 tsp baking powder","1 tbsp maple syrup"],
+      instructions:[{name:null,steps:["Whisk all ingredients together into a batter.","Cook in a preheated waffle iron until crisp.","Serve with fresh fruit or extra maple syrup."]}],
+      nutrition:{calories:280,protein_g:10,carbs_g:40,fat_g:9,fiber_g:4}, video:null, rating:{value:4.8,count:90} },
+
+    // ── Skinnytaste ───────────────────────────────────────────────────────────
+    { title:"High-Protein Waffles", blog:"skinnytaste",
+      source_url:"https://www.skinnytaste.com/high-protein-waffles/",
+      image:"https://www.skinnytaste.com/wp-content/uploads/2021/03/High-Protein-Waffles-12.jpg",
+      servings:2, times:{prep:"5 mins",cook:"10 mins",total:"15 mins"},
+      ingredients:["1/2 cup oats","1/2 cup cottage cheese","2 eggs","1 scoop vanilla protein powder","1 tsp baking powder","1/2 tsp vanilla"],
+      instructions:[{name:null,steps:["Blend all ingredients until smooth.","Cook in a hot waffle iron until golden.","Serve with berries or syrup."]}],
+      nutrition:{calories:280,protein_g:30,carbs_g:22,fat_g:9,fiber_g:3}, video:null, rating:{value:4.8,count:410} },
+
+    { title:"Egg Muffins", blog:"skinnytaste",
+      source_url:"https://www.skinnytaste.com/egg-muffins/",
+      image:"https://www.skinnytaste.com/wp-content/uploads/2021/01/Egg-Muffins-7.jpg",
+      servings:6, times:{prep:"10 mins",cook:"25 mins",total:"35 mins"},
+      ingredients:["8 large eggs","1 cup chopped spinach","1/3 cup feta","1/4 cup red onion, diced","salt and pepper"],
+      instructions:[{name:null,steps:["Heat oven to 350°F and grease a muffin tin.","Whisk eggs; fold in spinach, feta and onion.","Divide into tin and bake 22–25 min until set."]}],
+      nutrition:{calories:140,protein_g:11,carbs_g:2,fat_g:9,fiber_g:1}, video:null, rating:{value:4.9,count:560} },
+
+    { title:"Greek Yogurt Parfait", blog:"skinnytaste",
+      source_url:"https://www.skinnytaste.com/greek-yogurt-parfait/",
+      image:"", servings:1, times:{prep:"5 mins",cook:null,total:"5 mins"},
+      ingredients:["1 cup plain Greek yogurt","1/2 cup granola","1/2 cup mixed berries","1 tbsp honey","chia seeds, optional"],
+      instructions:[{name:null,steps:["Spoon Greek yogurt into a glass.","Layer with granola and berries.","Drizzle with honey and add chia seeds if using."]}],
+      nutrition:{calories:320,protein_g:22,carbs_g:42,fat_g:6,fiber_g:4}, video:null, rating:{value:4.9,count:280} },
+
+
+    { title:"Avocado Toast with Poached Egg", blog:"skinnytaste",
+      source_url:"https://www.skinnytaste.com/avocado-toast-with-egg/",
+      image:"", servings:2, times:{prep:"5 mins",cook:"5 mins",total:"10 mins"},
+      ingredients:["2 slices whole-grain toast","1 avocado","2 eggs","1/4 tsp red pepper flakes","salt and pepper","lemon juice"],
+      instructions:[{name:null,steps:["Toast bread until golden.","Mash avocado with lemon, salt and pepper; spread on toast.","Top with a poached or fried egg and red pepper flakes."]}],
+      nutrition:{calories:320,protein_g:14,carbs_g:28,fat_g:18,fiber_g:8}, video:null, rating:{value:4.9,count:310} },
+    { title:"Turkey Breakfast Sausage Patties", blog:"skinnytaste",
+      source_url:"https://www.skinnytaste.com/turkey-breakfast-sausage-patties/",
+      image:"", servings:4, times:{prep:"10 mins",cook:"10 mins",total:"20 mins"},
+      ingredients:["1 lb ground turkey","1 tsp sage","1/2 tsp fennel seeds","1/2 tsp garlic powder","pinch of red pepper flakes","salt and pepper"],
+      instructions:[{name:null,steps:["Mix turkey with all seasonings until combined.","Form into small patties.","Cook in a non-stick pan 4–5 min per side until cooked through."]}],
+      nutrition:{calories:180,protein_g:26,carbs_g:0,fat_g:8,fiber_g:0}, video:null, rating:{value:4.8,count:340} },
+    // ── Pinch of Yum ─────────────────────────────────────────────────────────
+    { title:"Meal Prep Breakfast Sandwiches", blog:"pinchofyum",
+      source_url:"https://pinchofyum.com/15-minute-meal-prep-breakfast-sandwiches",
+      image:"", servings:6, times:{prep:"10 mins",cook:"20 mins",total:"30 mins"},
+      ingredients:["6 English muffins","6 eggs","6 slices Canadian bacon","6 slices cheddar","2 cups spinach","salt and pepper"],
+      instructions:[{name:null,steps:["Whisk eggs with salt and pepper; bake in a sheet pan at 325°F for 12 min until set.","Cut into 6 portions; layer on muffins with bacon, cheese and spinach.","Wrap individually and refrigerate or freeze; reheat 1–2 min."]}],
+      nutrition:{calories:340,protein_g:24,carbs_g:30,fat_g:13,fiber_g:2}, video:null, rating:{value:4.9,count:54} },
+
+    { title:"Egg and Croissant Brunch Bake", blog:"pinchofyum",
+      source_url:"https://pinchofyum.com/egg-and-croissant-brunch-bake",
+      image:"https://pinchofyum.com/tachyon/Brunch-Casserole-Eggs-Ham.jpg",
+      servings:8, times:{prep:"15 mins",cook:"35 mins",total:"50 mins"},
+      ingredients:["4 croissants, torn","8 eggs","1 cup milk","1 cup ham, diced","1 cup gruyère, shredded","1 tbsp Dijon mustard","salt and pepper"],
+      instructions:[{name:null,steps:["Scatter croissant pieces and ham in a greased baking dish.","Whisk eggs, milk, mustard, salt and pepper; pour over.","Top with gruyère and bake at 375°F for 30–35 min until golden."]}],
+      nutrition:{calories:390,protein_g:22,carbs_g:22,fat_g:24,fiber_g:1}, video:null, rating:{value:4.9,count:40} },
+
+    { title:"Healing Bowls with Turmeric Sweet Potatoes and Poached Eggs", blog:"pinchofyum",
+      source_url:"https://pinchofyum.com/healing-bowls",
+      image:"", servings:2, times:{prep:"10 mins",cook:"30 mins",total:"40 mins"},
+      ingredients:["2 sweet potatoes, cubed","1 tsp turmeric","2 cups kale","2 cups cooked brown rice","4 eggs, poached","lemon tahini dressing","olive oil"],
+      instructions:[{name:null,steps:["Roast sweet potatoes with turmeric and olive oil at 400°F for 25 min.","Sauté kale until wilted.","Build bowls with rice, sweet potato and kale; top with poached eggs and dressing."]}],
+      nutrition:{calories:480,protein_g:22,carbs_g:62,fat_g:18,fiber_g:10}, video:null, rating:{value:4.9,count:49} },
+
+    { title:"Swedish Pancakes", blog:"pinchofyum",
+      source_url:"https://pinchofyum.com/swedish-pancakes",
+      image:"", servings:4, times:{prep:"5 mins",cook:"20 mins",total:"25 mins"},
+      ingredients:["3 eggs","1.5 cups milk","3/4 cup flour","1 tbsp sugar","1/2 tsp vanilla","2 tbsp butter","jam and whipped cream, to serve"],
+      instructions:[{name:null,steps:["Blend eggs, milk, flour, sugar and vanilla until smooth.","Cook thin crepe-style pancakes in a buttered pan over medium heat.","Serve rolled up with jam or fresh berries."]}],
+      nutrition:{calories:290,protein_g:12,carbs_g:36,fat_g:11,fiber_g:1}, video:null, rating:{value:4.9,count:142} },
+
+    { title:"Springy Vegetable Quiche", blog:"pinchofyum",
+      source_url:"https://pinchofyum.com/spring-quiche",
+      image:"", servings:8, times:{prep:"15 mins",cook:"40 mins",total:"55 mins"},
+      ingredients:["1 pie crust","6 eggs","1 cup milk","1 cup asparagus, chopped","1/2 cup peas","1/2 cup leek, sliced","1 cup gruyère, shredded","salt and pepper"],
+      instructions:[{name:null,steps:["Blind-bake crust at 375°F for 10 min.","Whisk eggs, milk, salt and pepper; fold in vegetables and cheese.","Pour into crust and bake 30 min until set."]}],
+      nutrition:{calories:280,protein_g:14,carbs_g:18,fat_g:17,fiber_g:2}, video:null, rating:{value:4.9,count:17} },
+
+    { title:"Life Changing Soft Scrambled Eggs", blog:"pinchofyum",
+      source_url:"https://pinchofyum.com/soft-scrambled-eggs",
+      image:"", servings:2, times:{prep:"2 mins",cook:"8 mins",total:"10 mins"},
+      ingredients:["4 eggs","2 tbsp butter","2 tbsp cream cheese","salt and pepper","fresh chives","toast, to serve"],
+      instructions:[{name:null,steps:["Whisk eggs well; melt butter in a non-stick pan over low heat.","Add eggs and stir slowly and constantly, scraping the pan.","Remove from heat, stir in cream cheese; season and pile on toast."]}],
+      nutrition:{calories:280,protein_g:16,carbs_g:2,fat_g:24,fiber_g:0}, video:null, rating:{value:4.6,count:57} },
+
+    { title:"Caramelized Banana Oatmeal", blog:"pinchofyum",
+      source_url:"https://pinchofyum.com/caramelized-banana-oatmeal",
+      image:"", servings:2, times:{prep:"5 mins",cook:"15 mins",total:"20 mins"},
+      ingredients:["1 cup rolled oats","2 cups milk","1 ripe banana","1 tbsp coconut oil","1 tbsp maple syrup","pinch of cinnamon","nuts and seeds, to top"],
+      instructions:[{name:null,steps:["Cook oats in milk until creamy.","Slice banana; caramelize in coconut oil with maple syrup until golden.","Top oatmeal with banana and nuts."]}],
+      nutrition:{calories:360,protein_g:11,carbs_g:58,fat_g:11,fiber_g:6}, video:null, rating:{value:4.8,count:22} },
+  ],
+
+  lunch: [
+    // ── Eating Bird Food ──────────────────────────────────────────────────────
+    { title:"Chicken Pesto Pasta Salad", blog:"eatingbirdfood",
+      source_url:"https://www.eatingbirdfood.com/chicken-pesto-pasta-salad/",
+      image:"https://www.eatingbirdfood.com/wp-content/uploads/2026/05/chicken-pesto-pasta-salad-hero.jpg",
+      servings:4, times:{prep:"15 mins",cook:"10 mins",total:"25 mins"},
+      ingredients:["8 oz pasta","2 cups cooked chicken, shredded","1/3 cup pesto","1 cup cherry tomatoes","1/2 cup mozzarella pearls","2 cups arugula"],
+      instructions:[{name:null,steps:["Cook and cool the pasta.","Toss with pesto, chicken, tomatoes and mozzarella.","Fold in arugula just before serving."]}],
+      nutrition:{calories:480,protein_g:38,carbs_g:42,fat_g:18,fiber_g:4}, video:null, rating:{value:4.9,count:64} },
+
+    { title:"Poke Bowl", blog:"eatingbirdfood",
+      source_url:"https://www.eatingbirdfood.com/poke-bowl/",
+      image:"", servings:2, times:{prep:"20 mins",cook:null,total:"20 mins"},
+      ingredients:["8 oz sushi-grade tuna","2 cups cooked rice","1 avocado, sliced","1 cup edamame","2 tbsp soy sauce","1 tsp sesame oil"],
+      instructions:[{name:null,steps:["Cube the tuna and toss with soy and sesame oil.","Divide rice into bowls.","Top with tuna, avocado and edamame."]}],
+      nutrition:{calories:520,protein_g:40,carbs_g:48,fat_g:18,fiber_g:8}, video:null, rating:{value:4.9,count:77} },
+
+    { title:"Massaged Kale Salad", blog:"eatingbirdfood",
+      source_url:"https://www.eatingbirdfood.com/massaged-kale-salad/",
+      image:"", servings:4, times:{prep:"15 mins",cook:null,total:"15 mins"},
+      ingredients:["1 bunch kale","2 tbsp olive oil","1 lemon, juiced","1/4 cup parmesan","1/3 cup almonds","1/2 cup chickpeas"],
+      instructions:[{name:null,steps:["Massage kale with oil and lemon until softened.","Add parmesan, almonds and chickpeas.","Toss and serve."]}],
+      nutrition:{calories:280,protein_g:14,carbs_g:18,fat_g:18,fiber_g:6}, video:null, rating:{value:4.8,count:54} },
+
+    { title:"Turkey Avocado Wrap", blog:"eatingbirdfood",
+      source_url:"https://www.eatingbirdfood.com/category/meal-type/lunch/",
+      image:"", servings:2, times:{prep:"10 mins",cook:null,total:"10 mins"},
+      ingredients:["2 large tortillas","6 oz sliced turkey","1 avocado","2 cups greens","2 tbsp hummus"],
+      instructions:[{name:null,steps:["Spread hummus over each tortilla.","Layer turkey, avocado and greens.","Roll tightly and halve."]}],
+      nutrition:{calories:410,protein_g:31,carbs_g:34,fat_g:18,fiber_g:9}, video:null, rating:null },
+
+    { title:"Healthy Hamburger Helper", blog:"eatingbirdfood",
+      source_url:"https://www.eatingbirdfood.com/healthy-hamburger-helper/",
+      image:"", servings:4, times:{prep:"10 mins",cook:"20 mins",total:"30 mins"},
+      ingredients:["1 lb lean ground beef","8 oz pasta","2 cups beef broth","1 cup milk","1.5 cups cheddar","1 tbsp paprika"],
+      instructions:[{name:null,steps:["Brown the beef and drain.","Add pasta, broth and milk; simmer until pasta is tender.","Stir in cheese and seasoning."]}],
+      nutrition:{calories:540,protein_g:42,carbs_g:40,fat_g:22,fiber_g:3}, video:null, rating:{value:4.7,count:210} },
+
+    { title:"Salmon Salad", blog:"eatingbirdfood",
+      source_url:"https://www.eatingbirdfood.com/salmon-salad/",
+      image:"", servings:4, times:{prep:"15 mins",cook:"15 mins",total:"30 mins"},
+      ingredients:["1 lb salmon fillet","4 cups mixed greens","1/2 cup cherry tomatoes","1/4 cup red onion","2 tbsp capers","lemon vinaigrette"],
+      instructions:[{name:null,steps:["Season and bake salmon at 400°F for 12–15 min; let cool.","Flake into chunks.","Toss greens with tomatoes, onion, capers and dressing; top with salmon."]}],
+      nutrition:{calories:340,protein_g:32,carbs_g:8,fat_g:20,fiber_g:3}, video:null, rating:{value:4.8,count:95} },
+
+    { title:"Thai Peanut Chicken Bowl", blog:"eatingbirdfood",
+      source_url:"https://www.eatingbirdfood.com/thai-peanut-chicken-bowl/",
+      image:"", servings:4, times:{prep:"15 mins",cook:"15 mins",total:"30 mins"},
+      ingredients:["1 lb chicken breast, grilled","2 cups brown rice","1 cup shredded cabbage","1 cup shredded carrots","1/4 cup peanut sauce","lime wedges"],
+      instructions:[{name:null,steps:["Cook chicken and slice thinly.","Assemble bowls with rice, cabbage and carrots.","Top with chicken; drizzle with peanut sauce and a squeeze of lime."]}],
+      nutrition:{calories:490,protein_g:40,carbs_g:50,fat_g:14,fiber_g:5}, video:null, rating:{value:4.8,count:118} },
+
+    { title:"Mediterranean Quinoa Salad", blog:"eatingbirdfood",
+      source_url:"https://www.eatingbirdfood.com/mediterranean-quinoa-salad/",
+      image:"", servings:6, times:{prep:"15 mins",cook:"15 mins",total:"30 mins"},
+      ingredients:["2 cups cooked quinoa","1 cucumber, diced","1 cup cherry tomatoes","1/2 cup olives","1/3 cup feta","fresh parsley","lemon dressing"],
+      instructions:[{name:null,steps:["Cook and cool quinoa.","Toss with cucumber, tomatoes, olives, feta and parsley.","Dress with lemon vinaigrette and serve."]}],
+      nutrition:{calories:290,protein_g:11,carbs_g:36,fat_g:12,fiber_g:5}, video:null, rating:{value:4.8,count:146} },
+
+    // ── The Mediterranean Dish ────────────────────────────────────────────────
+    { title:"Chickpea Salad", blog:"themediterraneandish",
+      source_url:"https://www.themediterraneandish.com/chickpea-salad/",
+      image:"https://www.themediterraneandish.com/wp-content/uploads/2025/10/Mediterranean-Chickpea-Salad-Edit-15.jpg",
+      servings:4, times:{prep:"15 mins",cook:null,total:"15 mins"},
+      ingredients:["2 cans chickpeas, drained","1 cucumber, diced","1 cup cherry tomatoes","1/3 cup red onion","1/4 cup parsley","3 tbsp olive oil","2 tbsp lemon juice"],
+      instructions:[{name:null,steps:["Combine chickpeas, cucumber, tomatoes, onion and parsley.","Whisk olive oil with lemon juice, salt and pepper.","Toss salad with dressing; rest 10 min before serving."]}],
+      nutrition:{calories:310,protein_g:14,carbs_g:40,fat_g:11,fiber_g:11}, video:null, rating:{value:5,count:180} },
+
+    { title:"Greek Chicken Bowls", blog:"themediterraneandish",
+      source_url:"https://www.themediterraneandish.com/greek-chicken-marinade/",
+      image:"https://www.themediterraneandish.com/wp-content/uploads/2024/01/TMD-Greek-Chicken-Marinade-WEB-13.jpg",
+      servings:4, times:{prep:"15 mins",cook:"15 mins",total:"30 mins"},
+      ingredients:["1.5 lb chicken breast","2 tbsp olive oil","1 lemon, juiced","2 tsp oregano","2 cups cooked rice","1 cucumber, diced","1/2 cup feta"],
+      instructions:[{name:null,steps:["Marinate chicken in oil, lemon and oregano; sear 6–7 min per side.","Rest then slice.","Build bowls with rice, cucumber, feta and sliced chicken."]}],
+      nutrition:{calories:520,protein_g:46,carbs_g:38,fat_g:18,fiber_g:3}, video:null, rating:{value:4.9,count:88} },
+
+    { title:"Gazpacho", blog:"themediterraneandish",
+      source_url:"https://www.themediterraneandish.com/easy-tomato-gazpacho-recipe/",
+      image:"https://www.themediterraneandish.com/wp-content/uploads/2026/05/TMD-Gazpacho-Leads-02.jpg",
+      servings:4, times:{prep:"15 mins",cook:null,total:"15 mins"},
+      ingredients:["2 lb ripe tomatoes","1 cucumber","1 red pepper","2 cloves garlic","3 tbsp olive oil","2 tbsp sherry vinegar","salt and pepper"],
+      instructions:[{name:null,steps:["Blend tomatoes, cucumber, pepper and garlic until smooth.","Add olive oil and vinegar; season well.","Chill for at least an hour before serving."]}],
+      nutrition:{calories:130,protein_g:3,carbs_g:14,fat_g:8,fiber_g:4}, video:null, rating:{value:4.9,count:95} },
+
+    { title:"Greek Red Lentil Soup", blog:"themediterraneandish",
+      source_url:"https://www.themediterraneandish.com/greek-red-lentil-soup-recipe/",
+      image:"https://www.themediterraneandish.com/wp-content/uploads/2020/01/greek-red-lentil-soup-recipe-5.jpg",
+      servings:6, times:{prep:"10 mins",cook:"30 mins",total:"40 mins"},
+      ingredients:["1.5 cups red lentils","1 onion","3 cloves garlic","1 tsp cumin","1 can crushed tomatoes","6 cups broth","olive oil","lemon"],
+      instructions:[{name:null,steps:["Sauté onion and garlic in olive oil; add cumin.","Add lentils, tomatoes and broth; simmer 25–30 min.","Blend partially, adjust seasoning and finish with lemon."]}],
+      nutrition:{calories:280,protein_g:18,carbs_g:44,fat_g:5,fiber_g:16}, video:null, rating:{value:4.9,count:220} },
+
+    { title:"Falafel Bowl", blog:"themediterraneandish",
+      source_url:"https://www.themediterraneandish.com/how-to-make-falafel/",
+      image:"https://www.themediterraneandish.com/wp-content/uploads/2020/02/falafel-recipe-1.jpg",
+      servings:4, times:{prep:"20 mins",cook:"15 mins",total:"35 mins"},
+      ingredients:["2 cans chickpeas, drained","1/2 onion","3 cloves garlic","1/2 cup parsley","1 tsp cumin","pita bread","tahini sauce"],
+      instructions:[{name:null,steps:["Process chickpeas with onion, garlic, parsley and spices.","Form into balls and fry or bake until golden.","Serve in bowls with pita, salad and tahini."]}],
+      nutrition:{calories:380,protein_g:16,carbs_g:52,fat_g:14,fiber_g:12}, video:null, rating:{value:4.9,count:380} },
+
+    // ── The East Coast Kitchen ────────────────────────────────────────────────
+    { title:"Sardine Salad on Toast", blog:"theeastcoastkitchen",
+      source_url:"https://theeastcoastkitchen.com/canned-sardines-a-tasty-salad-on-toast/",
+      image:"https://theeastcoastkitchen.com/wp-content/uploads/2026/05/Sardine-Salad-edited-1024x576.jpg",
+      servings:2, times:{prep:"10 mins",cook:null,total:"10 mins"},
+      ingredients:["1 can sardines in olive oil","4 slices sourdough","1 tbsp capers","2 tbsp red onion, minced","1 lemon, juiced","fresh parsley"],
+      instructions:[{name:null,steps:["Drain sardines and flake into a bowl with capers, onion and lemon.","Toast the bread until golden.","Top toast with sardine mixture and parsley."]}],
+      nutrition:{calories:320,protein_g:28,carbs_g:28,fat_g:12,fiber_g:3}, video:null, rating:{value:4.7,count:42} },
+
+    { title:"Greek Chicken Sheet Pan", blog:"theeastcoastkitchen",
+      source_url:"https://theeastcoastkitchen.com/greek-chicken-the-easiest-dinner-youll-make/",
+      image:"https://theeastcoastkitchen.com/wp-content/uploads/2026/04/Greek-Chicken-8-edited-1024x576.jpg",
+      servings:4, times:{prep:"10 mins",cook:"25 mins",total:"35 mins"},
+      ingredients:["4 chicken thighs","1 cup cherry tomatoes","1/2 cup olives","1 lemon, sliced","2 tbsp olive oil","1 tsp oregano","1/2 cup feta"],
+      instructions:[{name:null,steps:["Toss chicken with oil, oregano, salt and pepper on a sheet pan.","Scatter tomatoes, olives and lemon around the chicken.","Roast at 425°F for 22–25 min; top with feta."]}],
+      nutrition:{calories:450,protein_g:38,carbs_g:8,fat_g:30,fiber_g:2}, video:null, rating:{value:4.9,count:88} },
+
+    { title:"ECK Greek Pasta Salad", blog:"theeastcoastkitchen",
+      source_url:"https://theeastcoastkitchen.com/greek-pasta-salad-simple-bbq-potluck-favorite/",
+      image:"https://theeastcoastkitchen.com/wp-content/uploads/2026/05/Greek-Pasta-Salad-6-edited-1024x576.jpg",
+      servings:6, times:{prep:"20 mins",cook:"10 mins",total:"30 mins"},
+      ingredients:["12 oz rotini pasta","1 cucumber","1 cup cherry tomatoes","1/2 cup olives","1/3 cup feta","1/4 cup Greek dressing"],
+      instructions:[{name:null,steps:["Cook pasta; rinse and cool.","Toss with cucumber, tomatoes, olives and feta.","Dress and chill before serving."]}],
+      nutrition:{calories:360,protein_g:12,carbs_g:50,fat_g:13,fiber_g:4}, video:null, rating:{value:4.8,count:66} },
+
+    // ── Detoxinista ───────────────────────────────────────────────────────────
+    { title:"Tuna & Chickpea Salad", blog:"detoxinista",
+      source_url:"https://detoxinista.com/tuna-and-chickpea-salad/",
+      image:"https://detoxinista.com/wp-content/uploads/2026/05/tuna-and-chickpea-salad-stored.jpg",
+      servings:3, times:{prep:"10 mins",cook:null,total:"10 mins"},
+      ingredients:["2 cans tuna, drained","1 can chickpeas","1/4 cup red onion","2 tbsp olive oil","1 lemon, juiced","fresh parsley"],
+      instructions:[{name:null,steps:["Flake tuna into a bowl with chickpeas and onion.","Dress with olive oil and lemon.","Fold in parsley; season to taste."]}],
+      nutrition:{calories:340,protein_g:33,carbs_g:26,fat_g:11,fiber_g:7}, video:null, rating:{value:5,count:51} },
+
+    { title:"Detoxinista Greek Pasta Salad", blog:"detoxinista",
+      source_url:"https://detoxinista.com/greek-pasta-salad/",
+      image:"https://detoxinista.com/wp-content/uploads/2021/04/greek-pasta-salad-in-glass-jar.jpg",
+      servings:6, times:{prep:"20 mins",cook:"10 mins",total:"30 mins"},
+      ingredients:["12 oz chickpea pasta","1 cucumber","1 cup cherry tomatoes","1/2 cup feta","1/3 cup olives","1/4 cup Greek dressing"],
+      instructions:[{name:null,steps:["Cook and cool the pasta.","Add cucumber, tomatoes, feta and olives.","Toss with dressing and chill."]}],
+      nutrition:{calories:360,protein_g:18,carbs_g:44,fat_g:13,fiber_g:8}, video:null, rating:{value:4.8,count:120} },
+
+    { title:"Healthy Tuna Salad", blog:"detoxinista",
+      source_url:"https://detoxinista.com/healthy-tuna-salad/",
+      image:"https://detoxinista.com/wp-content/uploads/2026/03/healthy-tuna-salad-on-toast.jpg",
+      servings:2, times:{prep:"10 mins",cook:null,total:"10 mins"},
+      ingredients:["2 cans tuna, drained","2 tbsp Greek yogurt","1 tbsp Dijon mustard","1 stalk celery, diced","1 tbsp lemon juice","salt and pepper"],
+      instructions:[{name:null,steps:["Drain and flake the tuna into a bowl.","Add yogurt, mustard, celery and lemon juice.","Mix well and season; serve on toast or lettuce cups."]}],
+      nutrition:{calories:220,protein_g:36,carbs_g:6,fat_g:6,fiber_g:1}, video:null, rating:{value:4.9,count:76} },
+
+    // ── Skinnytaste ───────────────────────────────────────────────────────────
+    { title:"Grilled Chicken with Black Bean Mango Salsa", blog:"skinnytaste",
+      source_url:"https://www.skinnytaste.com/grilled-chicken-with-black-bean-mango-salsa/",
+      image:"https://www.skinnytaste.com/wp-content/uploads/2013/08/Grilled-Chicken-with-Black-Bean-Mango-Salsa-9.jpg",
+      servings:4, times:{prep:"15 mins",cook:"15 mins",total:"30 mins"},
+      ingredients:["4 chicken breasts","1 mango, diced","1 can black beans, drained","1/2 red onion, diced","1 lime, juiced","cilantro","salt and pepper"],
+      instructions:[{name:null,steps:["Season and grill chicken 6–7 min per side until cooked.","Combine mango, beans, onion, lime and cilantro.","Slice chicken and top with salsa."]}],
+      nutrition:{calories:380,protein_g:42,carbs_g:30,fat_g:8,fiber_g:8}, video:null, rating:{value:4.9,count:290} },
+
+    { title:"Cauliflower Fried Rice", blog:"skinnytaste",
+      source_url:"https://www.skinnytaste.com/cauliflower-fried-rice/",
+      image:"", servings:4, times:{prep:"10 mins",cook:"15 mins",total:"25 mins"},
+      ingredients:["4 cups cauliflower rice","2 eggs","1 cup peas and carrots","3 tbsp soy sauce","1 tbsp sesame oil","3 cloves garlic","green onions"],
+      instructions:[{name:null,steps:["Stir-fry garlic, peas and carrots in a hot wok.","Push to the side; scramble eggs, then combine.","Add cauliflower rice and soy sauce; cook 5 min. Finish with sesame oil."]}],
+      nutrition:{calories:180,protein_g:10,carbs_g:18,fat_g:8,fiber_g:6}, video:null, rating:{value:4.8,count:620} },
+
+    { title:"Turkey Taco Lettuce Cups", blog:"skinnytaste",
+      source_url:"https://www.skinnytaste.com/turkey-taco-lettuce-cups/",
+      image:"", servings:4, times:{prep:"10 mins",cook:"15 mins",total:"25 mins"},
+      ingredients:["1 lb ground turkey","1 packet taco seasoning","1 cup salsa","8 butter lettuce leaves","1 avocado","1/2 cup Greek yogurt"],
+      instructions:[{name:null,steps:["Brown turkey with taco seasoning; stir in salsa.","Wash and dry lettuce leaves.","Fill leaves with turkey, avocado and a spoonful of yogurt."]}],
+      nutrition:{calories:310,protein_g:32,carbs_g:14,fat_g:16,fiber_g:5}, video:null, rating:{value:4.9,count:480} },
+
+    { title:"Asparagus Prosciutto Panini", blog:"skinnytaste",
+      source_url:"https://www.skinnytaste.com/asparagus-prosciutto-panini/",
+      image:"https://www.skinnytaste.com/wp-content/uploads/2012/05/Asparagus-Prosciutto-Panini.jpg",
+      servings:2, times:{prep:"10 mins",cook:"10 mins",total:"20 mins"},
+      ingredients:["4 slices sourdough","4 slices prosciutto","8 asparagus spears, blanched","1/3 cup provolone","2 tsp Dijon mustard","olive oil"],
+      instructions:[{name:null,steps:["Brush bread with olive oil; spread with mustard.","Layer prosciutto, asparagus and provolone.","Press in a panini grill or skillet until golden and cheese melts."]}],
+      nutrition:{calories:400,protein_g:24,carbs_g:36,fat_g:18,fiber_g:4}, video:null, rating:{value:4.8,count:185} },
+
+
+    { title:"Spinach Frittata", blog:"themediterraneandish",
+      source_url:"https://www.themediterraneandish.com/feta-spinach-frittata-recipe/",
+      image:"", servings:6, times:{prep:"10 mins",cook:"20 mins",total:"30 mins"},
+      ingredients:["8 eggs","2 cups baby spinach","1/2 cup feta","1/4 cup sun-dried tomatoes","2 tbsp olive oil","salt and pepper"],
+      instructions:[{name:null,steps:["Whisk eggs with salt and pepper.","Sauté spinach; pour in eggs; scatter feta and tomatoes.","Finish under the broiler 2–3 min until set."]}],
+      nutrition:{calories:220,protein_g:16,carbs_g:4,fat_g:16,fiber_g:1}, video:null, rating:{value:4.8,count:140} },
+
+    { title:"Lemon Herb Chicken Salad", blog:"eatingbirdfood",
+      source_url:"https://www.eatingbirdfood.com/lemon-herb-chicken-salad/",
+      image:"", servings:4, times:{prep:"15 mins",cook:null,total:"15 mins"},
+      ingredients:["2 cups cooked chicken, shredded","2 tbsp Greek yogurt","1 tbsp mayo","1 celery stalk, diced","1 lemon, juiced","fresh dill","salt and pepper"],
+      instructions:[{name:null,steps:["Combine chicken with yogurt, mayo, celery and lemon.","Fold in dill and season.","Serve on lettuce, in a wrap or on toast."]}],
+      nutrition:{calories:240,protein_g:30,carbs_g:4,fat_g:11,fiber_g:1}, video:null, rating:{value:4.8,count:88} },
+
+    { title:"Canned Sardine Salad", blog:"theeastcoastkitchen",
+      source_url:"https://theeastcoastkitchen.com/canned-sardines-a-tasty-salad-on-toast/",
+      image:"https://theeastcoastkitchen.com/wp-content/uploads/2026/05/Sardine-Salad-edited-1024x576.jpg",
+      servings:2, times:{prep:"10 mins",cook:null,total:"10 mins"},
+      ingredients:["1 can sardines in olive oil","2 cups mixed greens","1 lemon, juiced","1 tbsp capers","2 tbsp red onion","fresh parsley"],
+      instructions:[{name:null,steps:["Drain and flake sardines over greens.","Scatter capers and red onion.","Dress with lemon juice and a drizzle of olive oil; top with parsley."]}],
+      nutrition:{calories:230,protein_g:24,carbs_g:6,fat_g:12,fiber_g:2}, video:null, rating:{value:4.7,count:40} },
+
+    { title:"Quinoa Power Bowl", blog:"detoxinista",
+      source_url:"https://detoxinista.com/quinoa-power-bowl/",
+      image:"", servings:4, times:{prep:"15 mins",cook:"15 mins",total:"30 mins"},
+      ingredients:["2 cups cooked quinoa","1 can chickpeas, roasted","1 avocado","2 cups kale","2 tbsp tahini dressing","lemon juice"],
+      instructions:[{name:null,steps:["Massage kale with lemon juice until softened.","Build bowls with quinoa, kale and roasted chickpeas.","Top with sliced avocado and drizzle with tahini dressing."]}],
+      nutrition:{calories:420,protein_g:18,carbs_g:52,fat_g:18,fiber_g:12}, video:null, rating:{value:4.9,count:130} },
+
+    { title:"Chicken Quesadillas", blog:"skinnytaste",
+      source_url:"https://www.skinnytaste.com/chicken-quesadillas/",
+      image:"", servings:4, times:{prep:"10 mins",cook:"15 mins",total:"25 mins"},
+      ingredients:["2 cups shredded chicken","4 whole-wheat tortillas","1 cup reduced-fat cheddar","1/2 cup salsa","1/4 cup Greek yogurt","cumin and chili powder"],
+      instructions:[{name:null,steps:["Mix chicken with cumin, chili powder and half the salsa.","Layer on one tortilla half; add cheese and fold.","Cook in a non-stick pan 3–4 min per side until golden."]}],
+      nutrition:{calories:380,protein_g:34,carbs_g:32,fat_g:14,fiber_g:4}, video:null, rating:{value:4.8,count:490} },
+
+    { title:"Egg Salad Lettuce Wraps", blog:"eatingbirdfood",
+      source_url:"https://www.eatingbirdfood.com/egg-salad/",
+      image:"", servings:2, times:{prep:"10 mins",cook:"10 mins",total:"20 mins"},
+      ingredients:["6 hard-boiled eggs","2 tbsp Greek yogurt","1 tsp Dijon mustard","1 stalk celery, diced","1 tbsp chives","salt and pepper","romaine leaves"],
+      instructions:[{name:null,steps:["Peel and chop the eggs.","Mix with yogurt, mustard, celery, chives, salt and pepper.","Spoon into romaine lettuce cups."]}],
+      nutrition:{calories:250,protein_g:22,carbs_g:5,fat_g:16,fiber_g:1}, video:null, rating:{value:4.8,count:120} },
+    { title:"Chicken & Vegetable Soup", blog:"skinnytaste",
+      source_url:"https://www.skinnytaste.com/chicken-vegetable-soup/",
+      image:"", servings:6, times:{prep:"15 mins",cook:"30 mins",total:"45 mins"},
+      ingredients:["1.5 lb chicken breast","4 cups chicken broth","2 carrots","2 stalks celery","1 onion","2 cloves garlic","1 cup egg noodles","thyme"],
+      instructions:[{name:null,steps:["Poach chicken in broth with vegetables and thyme.","Remove chicken, shred and return to pot.","Add noodles and cook 8 more min."]}],
+      nutrition:{calories:280,protein_g:30,carbs_g:22,fat_g:7,fiber_g:3}, video:null, rating:{value:4.9,count:540} },
+    // ── Pinch of Yum ─────────────────────────────────────────────────────────
+    { title:"Sheet Pan Chicken Pitas with Tzatziki", blog:"pinchofyum",
+      source_url:"https://pinchofyum.com/sheet-pan-chicken-pitas",
+      image:"https://pinchofyum.com/tachyon/Family-Style-Pitas-2.jpg",
+      servings:6, times:{prep:"15 mins",cook:"25 mins",total:"40 mins"},
+      ingredients:["1.5 lb chicken thighs","6 pita breads","1 cup tzatziki","1 cucumber, sliced","1/2 red onion","cherry tomatoes","fresh dill"],
+      instructions:[{name:null,steps:["Season and roast chicken thighs at 425°F for 20–25 min until golden.","Slice chicken thinly.","Assemble pitas with chicken, tzatziki, cucumber, onion and tomatoes."]}],
+      nutrition:{calories:460,protein_g:34,carbs_g:42,fat_g:16,fiber_g:3}, video:null, rating:{value:5,count:151} },
+
+    { title:"Roasted Veggie Grain Bowl with Balsamic Dressing", blog:"pinchofyum",
+      source_url:"https://pinchofyum.com/winter-grain-bowl-with-balsamic-dressing",
+      image:"https://pinchofyum.com/tachyon/Winter-Grain-Bowl.jpg",
+      servings:4, times:{prep:"15 mins",cook:"30 mins",total:"45 mins"},
+      ingredients:["2 cups farro or quinoa, cooked","2 cups butternut squash, cubed","1 bunch kale","1/2 cup dried cranberries","1/4 cup pepitas","3 tbsp balsamic dressing"],
+      instructions:[{name:null,steps:["Roast squash at 400°F for 25 min until caramelized.","Massage kale with a little oil and salt.","Build bowls with grain, squash, kale and cranberries; drizzle with balsamic."]}],
+      nutrition:{calories:380,protein_g:12,carbs_g:62,fat_g:10,fiber_g:8}, video:null, rating:{value:5,count:47} },
+
+    { title:"Harissa Meatballs with Whipped Feta", blog:"pinchofyum",
+      source_url:"https://pinchofyum.com/harissa-meatballs-with-whipped-feta",
+      image:"https://pinchofyum.com/tachyon/Harissa-Meatballs-with-Whipped-Feta-3.jpg",
+      servings:4, times:{prep:"20 mins",cook:"25 mins",total:"45 mins"},
+      ingredients:["1 lb ground lamb or beef","2 tbsp harissa","1 egg","1/3 cup breadcrumbs","1 cup feta, whipped","pita or flatbread","fresh mint"],
+      instructions:[{name:null,steps:["Mix meat with harissa, egg and breadcrumbs; roll into balls.","Bake at 400°F for 20 min.","Spread whipped feta on pitas; top with meatballs and mint."]}],
+      nutrition:{calories:440,protein_g:32,carbs_g:20,fat_g:26,fiber_g:2}, video:null, rating:{value:5,count:39} },
+
+    { title:"Lemon Rosemary Chicken Soup", blog:"pinchofyum",
+      source_url:"https://pinchofyum.com/lemon-rosemary-chicken-soup",
+      image:"https://pinchofyum.com/tachyon/Lemon-Rosemary-Chicken-Soup.jpg",
+      servings:6, times:{prep:"15 mins",cook:"35 mins",total:"50 mins"},
+      ingredients:["1.5 lb chicken breast","6 cups chicken broth","3 carrots, sliced","2 stalks celery","1 lemon, juiced and zested","2 sprigs rosemary","1 cup orzo","salt and pepper"],
+      instructions:[{name:null,steps:["Simmer chicken in broth with carrots, celery and rosemary until cooked; shred.","Return chicken to pot; add orzo and cook 8 min.","Finish with lemon juice and zest; season."]}],
+      nutrition:{calories:290,protein_g:28,carbs_g:28,fat_g:6,fiber_g:3}, video:null, rating:{value:5,count:45} },
+
+    { title:"Goddess Curry Chicken Salad", blog:"pinchofyum",
+      source_url:"https://pinchofyum.com/curry-chicken-salad",
+      image:"https://pinchofyum.com/tachyon/Curry-Chicken-Salad-5.jpg",
+      servings:4, times:{prep:"15 mins",cook:null,total:"15 mins"},
+      ingredients:["2 cups cooked chicken, shredded","1/3 cup Greek yogurt","2 tbsp mayo","1 tsp curry powder","1/2 cup grapes, halved","1/4 cup sliced almonds","fresh cilantro"],
+      instructions:[{name:null,steps:["Mix yogurt, mayo and curry powder into a dressing.","Toss chicken with grapes and dressing.","Top with almonds and cilantro; serve on bread or greens."]}],
+      nutrition:{calories:290,protein_g:28,carbs_g:12,fat_g:14,fiber_g:2}, video:null, rating:{value:4.8,count:62} },
+
+    { title:"Lemon Herb Pasta Salad with Marinated Chickpeas", blog:"pinchofyum",
+      source_url:"https://pinchofyum.com/lemon-herb-pasta-salad",
+      image:"https://pinchofyum.com/tachyon/Lemon-Herb-Pasta-Salad-1-1.jpg",
+      servings:6, times:{prep:"20 mins",cook:"10 mins",total:"30 mins"},
+      ingredients:["12 oz pasta","1 can chickpeas","1/2 cup sun-dried tomatoes","1/2 cup fresh herbs (parsley, basil)","3 tbsp olive oil","2 lemons, juiced","1/2 cup parmesan"],
+      instructions:[{name:null,steps:["Cook and cool pasta.","Marinate chickpeas with olive oil, lemon juice and herbs for 10 min.","Toss with pasta, sun-dried tomatoes and parmesan."]}],
+      nutrition:{calories:380,protein_g:14,carbs_g:56,fat_g:12,fiber_g:6}, video:null, rating:{value:4.9,count:46} },
+
+    { title:"Basic + Awesome Broccoli Cheese Soup", blog:"pinchofyum",
+      source_url:"https://pinchofyum.com/broccoli-cheese-soup",
+      image:"https://pinchofyum.com/tachyon/Broccoli-Cheese-Soup-2.jpg",
+      servings:6, times:{prep:"10 mins",cook:"25 mins",total:"35 mins"},
+      ingredients:["4 cups broccoli florets","1 onion","3 cloves garlic","3 cups chicken broth","1 cup cheddar, shredded","1/2 cup cream","2 tbsp butter","salt and pepper"],
+      instructions:[{name:null,steps:["Sauté onion and garlic in butter; add broth and broccoli.","Simmer 15 min until tender; blend partially.","Stir in cream and cheddar; season well."]}],
+      nutrition:{calories:280,protein_g:12,carbs_g:14,fat_g:20,fiber_g:4}, video:null, rating:{value:5,count:85} },
+  ],
+
+  dinner: [
+    // ── Eating Bird Food ──────────────────────────────────────────────────────
+    { title:"Baked Feta Pasta", blog:"eatingbirdfood",
+      source_url:"https://www.eatingbirdfood.com/baked-feta-pasta/",
+      image:"https://www.eatingbirdfood.com/wp-content/uploads/2025/07/baked-feta-pasta-hero.jpg",
+      servings:4, times:{prep:"10 mins",cook:"35 mins",total:"45 mins"},
+      ingredients:["1 block feta","2 cups cherry tomatoes","3 tbsp olive oil","12 oz pasta","3 cloves garlic","fresh basil"],
+      instructions:[{name:null,steps:["Bake feta and tomatoes with oil and garlic at 400°F for 30 min.","Cook pasta.","Mash everything together; finish with basil."]}],
+      nutrition:{calories:520,protein_g:20,carbs_g:62,fat_g:22,fiber_g:5}, video:null, rating:{value:4.9,count:340} },
+
+    { title:"Egg Roll in a Bowl", blog:"eatingbirdfood",
+      source_url:"https://www.eatingbirdfood.com/egg-roll-in-a-bowl/",
+      image:"", servings:4, times:{prep:"10 mins",cook:"15 mins",total:"25 mins"},
+      ingredients:["1 lb ground turkey","1 bag coleslaw mix","3 tbsp soy sauce","1 tbsp sesame oil","2 cloves garlic","1 tbsp grated ginger"],
+      instructions:[{name:null,steps:["Brown turkey with garlic and ginger.","Add coleslaw and stir-fry until tender.","Season with soy sauce and sesame oil."]}],
+      nutrition:{calories:320,protein_g:34,carbs_g:12,fat_g:16,fiber_g:4}, video:null, rating:{value:4.9,count:430} },
+
+    { title:"Cottage Cheese Pasta", blog:"eatingbirdfood",
+      source_url:"https://www.eatingbirdfood.com/cottage-cheese-pasta/",
+      image:"", servings:4, times:{prep:"5 mins",cook:"15 mins",total:"20 mins"},
+      ingredients:["12 oz pasta","2 cups cottage cheese","1 cup marinara","2 cloves garlic","1/4 cup parmesan","fresh basil"],
+      instructions:[{name:null,steps:["Blend cottage cheese until smooth.","Toss with hot pasta, marinara and garlic.","Top with parmesan and basil."]}],
+      nutrition:{calories:440,protein_g:30,carbs_g:58,fat_g:10,fiber_g:4}, video:null, rating:{value:4.8,count:180} },
+
+    { title:"Baked Chicken Tenders", blog:"eatingbirdfood",
+      source_url:"https://www.eatingbirdfood.com/baked-paleo-chicken-tenders/",
+      image:"", servings:4, times:{prep:"10 mins",cook:"20 mins",total:"30 mins"},
+      ingredients:["1.5 lb chicken tenders","2 eggs","1.5 cups almond flour","1 tsp paprika","1 tsp garlic powder","salt"],
+      instructions:[{name:null,steps:["Dip tenders in egg then seasoned almond flour.","Place on a lined sheet pan.","Bake at 400°F for 18–20 min, flipping once."]}],
+      nutrition:{calories:360,protein_g:40,carbs_g:8,fat_g:18,fiber_g:2}, video:null, rating:{value:4.8,count:260} },
+
+    { title:"Lemon Herb Baked Salmon", blog:"eatingbirdfood",
+      source_url:"https://www.eatingbirdfood.com/lemon-herb-salmon/",
+      image:"", servings:4, times:{prep:"5 mins",cook:"18 mins",total:"23 mins"},
+      ingredients:["4 salmon fillets","2 tbsp olive oil","1 lemon, zested and sliced","2 cloves garlic","fresh dill","salt and pepper"],
+      instructions:[{name:null,steps:["Place salmon on a sheet pan; rub with oil, garlic and lemon zest.","Top with lemon slices and dill.","Bake at 400°F for 15–18 min until flaky."]}],
+      nutrition:{calories:360,protein_g:36,carbs_g:2,fat_g:22,fiber_g:0}, video:null, rating:{value:4.9,count:145} },
+
+    { title:"Turkey Meatballs", blog:"eatingbirdfood",
+      source_url:"https://www.eatingbirdfood.com/turkey-meatballs/",
+      image:"", servings:4, times:{prep:"15 mins",cook:"25 mins",total:"40 mins"},
+      ingredients:["1 lb ground turkey","1/4 cup breadcrumbs","1 egg","1/4 cup parmesan","2 cloves garlic","1 tsp Italian herbs","marinara, to serve"],
+      instructions:[{name:null,steps:["Mix turkey, breadcrumbs, egg, parmesan, garlic and herbs.","Roll into balls and bake at 400°F for 20–22 min.","Serve with warm marinara."]}],
+      nutrition:{calories:310,protein_g:34,carbs_g:10,fat_g:14,fiber_g:1}, video:null, rating:{value:4.8,count:200} },
+
+    // ── The Mediterranean Dish ────────────────────────────────────────────────
+    { title:"Shakshuka", blog:"themediterraneandish",
+      source_url:"https://www.themediterraneandish.com/shakshuka-recipe/",
+      image:"", servings:4, times:{prep:"10 mins",cook:"25 mins",total:"35 mins"},
+      ingredients:["6 eggs","1 can crushed tomatoes","1 onion","1 bell pepper","2 tsp cumin","fresh parsley"],
+      instructions:[{name:null,steps:["Sauté onion and pepper; add tomatoes and cumin.","Simmer 10 min; make wells and crack in eggs.","Cover until whites set; top with parsley."]}],
+      nutrition:{calories:260,protein_g:18,carbs_g:16,fat_g:14,fiber_g:4}, video:null, rating:{value:4.9,count:210} },
+
+    { title:"Baked Cod with Lemon and Garlic", blog:"themediterraneandish",
+      source_url:"https://www.themediterraneandish.com/baked-cod-recipe-lemon-garlic/",
+      image:"https://www.themediterraneandish.com/wp-content/uploads/2017/10/Mediterranean-Baked-Cod-Recipe-Lemon-Garlic-The-Mediterranean-Dish-1.jpg",
+      servings:4, times:{prep:"5 mins",cook:"12 mins",total:"17 mins"},
+      ingredients:["4 cod fillets","3 tbsp olive oil","3 cloves garlic, minced","1 lemon, sliced","1 tsp paprika","fresh parsley"],
+      instructions:[{name:null,steps:["Whisk olive oil with garlic, paprika and lemon juice.","Place cod in a dish; spoon sauce over and add lemon slices.","Bake at 400°F for 10–12 min until it flakes."]}],
+      nutrition:{calories:260,protein_g:34,carbs_g:3,fat_g:12,fiber_g:1}, video:null, rating:{value:4.9,count:890} },
+
+    { title:"Avgolemono (Greek Lemon Chicken Soup)", blog:"themediterraneandish",
+      source_url:"https://www.themediterraneandish.com/avgolemono-soup-recipe/",
+      image:"https://www.themediterraneandish.com/wp-content/uploads/2019/10/Avgolemono-Soup-Recipe-9.jpg",
+      servings:6, times:{prep:"10 mins",cook:"35 mins",total:"45 mins"},
+      ingredients:["1 lb chicken breast","6 cups chicken broth","1/2 cup orzo","3 eggs","1 lemon, juiced","salt and pepper"],
+      instructions:[{name:null,steps:["Simmer chicken in broth until cooked; shred and return.","Add orzo; cook 8 min.","Whisk eggs with lemon; temper with hot broth; stir into soup."]}],
+      nutrition:{calories:280,protein_g:28,carbs_g:18,fat_g:8,fiber_g:1}, video:null, rating:{value:4.9,count:660} },
+
+    { title:"Balsamic Chicken", blog:"themediterraneandish",
+      source_url:"https://www.themediterraneandish.com/easy-balsamic-chicken/",
+      image:"https://www.themediterraneandish.com/wp-content/uploads/2021/11/balsamic-chicken-recipe-3.jpg",
+      servings:4, times:{prep:"5 mins",cook:"20 mins",total:"25 mins"},
+      ingredients:["4 chicken breasts","1/3 cup balsamic vinegar","2 tbsp honey","2 cloves garlic","1 tbsp olive oil","fresh thyme"],
+      instructions:[{name:null,steps:["Sear chicken in olive oil until golden.","Add balsamic, honey, garlic and thyme.","Simmer until chicken is cooked and sauce thickens."]}],
+      nutrition:{calories:320,protein_g:38,carbs_g:14,fat_g:10,fiber_g:0}, video:null, rating:{value:4.9,count:520} },
+
+    { title:"Moroccan Chicken", blog:"themediterraneandish",
+      source_url:"https://www.themediterraneandish.com/moroccan-chicken/",
+      image:"https://www.themediterraneandish.com/wp-content/uploads/2019/02/Moroccan-Chicken-Recipe-6.jpg",
+      servings:4, times:{prep:"15 mins",cook:"35 mins",total:"50 mins"},
+      ingredients:["8 chicken thighs","1 can chickpeas","1 cup olives","1 preserved lemon","1 tbsp ras el hanout","1 onion","2 cups broth"],
+      instructions:[{name:null,steps:["Brown chicken; set aside.","Sauté onion with spices; add broth, chickpeas and lemon.","Return chicken and braise 30 min; stir in olives."]}],
+      nutrition:{calories:450,protein_g:40,carbs_g:22,fat_g:22,fiber_g:6}, video:null, rating:{value:4.9,count:340} },
+
+    { title:"Spanakopita (Greek Spinach Pie)", blog:"themediterraneandish",
+      source_url:"https://www.themediterraneandish.com/spanakopita-recipe-greek-spinach-pie/",
+      image:"https://www.themediterraneandish.com/wp-content/uploads/2016/11/Spanakopita-Recipe-Greek-Spinach-Pie-The-Mediterranean-Dish-102.jpg",
+      servings:8, times:{prep:"30 mins",cook:"35 mins",total:"65 mins"},
+      ingredients:["10 oz frozen spinach, thawed","1 cup feta, crumbled","3 eggs","1 onion","2 cloves garlic","12 sheets phyllo dough","olive oil"],
+      instructions:[{name:null,steps:["Mix squeezed spinach, feta, eggs, onion and garlic.","Layer phyllo sheets, brushing each with oil; spread filling.","Fold and top with more phyllo; score and bake at 375°F for 35 min."]}],
+      nutrition:{calories:340,protein_g:14,carbs_g:28,fat_g:20,fiber_g:3}, video:null, rating:{value:4.9,count:470} },
+
+    // ── The East Coast Kitchen ────────────────────────────────────────────────
+    { title:"Lemon Ricotta Pasta", blog:"theeastcoastkitchen",
+      source_url:"https://theeastcoastkitchen.com/lemon-pasta-with-ricotta-in-25-min-flat/",
+      image:"https://theeastcoastkitchen.com/wp-content/uploads/2026/05/Lemon-Ricotta-3-edited-1024x576.jpg",
+      servings:4, times:{prep:"5 mins",cook:"20 mins",total:"25 mins"},
+      ingredients:["12 oz pasta","1 cup ricotta","1 lemon, zested and juiced","1/4 cup parmesan","2 tbsp butter","salt and pepper","fresh basil"],
+      instructions:[{name:null,steps:["Cook pasta; reserve 1 cup pasta water.","Mix ricotta, lemon zest and juice, parmesan and butter in the pot.","Add pasta and pasta water; toss until silky. Season."]}],
+      nutrition:{calories:480,protein_g:20,carbs_g:62,fat_g:18,fiber_g:3}, video:null, rating:{value:4.9,count:78} },
+
+    { title:"Oklahoma Smash Tacos", blog:"theeastcoastkitchen",
+      source_url:"https://theeastcoastkitchen.com/smash-tacos-oklahoma-onion-burger-style/",
+      image:"https://theeastcoastkitchen.com/wp-content/uploads/2026/05/Oklahoma-Smash-Tacos-BRAND-DEAL-2-edited-1024x576.jpg",
+      servings:4, times:{prep:"10 mins",cook:"15 mins",total:"25 mins"},
+      ingredients:["1 lb ground beef","1 large onion, thinly sliced","8 small tortillas","1 cup cheddar, shredded","pickles, mustard and ketchup to serve"],
+      instructions:[{name:null,steps:["Smash beef and onion together on a hot griddle; cook until crispy.","Break into pieces and cook tortillas with cheese.","Fill tortillas with smashed beef and condiments."]}],
+      nutrition:{calories:520,protein_g:34,carbs_g:36,fat_g:26,fiber_g:2}, video:null, rating:{value:4.9,count:115} },
+
+    { title:"Shrimp Dumpling Bowl", blog:"theeastcoastkitchen",
+      source_url:"https://theeastcoastkitchen.com/shrimp-dumpling-bowl-15-minute-noodle-recipe/",
+      image:"https://theeastcoastkitchen.com/wp-content/uploads/2026/05/Shrimp-Dumpling-edited-1024x576.jpg",
+      servings:2, times:{prep:"5 mins",cook:"10 mins",total:"15 mins"},
+      ingredients:["10 shrimp dumplings","2 portions rice noodles","2 cups broth","2 tbsp soy sauce","1 tsp sesame oil","bok choy","chili oil"],
+      instructions:[{name:null,steps:["Simmer broth with soy sauce and sesame oil.","Cook dumplings and noodles per package; blanch bok choy.","Assemble bowls; top with chili oil."]}],
+      nutrition:{calories:380,protein_g:18,carbs_g:52,fat_g:12,fiber_g:3}, video:null, rating:{value:4.9,count:54} },
+
+    { title:"Mediterranean Tuna Steak", blog:"theeastcoastkitchen",
+      source_url:"https://theeastcoastkitchen.com/tuna-steak-recipe-mediterranean-style-in-10-minutes/",
+      image:"https://theeastcoastkitchen.com/wp-content/uploads/2026/05/Lemon-Caper-Tuna-Steak-with-Red-Pepper-and-Beans-edited-1024x576.jpg",
+      servings:2, times:{prep:"5 mins",cook:"5 mins",total:"10 mins"},
+      ingredients:["2 tuna steaks","2 tbsp capers","1 roasted red pepper","1 can white beans","1 lemon","2 tbsp olive oil","fresh parsley"],
+      instructions:[{name:null,steps:["Sear tuna steaks 2 min per side in a hot skillet.","Warm beans with capers and red pepper in olive oil.","Serve tuna over beans with lemon and parsley."]}],
+      nutrition:{calories:400,protein_g:48,carbs_g:22,fat_g:14,fiber_g:8}, video:null, rating:{value:4.9,count:47} },
+
+    // ── Detoxinista ───────────────────────────────────────────────────────────
+    { title:"Greek Chicken Meatballs", blog:"detoxinista",
+      source_url:"https://detoxinista.com/greek-chicken-meatballs/",
+      image:"https://detoxinista.com/wp-content/uploads/2026/05/greek-chicken-meatballs-with-hummus.jpg",
+      servings:4, times:{prep:"15 mins",cook:"20 mins",total:"35 mins"},
+      ingredients:["1 lb ground chicken","1 egg","1/3 cup breadcrumbs","2 tsp oregano","1 cup hummus","cucumber salad to serve"],
+      instructions:[{name:null,steps:["Mix chicken, egg, breadcrumbs and oregano; roll into balls.","Bake at 400°F for 18–20 min.","Serve over hummus with cucumber salad."]}],
+      nutrition:{calories:430,protein_g:42,carbs_g:18,fat_g:20,fiber_g:4}, video:null, rating:{value:5,count:62} },
+
+    { title:"High-Protein Pizza Beans", blog:"detoxinista",
+      source_url:"https://detoxinista.com/high-protein-pizza-beans/",
+      image:"https://detoxinista.com/wp-content/uploads/2026/05/pizza-beans-recipe-with-protein.jpg",
+      servings:4, times:{prep:"10 mins",cook:"25 mins",total:"35 mins"},
+      ingredients:["1 lb ground turkey","2 cans white beans","2 cups marinara","1 cup mozzarella","2 tsp Italian herbs","fresh basil"],
+      instructions:[{name:null,steps:["Brown turkey in an oven-safe skillet.","Add beans, marinara and herbs; top with mozzarella.","Bake at 400°F until bubbly; finish with basil."]}],
+      nutrition:{calories:460,protein_g:44,carbs_g:34,fat_g:16,fiber_g:10}, video:null, rating:{value:4.9,count:48} },
+
+    { title:"Baked Bone-In Chicken Thighs", blog:"detoxinista",
+      source_url:"https://detoxinista.com/baked-bone-in-chicken-thighs/",
+      image:"https://detoxinista.com/wp-content/uploads/2026/04/baked-chicken-thighs-on-plate.jpg",
+      servings:4, times:{prep:"5 mins",cook:"40 mins",total:"45 mins"},
+      ingredients:["6 bone-in chicken thighs","2 tbsp olive oil","2 tsp paprika","1 tsp garlic powder","fresh thyme","salt and pepper"],
+      instructions:[{name:null,steps:["Pat thighs dry and rub with oil and spices.","Roast at 425°F for 35–40 min until skin is crisp.","Rest 5 minutes before serving."]}],
+      nutrition:{calories:380,protein_g:34,carbs_g:1,fat_g:26,fiber_g:0}, video:null, rating:{value:4.9,count:95} },
+
+    { title:"Detox Veggie Stir-Fry", blog:"detoxinista",
+      source_url:"https://detoxinista.com/category/all-recipes/course/main-entrees/",
+      image:"", servings:4, times:{prep:"15 mins",cook:"10 mins",total:"25 mins"},
+      ingredients:["1 block extra-firm tofu","3 cups mixed vegetables","2 tbsp tamari","1 tbsp sesame oil","1 tbsp grated ginger","2 cups cooked quinoa"],
+      instructions:[{name:null,steps:["Press and cube tofu; sear until golden.","Add vegetables and ginger; stir-fry 5 min.","Add tamari and sesame oil; serve over quinoa."]}],
+      nutrition:{calories:390,protein_g:24,carbs_g:40,fat_g:16,fiber_g:8}, video:null, rating:null },
+
+    // ── Skinnytaste ───────────────────────────────────────────────────────────
+    { title:"Sheet-Pan Salmon & Veg", blog:"skinnytaste",
+      source_url:"https://www.skinnytaste.com/sheet-pan-salmon/",
+      image:"", servings:4, times:{prep:"10 mins",cook:"20 mins",total:"30 mins"},
+      ingredients:["4 salmon fillets (6 oz each)","1 lb broccoli florets","2 tbsp olive oil","2 cloves garlic","1 lemon","salt and pepper"],
+      instructions:[{name:null,steps:["Toss broccoli with oil and garlic on a sheet pan; roast 8 min.","Add salmon, season, and roast 12 min more.","Finish with lemon."]}],
+      nutrition:{calories:430,protein_g:40,carbs_g:12,fat_g:24,fiber_g:4}, video:null, rating:{value:4.85,count:301} },
+
+    { title:"Chicken Tikka Masala", blog:"skinnytaste",
+      source_url:"https://www.skinnytaste.com/chicken-tikka-masala/",
+      image:"", servings:4, times:{prep:"15 mins",cook:"30 mins",total:"45 mins"},
+      ingredients:["1.5 lb chicken breast, cubed","1 cup plain yogurt","1 can crushed tomatoes","1 onion","3 cloves garlic","2 tsp garam masala","1/2 cup light cream"],
+      instructions:[{name:null,steps:["Marinate chicken in yogurt and spices; cook until charred.","Sauté onion and garlic; add tomatoes and spices; simmer 15 min.","Add chicken and cream; simmer 10 more min."]}],
+      nutrition:{calories:380,protein_g:42,carbs_g:18,fat_g:16,fiber_g:4}, video:null, rating:{value:4.9,count:720} },
+
+    { title:"Turkey Chili", blog:"skinnytaste",
+      source_url:"https://www.skinnytaste.com/turkey-chili/",
+      image:"", servings:6, times:{prep:"15 mins",cook:"35 mins",total:"50 mins"},
+      ingredients:["1.5 lb ground turkey","2 cans kidney beans","1 can crushed tomatoes","1 onion","2 tbsp chili powder","1 tsp cumin","salt and pepper"],
+      instructions:[{name:null,steps:["Brown turkey with onion.","Add tomatoes, beans, chili powder and cumin.","Simmer 30 min; adjust seasoning."]}],
+      nutrition:{calories:340,protein_g:36,carbs_g:30,fat_g:10,fiber_g:10}, video:null, rating:{value:4.9,count:890} },
+
+
+    { title:"Greek Eggplant with Chickpeas", blog:"themediterraneandish",
+      source_url:"https://www.themediterraneandish.com/braised-eggplant-recipe-greek-style/",
+      image:"https://www.themediterraneandish.com/wp-content/uploads/2020/03/braised-eggplant-recipe-greek-style-6.jpg",
+      servings:4, times:{prep:"10 mins",cook:"30 mins",total:"40 mins"},
+      ingredients:["2 eggplants, cubed","1 can chickpeas","1 can crushed tomatoes","1 onion","3 cloves garlic","2 tsp cumin","olive oil","fresh parsley"],
+      instructions:[{name:null,steps:["Brown eggplant in olive oil; set aside.","Sauté onion and garlic; add tomatoes and cumin.","Add chickpeas and eggplant; braise 20 min; finish with parsley."]}],
+      nutrition:{calories:290,protein_g:12,carbs_g:42,fat_g:10,fiber_g:14}, video:null, rating:{value:4.8,count:180} },
+
+    { title:"Air Fryer Salmon", blog:"skinnytaste",
+      source_url:"https://www.skinnytaste.com/air-fryer-salmon/",
+      image:"", servings:4, times:{prep:"5 mins",cook:"10 mins",total:"15 mins"},
+      ingredients:["4 salmon fillets","1 tbsp olive oil","1 lemon, juiced","1 tsp garlic powder","1 tsp paprika","salt and pepper"],
+      instructions:[{name:null,steps:["Brush salmon with oil, lemon and seasonings.","Air fry at 400°F for 8–10 min until flaky.","Serve with your choice of sides."]}],
+      nutrition:{calories:340,protein_g:38,carbs_g:2,fat_g:20,fiber_g:0}, video:null, rating:{value:4.9,count:580} },
+
+    { title:"Sweet Potato Black Bean Bowl", blog:"eatingbirdfood",
+      source_url:"https://www.eatingbirdfood.com/sweet-potato-black-bean-bowl/",
+      image:"", servings:4, times:{prep:"15 mins",cook:"25 mins",total:"40 mins"},
+      ingredients:["2 sweet potatoes, cubed","1 can black beans","2 cups brown rice","1 avocado","2 tbsp lime juice","1 tsp cumin","cilantro"],
+      instructions:[{name:null,steps:["Roast sweet potatoes at 400°F for 20–25 min until tender.","Warm black beans with cumin.","Build bowls with rice, sweet potato, beans and avocado; dress with lime."]}],
+      nutrition:{calories:450,protein_g:16,carbs_g:78,fat_g:10,fiber_g:14}, video:null, rating:{value:4.8,count:145} },
+
+    { title:"Eggplant Parmesan", blog:"themediterraneandish",
+      source_url:"https://www.themediterraneandish.com/eggplant-parmigiana-recipe/",
+      image:"https://www.themediterraneandish.com/wp-content/uploads/2019/06/Eggplant-Parmesan-Recipe-15.jpg",
+      servings:6, times:{prep:"20 mins",cook:"40 mins",total:"60 mins"},
+      ingredients:["2 large eggplants","2 eggs","1 cup breadcrumbs","2 cups marinara","1.5 cups mozzarella","1/2 cup parmesan","olive oil"],
+      instructions:[{name:null,steps:["Slice eggplant; dip in egg then breadcrumbs; bake at 400°F 20 min.","Layer eggplant, marinara and cheeses in a baking dish.","Bake covered 25 min; uncover 10 min to brown."]}],
+      nutrition:{calories:380,protein_g:22,carbs_g:34,fat_g:18,fiber_g:8}, video:null, rating:{value:4.9,count:380} },
+
+    { title:"Zucchini Lasagna", blog:"skinnytaste",
+      source_url:"https://www.skinnytaste.com/zucchini-lasagna/",
+      image:"", servings:8, times:{prep:"30 mins",cook:"50 mins",total:"80 mins"},
+      ingredients:["4 large zucchini, sliced lengthwise","1 lb lean ground beef","2 cups marinara","1 cup ricotta","1.5 cups mozzarella","1 egg"],
+      instructions:[{name:null,steps:["Salt and dry zucchini slices; grill 2 min per side.","Brown beef with marinara; mix ricotta with egg.","Layer zucchini, meat sauce, ricotta and mozzarella; bake at 375°F 45 min."]}],
+      nutrition:{calories:340,protein_g:28,carbs_g:14,fat_g:18,fiber_g:4}, video:null, rating:{value:4.9,count:810} },
+
+    { title:"Cauliflower Rice Chicken Bowl", blog:"skinnytaste",
+      source_url:"https://www.skinnytaste.com/cauliflower-rice-chicken-bowl/",
+      image:"", servings:4, times:{prep:"10 mins",cook:"20 mins",total:"30 mins"},
+      ingredients:["1.5 lb chicken breast","4 cups cauliflower rice","1 cup black beans","1 cup corn","1 avocado","lime juice","cumin and chili powder"],
+      instructions:[{name:null,steps:["Season and grill chicken; slice.","Sauté cauliflower rice with cumin and chili powder.","Build bowls with cauliflower rice, beans, corn, chicken and avocado."]}],
+      nutrition:{calories:400,protein_g:44,carbs_g:28,fat_g:14,fiber_g:9}, video:null, rating:{value:4.8,count:430} },
+    { title:"Lighter Chicken Marsala", blog:"skinnytaste",
+      source_url:"https://www.skinnytaste.com/lighter-chicken-marsala/",
+      image:"", servings:4, times:{prep:"10 mins",cook:"25 mins",total:"35 mins"},
+      ingredients:["4 chicken breasts, pounded thin","2 cups mushrooms, sliced","1/2 cup Marsala wine","1/2 cup chicken broth","2 tbsp flour","2 tbsp butter"],
+      instructions:[{name:null,steps:["Dredge chicken in flour; pan-fry until golden.","Sauté mushrooms; deglaze with Marsala and broth.","Return chicken and simmer until sauce thickens."]}],
+      nutrition:{calories:350,protein_g:36,carbs_g:12,fat_g:14,fiber_g:2}, video:null, rating:{value:4.9,count:640} },
+    // ── Pinch of Yum ─────────────────────────────────────────────────────────
+    { title:"Yellow Curry Meatballs with Peanut Shallot Crispies", blog:"pinchofyum",
+      source_url:"https://pinchofyum.com/yellow-curry-meatballs",
+      image:"https://pinchofyum.com/tachyon/Yellow-Curry-Chicken-Meatballs-2.jpg",
+      servings:4, times:{prep:"20 mins",cook:"30 mins",total:"50 mins"},
+      ingredients:["1 lb ground chicken","1 can coconut milk","2 tbsp yellow curry paste","2 tbsp peanut butter","2 shallots, thinly sliced","cooked jasmine rice","fresh cilantro"],
+      instructions:[{name:null,steps:["Roll chicken into meatballs and brown in a skillet.","Simmer in coconut milk, curry paste and peanut butter until cooked through.","Crisp shallots in oil; serve meatballs and sauce over rice with crispy shallots."]}],
+      nutrition:{calories:490,protein_g:34,carbs_g:38,fat_g:24,fiber_g:3}, video:null, rating:{value:5,count:20} },
+
+    { title:"Saucy Gochujang Noodles with Chicken", blog:"pinchofyum",
+      source_url:"https://pinchofyum.com/saucy-gochujang-noodles-with-chicken",
+      image:"", servings:4, times:{prep:"10 mins",cook:"20 mins",total:"30 mins"},
+      ingredients:["8 oz ramen or udon noodles","1 lb chicken breast, sliced","2 tbsp gochujang","1 tbsp soy sauce","1 tbsp honey","1 tbsp sesame oil","4 green onions","sesame seeds"],
+      instructions:[{name:null,steps:["Cook noodles; whisk gochujang, soy, honey and sesame into sauce.","Sear chicken in a hot pan until cooked; add sauce and toss.","Add noodles and toss; top with green onions and sesame seeds."]}],
+      nutrition:{calories:460,protein_g:38,carbs_g:50,fat_g:12,fiber_g:2}, video:null, rating:{value:5,count:131} },
+
+    { title:"Ridiculously Good Chicken Tacos with Green Sauce", blog:"pinchofyum",
+      source_url:"https://pinchofyum.com/chicken-tacos",
+      image:"", servings:6, times:{prep:"15 mins",cook:"20 mins",total:"35 mins"},
+      ingredients:["1.5 lb chicken thighs","1 tsp cumin","1 tsp chili powder","12 corn tortillas","1 cup tomatillo salsa","1 avocado","fresh cilantro","lime"],
+      instructions:[{name:null,steps:["Season chicken and grill or sear until cooked; shred.","Warm tortillas; fill with chicken.","Top with green salsa, avocado, cilantro and a squeeze of lime."]}],
+      nutrition:{calories:400,protein_g:34,carbs_g:32,fat_g:16,fiber_g:5}, video:null, rating:{value:5,count:76} },
+
+    { title:"Ricotta Meatballs with the Crispy Topping", blog:"pinchofyum",
+      source_url:"https://pinchofyum.com/ricotta-meatballs-with-the-crispy-topping",
+      image:"", servings:4, times:{prep:"20 mins",cook:"30 mins",total:"50 mins"},
+      ingredients:["1 lb ground beef","1/2 cup ricotta","1 egg","1/4 cup parmesan","2 cups marinara","1/2 cup panko breadcrumbs","2 tbsp butter","pasta, to serve"],
+      instructions:[{name:null,steps:["Mix beef with ricotta, egg and parmesan; roll into balls and brown.","Simmer in marinara until cooked through.","Toast panko in butter until golden; scatter over meatballs before serving."]}],
+      nutrition:{calories:510,protein_g:38,carbs_g:28,fat_g:26,fiber_g:3}, video:null, rating:{value:5,count:182} },
+
+    { title:"Best Anytime Baked Chicken Meatballs", blog:"pinchofyum",
+      source_url:"https://pinchofyum.com/best-anytime-baked-chicken-meatballs",
+      image:"", servings:6, times:{prep:"15 mins",cook:"20 mins",total:"35 mins"},
+      ingredients:["1.5 lb ground chicken","1/3 cup parmesan","1 egg","1/4 cup parsley","3 cloves garlic","1/2 tsp red pepper flakes","salt and pepper"],
+      instructions:[{name:null,steps:["Combine all ingredients gently; roll into balls and place on a lined sheet.","Bake at 400°F for 18–20 min until golden.","Serve with pasta, in bowls, or as meal prep for the week."]}],
+      nutrition:{calories:290,protein_g:34,carbs_g:4,fat_g:14,fiber_g:1}, video:null, rating:{value:4.9,count:788} },
+
+    { title:"Spicy Shrimp Tacos with Garlic Cilantro Lime Slaw", blog:"pinchofyum",
+      source_url:"https://pinchofyum.com/spicy-shrimp-tacos-with-garlic-cilantro-lime-slaw",
+      image:"", servings:4, times:{prep:"15 mins",cook:"10 mins",total:"25 mins"},
+      ingredients:["1 lb large shrimp","8 corn tortillas","2 cups cabbage, shredded","1/2 cup cilantro","2 limes, juiced","2 cloves garlic","1 tbsp sriracha","2 tbsp mayo","1 tsp cumin"],
+      instructions:[{name:null,steps:["Toss shrimp with cumin and sriracha; sear 2 min per side.","Mix cabbage with cilantro, lime, garlic and mayo into slaw.","Warm tortillas; fill with shrimp and slaw."]}],
+      nutrition:{calories:360,protein_g:30,carbs_g:34,fat_g:12,fiber_g:5}, video:null, rating:{value:4.8,count:309} },
+
+    { title:"Crispy Chicken Tikka Bowls with Mint Sauce", blog:"pinchofyum",
+      source_url:"https://pinchofyum.com/crispy-chicken-tikka-bowls-with-mint-sauce",
+      image:"", servings:4, times:{prep:"20 mins",cook:"25 mins",total:"45 mins"},
+      ingredients:["1.5 lb chicken thighs, cubed","1/2 cup yogurt","2 tsp garam masala","1 tsp turmeric","2 cups cooked quinoa","1 cucumber, diced","1/2 cup fresh mint","lemon tahini sauce"],
+      instructions:[{name:null,steps:["Marinate chicken in yogurt and spices for at least 30 min.","Sear in a hot pan until crispy and cooked through.","Build bowls with quinoa, cucumber and chicken; drizzle with mint sauce."]}],
+      nutrition:{calories:440,protein_g:42,carbs_g:30,fat_g:16,fiber_g:4}, video:null, rating:{value:4.9,count:48} },
+  ],
+  salad: [
+    // ── Eating Bird Food ──────────────────────────────────────────────────────
+    { title:"Jennifer Aniston Salad", blog:"eatingbirdfood",
+      source_url:"https://www.eatingbirdfood.com/jennifer-aniston-salad/",
+      image:"https://www.eatingbirdfood.com/wp-content/uploads/2024/05/jennifer-aniston-salad-hero.jpg",
+      servings:4, times:{prep:"15 mins",cook:null,total:"15 mins"},
+      ingredients:["1 can chickpeas, drained","1 cup cooked quinoa","1 cucumber, diced","1/2 cup crumbled feta","1/2 cup fresh parsley","1/4 cup red onion","1/4 cup fresh mint","3 tbsp olive oil","1 lemon, juiced"],
+      instructions:[{name:null,steps:["Combine quinoa, chickpeas, cucumber, onion, parsley and mint.","Crumble feta over the top.","Dress with olive oil and lemon; toss and serve."]}],
+      nutrition:{calories:320,protein_g:14,carbs_g:36,fat_g:14,fiber_g:8}, video:null, rating:{value:4.9,count:680} },
+
+    { title:"Grilled Shrimp Salad", blog:"eatingbirdfood",
+      source_url:"https://www.eatingbirdfood.com/grilled-shrimp-salad/",
+      image:"https://www.eatingbirdfood.com/wp-content/uploads/2022/06/grilled-shrimp-salad-hero.jpg",
+      servings:4, times:{prep:"15 mins",cook:"10 mins",total:"25 mins"},
+      ingredients:["1 lb large shrimp, peeled","6 cups romaine, chopped","1 cup cherry tomatoes","1 avocado, sliced","1/4 cup red onion","lime cilantro dressing"],
+      instructions:[{name:null,steps:["Toss shrimp with oil and seasoning; grill 2–3 min per side.","Arrange greens, tomatoes, avocado and onion in bowls.","Top with shrimp and drizzle with dressing."]}],
+      nutrition:{calories:290,protein_g:28,carbs_g:12,fat_g:16,fiber_g:6}, video:null, rating:{value:4.9,count:152} },
+
+    { title:"Quinoa Tabbouleh", blog:"eatingbirdfood",
+      source_url:"https://www.eatingbirdfood.com/quinoa-tabbouleh/",
+      image:"https://www.eatingbirdfood.com/wp-content/uploads/2023/02/quinoa-tabbouleh-overhead.jpg",
+      servings:6, times:{prep:"20 mins",cook:"15 mins",total:"35 mins"},
+      ingredients:["2 cups cooked quinoa","2 cups fresh parsley, chopped","1 cup cherry tomatoes, halved","1 cucumber, diced","1/4 cup mint","3 tbsp olive oil","2 lemons, juiced"],
+      instructions:[{name:null,steps:["Cook and cool quinoa.","Combine with parsley, tomatoes, cucumber and mint.","Dress with olive oil and lemon; season well."]}],
+      nutrition:{calories:220,protein_g:8,carbs_g:28,fat_g:9,fiber_g:4}, video:null, rating:{value:4.9,count:210} },
+
+    { title:"Poppy Seed Chicken Pasta Salad", blog:"eatingbirdfood",
+      source_url:"https://www.eatingbirdfood.com/poppy-seed-chicken-pasta-salad/",
+      image:"https://www.eatingbirdfood.com/wp-content/uploads/2022/05/poppy-seed-chicken-pasta-salad-hero.jpg",
+      servings:6, times:{prep:"20 mins",cook:"10 mins",total:"30 mins"},
+      ingredients:["8 oz pasta","2 cups cooked chicken, shredded","2 cups spinach","1 cup strawberries, sliced","1/2 cup pecans","poppy seed dressing"],
+      instructions:[{name:null,steps:["Cook and cool pasta.","Combine with chicken, spinach and strawberries.","Drizzle with dressing; top with pecans."]}],
+      nutrition:{calories:410,protein_g:30,carbs_g:40,fat_g:16,fiber_g:4}, video:null, rating:{value:4.9,count:185} },
+
+    { title:"Massaged Kale Salad", blog:"eatingbirdfood",
+      source_url:"https://www.eatingbirdfood.com/massaged-kale-salad/",
+      image:"https://www.eatingbirdfood.com/wp-content/uploads/2022/04/massaged-kale-salad-hero.jpg",
+      servings:4, times:{prep:"15 mins",cook:null,total:"15 mins"},
+      ingredients:["1 bunch kale, stemmed and chopped","2 tbsp olive oil","1 lemon, juiced","1/4 cup parmesan, shaved","1/3 cup almonds","1/2 cup chickpeas","salt"],
+      instructions:[{name:null,steps:["Massage kale with olive oil, lemon and salt for 3 min until softened.","Add parmesan and chickpeas.","Top with almonds and serve."]}],
+      nutrition:{calories:260,protein_g:12,carbs_g:18,fat_g:16,fiber_g:6}, video:null, rating:{value:4.9,count:130} },
+
+    { title:"Healthy Pasta Salad", blog:"eatingbirdfood",
+      source_url:"https://www.eatingbirdfood.com/healthy-pasta-salad/",
+      image:"", servings:8, times:{prep:"20 mins",cook:"10 mins",total:"30 mins"},
+      ingredients:["12 oz rotini pasta","1 cup cherry tomatoes","1 cucumber, diced","1/2 cup black olives","1/3 cup red onion","1/4 cup feta","Italian dressing"],
+      instructions:[{name:null,steps:["Cook pasta; rinse and cool.","Toss with vegetables, olives and feta.","Dress and refrigerate 30 min before serving."]}],
+      nutrition:{calories:320,protein_g:10,carbs_g:46,fat_g:12,fiber_g:3}, video:null, rating:{value:4.8,count:95} },
+
+    { title:"Mason Jar Salad", blog:"eatingbirdfood",
+      source_url:"https://www.eatingbirdfood.com/mason-jar-salad-meal-prep/",
+      image:"https://www.eatingbirdfood.com/wp-content/uploads/2022/05/how-to-make-a-mason-jar-salad-process-9.jpg",
+      servings:4, times:{prep:"20 mins",cook:null,total:"20 mins"},
+      ingredients:["4 cups mixed greens","1 cup chickpeas","1 cup cherry tomatoes","1 cucumber","1 avocado","1/4 cup sunflower seeds","4 tbsp tahini dressing"],
+      instructions:[{name:null,steps:["Layer dressing at the bottom of each jar.","Add hearty veg (tomatoes, cucumber, chickpeas), then greens.","Seal and refrigerate; shake and eat when ready."]}],
+      nutrition:{calories:280,protein_g:11,carbs_g:24,fat_g:16,fiber_g:9}, video:null, rating:{value:4.8,count:88} },
+
+    // ── The Mediterranean Dish ────────────────────────────────────────────────
+    { title:"Mediterranean Orzo Salad", blog:"themediterraneandish",
+      source_url:"https://www.themediterraneandish.com/orzo-salad/",
+      image:"https://www.themediterraneandish.com/wp-content/uploads/2025/06/OrzoSalad-4.jpg",
+      servings:6, times:{prep:"15 mins",cook:"10 mins",total:"25 mins"},
+      ingredients:["1 lb orzo pasta","1 cup cherry tomatoes","1 cucumber, diced","1/2 cup kalamata olives","1/2 cup feta","fresh parsley","Greek dressing"],
+      instructions:[{name:null,steps:["Cook orzo; rinse and cool.","Combine with tomatoes, cucumber, olives and feta.","Dress and toss; chill 30 min before serving."]}],
+      nutrition:{calories:360,protein_g:12,carbs_g:52,fat_g:12,fiber_g:4}, video:null, rating:{value:4.9,count:180} },
+
+    { title:"Mediterranean Chickpea Salad", blog:"themediterraneandish",
+      source_url:"https://www.themediterraneandish.com/chickpea-salad/",
+      image:"https://www.themediterraneandish.com/wp-content/uploads/2025/10/Mediterranean-Chickpea-Salad-Edit-15.jpg",
+      servings:4, times:{prep:"15 mins",cook:null,total:"15 mins"},
+      ingredients:["2 cans chickpeas, drained","1 cucumber, diced","1 cup cherry tomatoes","1/3 cup red onion","1/4 cup parsley","3 tbsp olive oil","2 tbsp lemon juice","1 tsp cumin"],
+      instructions:[{name:null,steps:["Combine chickpeas, cucumber, tomatoes, onion and parsley.","Whisk olive oil, lemon juice and cumin together.","Toss salad with dressing; rest 10 min before serving."]}],
+      nutrition:{calories:310,protein_g:14,carbs_g:40,fat_g:11,fiber_g:11}, video:null, rating:{value:5,count:210} },
+
+    { title:"Panzanella Salad", blog:"themediterraneandish",
+      source_url:"https://www.themediterraneandish.com/tomato-panzanella-salad-recipe/",
+      image:"https://www.themediterraneandish.com/wp-content/uploads/2026/04/Panzanella-Salad-7.jpg",
+      servings:6, times:{prep:"20 mins",cook:"10 mins",total:"30 mins"},
+      ingredients:["4 cups crusty bread, cubed","2 lb ripe tomatoes, chopped","1/2 cup fresh basil","1/4 cup red onion","3 tbsp olive oil","2 tbsp red wine vinegar","1 clove garlic"],
+      instructions:[{name:null,steps:["Toast or grill bread cubes until crispy.","Toss with tomatoes, basil, onion, oil, vinegar and garlic.","Rest 15 min so bread soaks up the juices."]}],
+      nutrition:{calories:240,protein_g:7,carbs_g:32,fat_g:10,fiber_g:4}, video:null, rating:{value:4.9,count:145} },
+
+    { title:"Wilted Spinach Salad", blog:"themediterraneandish",
+      source_url:"https://www.themediterraneandish.com/wilted-spinach-salad/",
+      image:"https://www.themediterraneandish.com/wp-content/uploads/2024/03/Spinach-Salad-11.jpg",
+      servings:4, times:{prep:"10 mins",cook:"10 mins",total:"20 mins"},
+      ingredients:["6 cups baby spinach","4 slices bacon, chopped","1 shallot, minced","2 tbsp red wine vinegar","1 tsp Dijon mustard","1/4 cup feta","1/4 cup toasted pine nuts"],
+      instructions:[{name:null,steps:["Cook bacon until crispy; remove.","Sauté shallot in drippings; whisk in vinegar and mustard.","Pour warm dressing over spinach; toss, then top with bacon, feta and pine nuts."]}],
+      nutrition:{calories:210,protein_g:10,carbs_g:6,fat_g:16,fiber_g:2}, video:null, rating:{value:4.9,count:88} },
+
+    { title:"Kisir (Turkish Bulgur Salad)", blog:"themediterraneandish",
+      source_url:"https://www.themediterraneandish.com/kisir-bulgur-salad/",
+      image:"https://www.themediterraneandish.com/wp-content/uploads/2024/06/TMD-June-Kisir-Salad-Leads-01-Horizontal.jpg",
+      servings:6, times:{prep:"20 mins",cook:"15 mins",total:"35 mins"},
+      ingredients:["2 cups fine bulgur wheat","2 cups hot water","3 tbsp tomato paste","2 tbsp pomegranate molasses","1/2 cup parsley","1 bunch green onions","1 lemon, juiced","olive oil"],
+      instructions:[{name:null,steps:["Pour hot water over bulgur; cover and rest 20 min.","Stir in tomato paste, molasses, lemon and olive oil.","Fold in parsley and green onions; chill and serve."]}],
+      nutrition:{calories:280,protein_g:8,carbs_g:52,fat_g:6,fiber_g:9}, video:null, rating:{value:4.9,count:112} },
+
+    { title:"Quinoa Tabbouleh (TMD)", blog:"themediterraneandish",
+      source_url:"https://www.themediterraneandish.com/quinoa-tabbouleh/",
+      image:"https://www.themediterraneandish.com/wp-content/uploads/2026/04/TMD-Quinoa-Tabouli-Leads-01-Overhead-Tight-Crop.jpg",
+      servings:6, times:{prep:"20 mins",cook:"15 mins",total:"35 mins"},
+      ingredients:["2 cups cooked quinoa","2 bunches fresh parsley, chopped","1/2 cup fresh mint","3 ripe tomatoes, diced","1 cucumber, diced","3 tbsp olive oil","2 lemons, juiced"],
+      instructions:[{name:null,steps:["Combine cooled quinoa with parsley, mint, tomatoes and cucumber.","Dress generously with olive oil and lemon juice.","Season and rest 15 min before serving."]}],
+      nutrition:{calories:200,protein_g:7,carbs_g:26,fat_g:9,fiber_g:4}, video:null, rating:{value:4.9,count:95} },
+
+    { title:"Mediterranean Quinoa Salad", blog:"themediterraneandish",
+      source_url:"https://www.themediterraneandish.com/quinoa-salad/",
+      image:"https://www.themediterraneandish.com/wp-content/uploads/2024/01/TMD-Quinoa-Salad-18.jpg",
+      servings:6, times:{prep:"15 mins",cook:"15 mins",total:"30 mins"},
+      ingredients:["2 cups cooked quinoa","1/2 cup sun-dried tomatoes","1/4 cup kalamata olives","1/3 cup feta","1/4 cup parsley","2 tbsp capers","3 tbsp olive oil","1 lemon, juiced"],
+      instructions:[{name:null,steps:["Cook and cool quinoa.","Toss with tomatoes, olives, capers, feta and parsley.","Dress with olive oil and lemon; season to taste."]}],
+      nutrition:{calories:280,protein_g:9,carbs_g:34,fat_g:12,fiber_g:5}, video:null, rating:{value:4.9,count:160} },
+
+    // ── Detoxinista ───────────────────────────────────────────────────────────
+    { title:"Tuna and Chickpea Salad", blog:"detoxinista",
+      source_url:"https://detoxinista.com/tuna-and-chickpea-salad/",
+      image:"https://detoxinista.com/wp-content/uploads/2026/05/tuna-and-chickpea-salad-stored.jpg",
+      servings:3, times:{prep:"10 mins",cook:null,total:"10 mins"},
+      ingredients:["2 cans tuna, drained","1 can chickpeas","1/4 cup red onion","2 tbsp olive oil","1 lemon, juiced","fresh parsley"],
+      instructions:[{name:null,steps:["Flake tuna into a bowl with chickpeas and onion.","Dress with olive oil and lemon.","Fold in parsley; season to taste."]}],
+      nutrition:{calories:340,protein_g:33,carbs_g:26,fat_g:11,fiber_g:7}, video:null, rating:{value:5,count:62} },
+
+    { title:"Greek Pasta Salad", blog:"detoxinista",
+      source_url:"https://detoxinista.com/greek-pasta-salad/",
+      image:"https://detoxinista.com/wp-content/uploads/2021/04/greek-pasta-salad-in-glass-jar.jpg",
+      servings:6, times:{prep:"20 mins",cook:"10 mins",total:"30 mins"},
+      ingredients:["12 oz chickpea pasta","1 cucumber","1 cup cherry tomatoes","1/2 cup feta","1/3 cup olives","Greek dressing"],
+      instructions:[{name:null,steps:["Cook and cool pasta.","Add cucumber, tomatoes, feta and olives.","Toss with dressing and chill before serving."]}],
+      nutrition:{calories:360,protein_g:18,carbs_g:44,fat_g:13,fiber_g:8}, video:null, rating:{value:4.8,count:140} },
+
+    { title:"Kale Caesar Salad", blog:"detoxinista",
+      source_url:"https://detoxinista.com/vegan-kale-caesar-salad-with-garlic-roasted-chickpeas/",
+      image:"https://detoxinista.com/wp-content/uploads/2017/06/kale-chicken-caesar-salad-recipe.jpg",
+      servings:4, times:{prep:"20 mins",cook:"25 mins",total:"45 mins"},
+      ingredients:["1 bunch kale, massaged","1 can chickpeas, roasted","1/3 cup tahini caesar dressing","1/4 cup parmesan","1 cup croutons","2 cloves garlic"],
+      instructions:[{name:null,steps:["Roast chickpeas at 400°F for 20–25 min until crispy.","Toss massaged kale with caesar dressing.","Top with chickpeas, parmesan and croutons."]}],
+      nutrition:{calories:310,protein_g:16,carbs_g:30,fat_g:16,fiber_g:8}, video:null, rating:{value:4.9,count:180} },
+
+    { title:"Roasted Vegetable Salad", blog:"detoxinista",
+      source_url:"https://detoxinista.com/roasted-vegetable-salad/",
+      image:"", servings:4, times:{prep:"15 mins",cook:"30 mins",total:"45 mins"},
+      ingredients:["1 sweet potato, cubed","1 cup Brussels sprouts","1 avocado","4 cups mixed greens","1/4 cup pepitas","lemon tahini dressing"],
+      instructions:[{name:null,steps:["Roast sweet potato and Brussels sprouts at 400°F for 25–30 min.","Cool slightly then arrange over greens.","Top with avocado, pepitas and tahini dressing."]}],
+      nutrition:{calories:330,protein_g:9,carbs_g:38,fat_g:18,fiber_g:11}, video:null, rating:{value:4.8,count:95} },
+
+    { title:"Broccoli Salad", blog:"detoxinista",
+      source_url:"https://detoxinista.com/broccoli-salad/",
+      image:"", servings:6, times:{prep:"15 mins",cook:null,total:"15 mins"},
+      ingredients:["4 cups broccoli florets","1/2 cup dried cranberries","1/3 cup sunflower seeds","1/4 cup red onion","1/4 cup Greek yogurt","2 tbsp apple cider vinegar","1 tbsp honey"],
+      instructions:[{name:null,steps:["Chop broccoli into small florets.","Mix yogurt, vinegar and honey into a dressing.","Toss broccoli with cranberries, seeds, onion and dressing."]}],
+      nutrition:{calories:190,protein_g:7,carbs_g:24,fat_g:9,fiber_g:5}, video:null, rating:{value:4.9,count:115} },
+
+    { title:"Watermelon Feta Salad", blog:"detoxinista",
+      source_url:"https://detoxinista.com/watermelon-feta-salad/",
+      image:"", servings:6, times:{prep:"15 mins",cook:null,total:"15 mins"},
+      ingredients:["6 cups watermelon, cubed","1/2 cup feta, crumbled","1/4 cup fresh mint","1/4 cup red onion, thinly sliced","2 tbsp olive oil","1 lime, juiced","flaky salt"],
+      instructions:[{name:null,steps:["Cube watermelon and arrange on a large platter.","Scatter feta, mint and red onion over the top.","Drizzle with olive oil and lime juice; finish with flaky salt."]}],
+      nutrition:{calories:150,protein_g:4,carbs_g:18,fat_g:7,fiber_g:1}, video:null, rating:{value:5,count:78} },
+
+    // ── Pinch of Yum ──────────────────────────────────────────────────────────
+    { title:"Summer Chipotle Chicken Cobb Salad", blog:"pinchofyum",
+      source_url:"https://pinchofyum.com/summer-chipotle-chicken-cobb-salad-with-cilantro-vinaigrette",
+      image:"", servings:4, times:{prep:"20 mins",cook:"15 mins",total:"35 mins"},
+      ingredients:["2 chicken breasts, grilled","6 cups romaine, chopped","2 hard-boiled eggs","1 avocado","1 cup corn","1/2 cup cherry tomatoes","cilantro lime vinaigrette"],
+      instructions:[{name:null,steps:["Grill and slice chicken with chipotle seasoning.","Arrange greens, eggs, avocado, corn and tomatoes in rows.","Top with chicken and drizzle with vinaigrette."]}],
+      nutrition:{calories:420,protein_g:40,carbs_g:18,fat_g:22,fiber_g:7}, video:null, rating:{value:5,count:82} },
+
+    { title:"Liz's Bistro Salad", blog:"pinchofyum",
+      source_url:"https://pinchofyum.com/bistro-salad",
+      image:"https://pinchofyum.com/uploads/Lizs-Bistro-Salad-Square-960x960.png",
+      servings:2, times:{prep:"15 mins",cook:null,total:"15 mins"},
+      ingredients:["4 cups mixed greens","1/2 cup walnuts","1/2 cup dried cherries","1/4 cup goat cheese","1 shallot, minced","3 tbsp olive oil","1 tbsp Dijon mustard","1 tbsp red wine vinegar"],
+      instructions:[{name:null,steps:["Whisk oil, mustard, vinegar and shallot into a dressing.","Toss greens with walnuts, cherries and goat cheese.","Dress and serve immediately."]}],
+      nutrition:{calories:380,protein_g:10,carbs_g:28,fat_g:28,fiber_g:4}, video:null, rating:{value:5,count:22} },
+
+    { title:"Cashew Crunch Salad with Sesame Dressing", blog:"pinchofyum",
+      source_url:"https://pinchofyum.com/cashew-crunch-salad-with-sesame-dressing",
+      image:"https://pinchofyum.com/tachyon/cropped-Cashew-Crunch-Salad-3.jpg",
+      servings:4, times:{prep:"20 mins",cook:null,total:"20 mins"},
+      ingredients:["4 cups shredded cabbage and kale","1 cup shredded carrots","1/2 cup cashews","1/4 cup edamame","2 tbsp sesame seeds","3 tbsp sesame oil","2 tbsp soy sauce","1 tbsp rice vinegar","1 tbsp honey"],
+      instructions:[{name:null,steps:["Whisk sesame oil, soy sauce, vinegar and honey into dressing.","Toss cabbage, kale, carrots and edamame together.","Top with cashews and sesame seeds; dress and serve."]}],
+      nutrition:{calories:310,protein_g:10,carbs_g:26,fat_g:20,fiber_g:5}, video:null, rating:{value:4.9,count:124} },
+
+    { title:"Corn, Avocado and Quinoa Salad", blog:"pinchofyum",
+      source_url:"https://pinchofyum.com/corn-avocado-and-quinoa-salad-with-marinated-tomatoes",
+      image:"", servings:4, times:{prep:"20 mins",cook:"15 mins",total:"35 mins"},
+      ingredients:["2 cups cooked quinoa","2 ears corn, grilled","2 avocados","1 cup cherry tomatoes, marinated","1/4 cup fresh basil","2 tbsp olive oil","1 lime, juiced"],
+      instructions:[{name:null,steps:["Grill corn and cut off the cob.","Combine quinoa, corn, avocado and marinated tomatoes.","Finish with basil, olive oil and lime juice."]}],
+      nutrition:{calories:380,protein_g:10,carbs_g:44,fat_g:20,fiber_g:10}, video:null, rating:{value:4.9,count:43} },
+
+    { title:"Lentil Greek Salad with Dill Sauce", blog:"pinchofyum",
+      source_url:"https://pinchofyum.com/lentil-greek-salads-with-dill-sauce",
+      image:"", servings:4, times:{prep:"15 mins",cook:"20 mins",total:"35 mins"},
+      ingredients:["1.5 cups green lentils, cooked","1 cucumber, diced","1 cup cherry tomatoes","1/3 cup feta","1/4 cup kalamata olives","fresh dill sauce"],
+      instructions:[{name:null,steps:["Cook and cool lentils.","Toss with cucumber, tomatoes, feta and olives.","Drizzle with dill sauce and serve."]}],
+      nutrition:{calories:290,protein_g:18,carbs_g:38,fat_g:8,fiber_g:14}, video:null, rating:{value:4.9,count:55} },
+
+    { title:"Spicy Peanut Soba Noodle Salad", blog:"pinchofyum",
+      source_url:"https://pinchofyum.com/spicy-peanut-soba-noodle-salad",
+      image:"", servings:4, times:{prep:"15 mins",cook:"10 mins",total:"25 mins"},
+      ingredients:["8 oz soba noodles","2 cups shredded purple cabbage","1 cup shredded carrots","1 cup edamame","3 tbsp peanut butter","2 tbsp soy sauce","1 tbsp sriracha","1 lime, juiced"],
+      instructions:[{name:null,steps:["Cook soba noodles; rinse under cold water.","Whisk peanut butter, soy sauce, sriracha and lime into sauce.","Toss noodles with cabbage, carrots and edamame; coat in sauce."]}],
+      nutrition:{calories:390,protein_g:18,carbs_g:58,fat_g:12,fiber_g:6}, video:null, rating:{value:4.8,count:91} },
+
+    { title:"Autumn Glow Salad with Lemon Dressing", blog:"pinchofyum",
+      source_url:"https://pinchofyum.com/autumn-glow-salad-with-lemon-dressing",
+      image:"", servings:4, times:{prep:"20 mins",cook:"25 mins",total:"45 mins"},
+      ingredients:["2 cups roasted butternut squash","4 cups arugula","1/2 cup dried cranberries","1/3 cup pepitas","1/4 cup goat cheese","lemon tahini dressing"],
+      instructions:[{name:null,steps:["Roast squash at 400°F for 20–25 min until caramelized.","Arrange arugula on a platter; top with squash and cranberries.","Scatter pepitas and goat cheese; drizzle with dressing."]}],
+      nutrition:{calories:300,protein_g:9,carbs_g:36,fat_g:15,fiber_g:6}, video:null, rating:{value:4.9,count:62} },
+
+    // ── Skinnytaste ───────────────────────────────────────────────────────────
+    { title:"Thai Flank Steak Salad", blog:"skinnytaste",
+      source_url:"https://www.skinnytaste.com/thai-flank-steak-salad/",
+      image:"https://www.skinnytaste.com/wp-content/uploads/2026/05/Thai-Flank-Steak-Salad-15.jpg",
+      servings:4, times:{prep:"20 mins",cook:"10 mins",total:"30 mins"},
+      ingredients:["1 lb flank steak","4 cups romaine, chopped","1 cup shredded carrots","1 cup cucumber, sliced","1/4 cup fresh mint","1/4 cup fresh basil","Thai lime dressing"],
+      instructions:[{name:null,steps:["Grill steak to medium-rare; rest and slice thin against the grain.","Arrange greens, carrots, cucumber and herbs on plates.","Top with steak and drizzle with Thai lime dressing."]}],
+      nutrition:{calories:350,protein_g:38,carbs_g:12,fat_g:16,fiber_g:4}, video:null, rating:{value:4.9,count:180} },
+
+    { title:"Chickpea Salad", blog:"skinnytaste",
+      source_url:"https://www.skinnytaste.com/chickpea-salad/",
+      image:"https://www.skinnytaste.com/wp-content/uploads/2019/06/Chickpea-Salad-6.jpg",
+      servings:4, times:{prep:"15 mins",cook:null,total:"15 mins"},
+      ingredients:["2 cans chickpeas, drained","1 cucumber, diced","1/2 cup cherry tomatoes","1/4 cup red onion","1/4 cup feta","2 tbsp olive oil","1 lemon, juiced","fresh parsley"],
+      instructions:[{name:null,steps:["Combine chickpeas, cucumber, tomatoes and onion.","Dress with olive oil and lemon juice.","Toss with feta and parsley; serve."]}],
+      nutrition:{calories:290,protein_g:12,carbs_g:38,fat_g:10,fiber_g:9}, video:null, rating:{value:4.8,count:320} },
+
+    { title:"Asian Chicken Salad", blog:"skinnytaste",
+      source_url:"https://www.skinnytaste.com/asian-chicken-salad/",
+      image:"", servings:4, times:{prep:"20 mins",cook:"15 mins",total:"35 mins"},
+      ingredients:["2 chicken breasts, grilled and sliced","4 cups shredded napa cabbage","1 cup shredded carrots","1/2 cup sliced almonds","3 tbsp sesame ginger dressing","2 tbsp sesame seeds"],
+      instructions:[{name:null,steps:["Cook and slice chicken.","Toss cabbage and carrots with dressing.","Top with chicken, almonds and sesame seeds."]}],
+      nutrition:{calories:340,protein_g:34,carbs_g:14,fat_g:16,fiber_g:4}, video:null, rating:{value:4.8,count:410} },
+
+    { title:"Shrimp Taco Salad", blog:"skinnytaste",
+      source_url:"https://www.skinnytaste.com/shrimp-taco-salad/",
+      image:"", servings:4, times:{prep:"15 mins",cook:"5 mins",total:"20 mins"},
+      ingredients:["1 lb large shrimp","4 cups romaine, chopped","1 cup black beans","1 cup corn","1 avocado","1/4 cup cilantro lime dressing","tortilla strips"],
+      instructions:[{name:null,steps:["Season and cook shrimp 2 min per side until pink.","Arrange greens, beans, corn and avocado in bowls.","Top with shrimp and drizzle with dressing."]}],
+      nutrition:{calories:370,protein_g:32,carbs_g:28,fat_g:14,fiber_g:10}, video:null, rating:{value:4.9,count:290} },
+
+    { title:"Mexican Street Corn Salad", blog:"skinnytaste",
+      source_url:"https://www.skinnytaste.com/mexican-street-corn-salad/",
+      image:"", servings:6, times:{prep:"10 mins",cook:"10 mins",total:"20 mins"},
+      ingredients:["4 ears corn, grilled","1/3 cup cotija cheese","1/4 cup mayo","1 lime, juiced","1/2 tsp chili powder","fresh cilantro","jalapeño, optional"],
+      instructions:[{name:null,steps:["Grill corn and cut from the cob.","Toss with mayo, lime, chili powder and jalapeño.","Top with cotija and cilantro."]}],
+      nutrition:{calories:220,protein_g:6,carbs_g:28,fat_g:11,fiber_g:3}, video:null, rating:{value:4.9,count:380} },
+
+    { title:"Greek Salad", blog:"skinnytaste",
+      source_url:"https://www.skinnytaste.com/greek-salad/",
+      image:"", servings:4, times:{prep:"15 mins",cook:null,total:"15 mins"},
+      ingredients:["1 head romaine, chopped","1 cucumber, sliced","1 cup cherry tomatoes","1/2 cup kalamata olives","1/2 cup feta, crumbled","1/4 cup red onion","Greek dressing"],
+      instructions:[{name:null,steps:["Combine all vegetables in a large bowl.","Scatter olives, feta and red onion.","Dress with Greek dressing just before serving."]}],
+      nutrition:{calories:200,protein_g:8,carbs_g:10,fat_g:14,fiber_g:4}, video:null, rating:{value:4.8,count:260} },
+  ],
+  dessert: [
+    { title:"Greek Yogurt Berry Bark", blog:"eatingbirdfood", author:"Brittany Mullins",
+      source_url:"https://www.eatingbirdfood.com/category/meal-type/dessert/", image:"",
+      servings:6, times:{prep:"10 mins",cook:null,total:"2 hrs"},
+      ingredients:["2 cups Greek yogurt","2 tbsp maple syrup","1 cup mixed berries","2 tbsp dark chocolate chips"],
+      instructions:[{name:null,steps:["Stir yogurt with maple syrup; spread on a lined tray.",
+        "Scatter berries and chocolate over the top.","Freeze 2 hours, then break into pieces."]}],
+      nutrition:{calories:120,protein_g:10,carbs_g:14,fat_g:3,fiber_g:2}, video:null, rating:null },
+  ],
+};
+
+const MEALS = {
+  breakfast:{emoji:"🍳",sub:"Bright, protein-forward starts"},
+  lunch:    {emoji:"🥗",sub:"Quick, fresh midday plates"},
+  dinner:   {emoji:"🍲",sub:"Family-sized, healthy dinners"},
+  salad:    {emoji:"🥙",sub:"Big, filling salads for any meal"},
+};
+// When served via Express (locally or on Render) use relative API paths.
+// When opened as a local file (file://) fall back to built-in DEMO data only.
+const API = location.protocol === "file:" ? null : "";
+
+/* ---------------- state ---------------- */
+const S = {
+  bw:140, added:new Set(),
+  meal:null,
+  course:"main", picks:{main:null,salad:null,dessert:null},
+  servings:null, servingsFor:null,   // chosen serving count + which recipe it's for
+  view:"cook", log:{},               // log: { "YYYY-MM-DD": [ {meal,course,title,blog,protein,key} ] }
+  plan:{}, shopChecked:new Set(),     // plan: { "YYYY-MM-DD": { breakfast:[entry], lunch:[], dinner:[] } }
+  blogFilter:null, fullMenuList:[],   // active blog filter and unfiltered list
+  proteinFilter:null,                 // active protein-source filter
+  goals:{calories:2000,fiber:28,carbs:150,fat:65,water:8}, // daily targets
+  waterToday:{},                      // { 'YYYY-MM-DD': N glasses }
+};
+const app = document.getElementById("app");
+const $ = (id)=>document.getElementById(id);
+
+/* ---------------- dates & log ---------------- */
+function dayInfo(offset){            // offset 0 = today, -1 = yesterday ...
+  const d=new Date(); d.setHours(12,0,0,0); d.setDate(d.getDate()+offset);
+  const iso=d.getFullYear()+"-"+String(d.getMonth()+1).padStart(2,"0")+"-"+String(d.getDate()).padStart(2,"0");
+  return {iso, dow:d.toLocaleDateString(undefined,{weekday:"short"}),
+          nice:d.toLocaleDateString(undefined,{weekday:"long",month:"short",day:"numeric"}), dt:d};
+}
+const today = ()=>dayInfo(0).iso;
+const goal = ()=>Math.round(S.bw*0.8);                  // 0.8g protein per lb
+const proteinOn = (iso)=>(S.log[iso]||[]).reduce((s,e)=>s+e.protein,0);
+const proteinToday = ()=>proteinOn(today());
+
+/* ================================================================
+   PERSISTENCE — localStorage (works in Safari/Chrome when opening
+   the file directly) + optional server-side sync when server.js
+   is running. Data survives closing the app and reopening it.
+   NOTE: The Claude.ai in-app artifact preview sandboxes storage,
+   so save/load only kicks in when the file is opened in a real
+   browser or served via node server.js.
+================================================================ */
+const SK = "morgans_kitchen_v1";          // storage key
+
+function findRecipeByKey(key){
+  for(const course of Object.keys(DEMO)){
+    const r=(DEMO[course]||[]).find(r=>recipeKey(r)===key);
+    if(r) return r;
+  }
+  return null;
+}
+
+function serialState(){
+  // strip the .recipe object reference (a live DEMO pointer) before JSON-encoding
+  const planClean={};
+  Object.entries(S.plan).forEach(([day,meals])=>{
+    planClean[day]={};
+    Object.entries(meals).forEach(([m,list])=>{
+      planClean[day][m]=list.map(({recipe,...rest})=>rest);
+    });
+  });
+  return {bw:S.bw, log:S.log, plan:planClean, shopChecked:[...S.shopChecked], goals:S.goals, waterToday:S.waterToday};
+}
+
+function applyState(data){
+  if(!data||typeof data!=="object") return;
+  if(data.bw){ S.bw=+data.bw; const inp=$("bw"); if(inp) inp.value=data.bw; }
+  if(data.log) S.log=data.log;
+  if(data.plan){
+    S.plan={};
+    Object.entries(data.plan).forEach(([day,meals])=>{
+      S.plan[day]={};
+      Object.entries(meals).forEach(([m,list])=>{
+        S.plan[day][m]=(list||[]).map(e=>({...e, recipe:findRecipeByKey(e.key)}));
+      });
+    });
+  }
+  if(data.shopChecked) S.shopChecked=new Set(data.shopChecked);
+  if(data.goals)     Object.assign(S.goals, data.goals);
+  if(data.waterToday) S.waterToday=data.waterToday;
+  // rebuild S.added (today's logged recipe keys) from the saved log
+  S.added=new Set((S.log[today()]||[]).map(e=>e.key));
+}
+
+let _saveTimer=null;
+function save(){
+  clearTimeout(_saveTimer);
+  _saveTimer=setTimeout(()=>{
+    const d=serialState();
+    try{ localStorage.setItem(SK, JSON.stringify(d)); }catch{}  // localStorage
+    if(API){ fetch(`${API}/api/state`,{method:"POST",          // server sync
+      headers:{"Content-Type":"application/json"},
+      body:JSON.stringify(d)}).catch(()=>{}); }
+  }, 300);
+}
+
+async function loadState(){
+  // 1. try the server (freshest source when backend is running)
+  if(API){ try{
+    const r=await fetch(`${API}/api/state`);
+    if(r.ok){ applyState(await r.json()); return; }
+  }catch{} }
+  // 2. fall back to localStorage
+  try{
+    const raw=localStorage.getItem(SK);
+    if(raw) applyState(JSON.parse(raw));
+  }catch{}
+}
+
+function clearData(){
+  const wrap=document.querySelector("[data-reset-wrap]"); if(!wrap) return;
+  wrap.innerHTML=`
+    <span style="font-size:13px;color:var(--ink-soft)">Erase all meals, plans &amp; history?</span><br>
+    <button onclick="doReset()" style="font-size:13px;font-weight:700;color:var(--terra);font-family:inherit;text-decoration:underline;margin-top:6px">Yes, reset everything</button>
+    &nbsp;·&nbsp;
+    <button onclick="cancelReset()" style="font-size:12px;color:var(--ink-soft);font-family:inherit;text-decoration:underline">Cancel</button>`;
+}
+function doReset(){
+  S.log={}; S.plan={}; S.added=new Set(); S.shopChecked=new Set();
+  S.blogFilter=null; S.proteinFilter=null;
+  try{ localStorage.removeItem(SK); }catch{}
+  if(API){ fetch(`${API}/api/state`,{method:"POST",
+    headers:{"Content-Type":"application/json"}, body:"{}"}); }
+  go(S.view);
+  toast("All data cleared.");
+}
+function cancelReset(){
+  const wrap=document.querySelector("[data-reset-wrap]"); if(!wrap) return;
+  wrap.innerHTML=`<button onclick="clearData()" style="font-size:12px;color:var(--ink-soft);font-family:inherit;text-decoration:underline">Reset all data</button>`;
+}
+
+/* ---------------- multi-ring goal tracker ---------------- */
+function refreshCoach(){
+  S.bw = S.bw||140;
+  const g=goal(), n=nutritionSumToday();
+  const water=(S.waterToday||{})[today()]||0;
+  const gg=S.goals||{};
+  // circumference for each ring radius [35,26,17,8]
+  const rings=[
+    ["rCal",  n.calories, gg.calories||2000, 219.9],
+    ["rProt", n.protein,  g,                 163.4],
+    ["rFib",  n.fiber,    gg.fiber||28,       106.8],
+    ["rWat",  water,      gg.water||8,        50.3 ],
+  ];
+  rings.forEach(([id,actual,tgt,C])=>{
+    const el=$(id); if(!el) return;
+    const pct=Math.min(100, actual/Math.max(1,tgt)*100);
+    el.style.strokeDashoffset = (C*(1-pct/100)).toFixed(2);
+  });
+  const fmt=v=>Math.round(v);
+  if($("hCal"))  $("hCal").textContent  = `${fmt(n.calories)} / ${gg.calories||2000} cal`;
+  if($("hProt")) $("hProt").textContent = `${fmt(n.protein)} / ${g}g prot`;
+  if($("hFib"))  $("hFib").textContent  = `${fmt(n.fiber)} / ${gg.fiber||28}g fiber`;
+  if($("hWat"))  $("hWat").textContent  = `${water} / ${gg.water||8} 💧`;
+}
+
+function toast(msg){const t=$("toast");t.textContent=msg;t.classList.add("show");
+  clearTimeout(t._);t._=setTimeout(()=>t.classList.remove("show"),2200);}
+
+/* ---------------- data access ---------------- */
+async function getMenu(course){
+  if(API === null) return DEMO[course]||[];
+  try{
+    const r = await fetch(`/api/menu/${course}`);
+    if(!r.ok) throw new Error(r.status);
+    const fresh = await r.json();
+    if(Array.isArray(fresh) && fresh.length){
+      // Merge: live server recipes first, DEMO fills in any gaps
+      // (DEMO has full nutrition; server has freshest titles/images)
+      const liveKeys = new Set(fresh.map(r=>r.source_url||r.title));
+      const fallback = (DEMO[course]||[]).filter(r=>!liveKeys.has(r.source_url||r.title));
+      return [...fresh, ...fallback];
+    }
+  }catch{ /* server not ready yet — use DEMO */ }
+  return DEMO[course]||[];
+}
+function recipeKey(r){return (r.source_url||r.title);}
+
+/* ---------------- meal plan ---------------- */
+function planEntry(r,meal,servings){
+  return {key:recipeKey(r), title:r.title, blog:r.blog, protein:r.nutrition?.protein_g||0,
+          meal, servings:servings||r.servings||1, recipe:r};
+}
+function addToPlan(){
+  const r=S.picks[S.course]; if(!r) return;
+  const day=$("planDay") ? $("planDay").value : today();
+  const meal=S.meal||"dinner";
+  S.plan[day]=S.plan[day]||{};
+  S.plan[day][meal]=S.plan[day][meal]||[];
+  if(S.plan[day][meal].some(e=>e.key===recipeKey(r))){ toast("Already in the plan"); return; }
+  S.plan[day][meal].push(planEntry(r,meal,S.servings));
+  const lbl=$("planDay")?$("planDay").selectedOptions[0].textContent:"the plan";
+  toast(`Added to ${lbl} 🗓️`); save();
+}
+function removeFromPlan(day,meal,key){
+  if(S.plan[day]&&S.plan[day][meal]) S.plan[day][meal]=S.plan[day][meal].filter(e=>e.key!==key);
+  save(); go("plan");
+}
+function plannedProtein(iso){
+  const d=S.plan[iso]; if(!d) return 0;
+  return ["breakfast","lunch","dinner","salad"].reduce((s,m)=>s+(d[m]||[]).reduce((a,e)=>a+e.protein,0),0);
+}
+function plannedNutrition(iso){
+  const d=S.plan[iso]; if(!d) return null;
+  let cal=0,prot=0,carbs=0,fat=0,fiber=0;
+  ["breakfast","lunch","dinner","salad"].forEach(m=>{
+    (d[m]||[]).forEach(e=>{
+      const n=e.recipe?.nutrition||{};
+      const base=e.recipe?.servings||1, sv=e.servings||1, f=sv/base;
+      cal   += (n.calories   ||0)*f;
+      prot  += (n.protein_g  ||0)*f;
+      carbs += (n.carbs_g    ||0)*f;
+      fat   += (n.fat_g      ||0)*f;
+      fiber += (n.fiber_g    ||0)*f;
+    });
+  });
+  if(!cal&&!prot&&!carbs&&!fat&&!fiber) return null;
+  return {cal:Math.round(cal),prot:Math.round(prot),carbs:Math.round(carbs),fat:Math.round(fat),fiber:Math.round(fiber)};
+}
+
+/* ---------------- shopping list ---------------- */
+/* ================================================================
+   SHOPPING LIST — ingredient parsing, merging, display
+================================================================ */
+
+// Units that are real measurements (not adjectives like large/medium/small)
+const UNIT_SET=new Set(["cups","cup","tablespoons","tablespoon","tbsp","teaspoons","teaspoon","tsp",
+  "ounces","ounce","oz","pounds","pound","lbs","lb","grams","gram","kg","ml","liters","liter","l",
+  "cans","can","cloves","clove","slices","slice","bunches","bunch","blocks","block","scoops","scoop",
+  "packages","package","jars","jar","heads","head","sprigs","sprig","stalks","stalk",
+  "pinches","pinch","handfuls","handful","fillets","fillet"]);
+
+// Normalise unit variants → one canonical singular form used as the merge key
+const UNIT_NORM={cups:"cup",tablespoons:"tbsp",tablespoon:"tbsp",teaspoons:"tsp",teaspoon:"tsp",
+  ounces:"oz",ounce:"oz",pounds:"lb",pound:"lb",lbs:"lb",grams:"g",gram:"g",
+  liters:"l",liter:"l",cans:"can",cloves:"clove",slices:"slice",bunches:"bunch",
+  blocks:"block",scoops:"scoop",packages:"package",jars:"jar",heads:"head",
+  sprigs:"sprig",stalks:"stalk",pinches:"pinch",handfuls:"handful",fillets:"fillet"};
+function unitNorm(u){return UNIT_NORM[u]||u;}
+
+// Pluralise a unit for display when qty > 1
+function unitDisplay(u,qty){
+  if(!u) return "";
+  if(qty<=1) return u;   // "1/4 cup" and "1 cup" stay singular; "1 1/2 cups" and "2 cups" plural
+  return ({cup:"cups",can:"cans",clove:"cloves",slice:"slices",bunch:"bunches",block:"blocks",
+    scoop:"scoops",package:"packages",jar:"jars",head:"heads",sprig:"sprigs",stalk:"stalks",
+    fillet:"fillets",pinch:"pinches",handful:"handfuls"})[u]||u; // tbsp/tsp/oz/lb/g unchanged
+}
+
+// Singularise a name for the merge key only (display uses the original)
+function singular(n){
+  if(!n) return n;
+  if(n.endsWith("ies") && n.length>4) return n.slice(0,-3)+"y";  // berries→berry
+  if(n.endsWith("oes") && n.length>4) return n.slice(0,-2);      // tomatoes→tomato
+  if(n.endsWith("ves") && n.length>4) return n.slice(0,-3)+"f";  // leaves→leaf
+  if(n.endsWith("s")  && !n.endsWith("ss") && n.length>3) return n.slice(0,-1);
+  return n;
+}
+
+// Uncountable/mass nouns that never get an "s" appended
+const UNCOUNTABLE=/^(milk|oil|water|broth|stock|vinegar|honey|syrup|rice|quinoa|pasta|flour|sugar|butter|cream|hummus|pesto|marinara|tamari|soy|garlic|feta|parmesan|mozzarella|cottage cheese|yogurt|dressing|seasoning|spinach|kale|arugula|coleslaw|ginger|tahini|protein powder|almond flour|cinnamon|paprika|cumin|oregano|vanilla|salt|pepper|baking|chicken|turkey|beef|salmon|tuna|tofu|tempeh|edamame|peanut butter|almond butter|basil|parsley|dill|thyme|oats|chia|olive oil|sesame oil|coconut oil|avocado oil)\b/;
+
+// Pluralise a display name when there's no unit and qty > 1
+function pluralName(name,qty){
+  if(qty<=1||UNCOUNTABLE.test(name)) return name;
+  if(name.endsWith("berry")) return name.slice(0,-5)+"berries";
+  if(name.endsWith("tomato")||name.endsWith("potato")) return name+"es";
+  if(name.endsWith("y") && !/[aeiou]y$/i.test(name)) return name.slice(0,-1)+"ies";
+  if(/(sh|ch|x|z)$/.test(name)) return name+"es";
+  if(!name.endsWith("s")) return name+"s"; // lemon→lemons, egg→eggs, avocado→avocados
+  return name; // already ends in s (or uncountable caught above)
+}
+
+// Strip noise from an ingredient string to get a canonical display name
+function cleanName(s){
+  return s
+    .replace(/\([^)]*\)/g,"")            // "(6 oz each)" → ""
+    .replace(/,.*$/,"")                   // ", diced and minced" → ""
+    .replace(/\b(to serve|to top|for topping|for serving|of choice|as needed|to taste)\b.*/gi,"")
+    .replace(/^(large|medium|small|fresh|frozen|ripe|raw|cooked|canned|dried|chopped|rolled|instant|quick|old.fashioned)\s+/gi,"")
+    .replace(/\bvanilla\s+extract\b/gi,"vanilla")   // vanilla extract ≡ vanilla
+    .replace(/\brolled\s+oats?\b/gi,"oats")         // rolled oats ≡ oats
+    .trim().toLowerCase().replace(/\s+/g," ");
+}
+
+function parseIngredient(text){
+  const m=text.match(/^(\d+\s+\d+\/\d+|\d+\/\d+|\d+(?:\.\d+)?)\s*(.*)$/);
+  if(!m){
+    const n=cleanName(text);
+    return {qty:null, unit:"", displayName:n, canon:singular(n)};
+  }
+  let rest=m[2], unit="";
+  const w=rest.match(/^([a-zA-Z]+)\b/);
+  if(w && UNIT_SET.has(w[1].toLowerCase())){
+    unit=unitNorm(w[1].toLowerCase()); rest=rest.slice(w[0].length);
+  }
+  const displayName=cleanName(rest), canon=singular(displayName);
+  return {qty:parseQty(m[1]), unit, displayName, canon};
+}
+
+function category(name){
+  const has=(...w)=>w.some(x=>name.includes(x));
+  if(has("chicken","turkey","beef","salmon","tuna","shrimp","tofu","tempeh","fillet","meatball")) return "Meat & fish";
+  if(has("egg","milk","yogurt","feta","cheese","mozzarella","parmesan","cream","butter","hummus","cottage")) return "Dairy & eggs";
+  if(has("lemon","lime","tomato","cucumber","onion","garlic","ginger","spinach","kale","green","avocado",
+         "banana","berry","broccoli","pepper","basil","parsley","dill","thyme","rhubarb","arugula",
+         "romaine","mushroom","carrot","zucchini","asparagus","olive","edamame","vegetable")) return "Produce";
+  if(has("oat","chia","flour","pasta","rice","quinoa","broth","oil","vinegar","syrup","honey","sugar",
+         "baking","vanilla","soy","tamari","sesame","breadcrumb","marinara","bean","chickpea","tortilla",
+         "granola","almond","nut","seed","protein","paprika","cumin","oregano","cinnamon","dressing",
+         "pesto","salt","spice","crumb")) return "Pantry";
+  return "Other";
+}
+
+// Format a final item for display — handles plurals, unit display, capitalisation
+function fmtItem(qty,unit,displayName){
+  if(qty==null||qty===0) return cap(displayName);
+  const q=pretty(qty);
+  if(unit) return `${q} ${unitDisplay(unit,qty)} ${displayName}`;
+  return `${q} ${pluralName(displayName,qty)}`;
+}
+
+/* ---- unit conversion for aggregation ----
+   Volume items accumulate in ml, weight in g, countable in their own bucket.
+   This means "1/4 cup + 1 tbsp maple syrup" → 5 tbsp maple syrup. */
+const VOL_TO_ML={tsp:4.93,tbsp:14.79,cup:236.59,ml:1,l:1000};
+const WT_TO_G={g:1,kg:1000,oz:28.35,lb:453.59};
+function mlToBest(ml){
+  if(ml>=177) return {qty:ml/236.59, unit:"cup"};   // ≥ 3/4 cup
+  if(ml>=29)  return {qty:ml/14.79,  unit:"tbsp"};  // ≥ 2 tbsp
+  return            {qty:ml/4.93,   unit:"tsp"};
+}
+function gToBest(g){
+  if(g>=454) return {qty:g/453.59, unit:"lb"};
+  if(g>=28)  return {qty:g/28.35,  unit:"oz"};
+  return           {qty:g,         unit:"g"};
+}
+
+function buildShoppingList(){
+  const order=["Produce","Meat & fish","Dairy & eggs","Pantry","Other"];
+  // key = cat|canon (NO unit) — volumes and weights convert to common base
+  const bag={}, cats={}; order.forEach(c=>cats[c]=[]); let mealCount=0;
+  Object.keys(S.plan).forEach(day=>{
+    ["breakfast","lunch","dinner","salad"].forEach(meal=>{
+      (S.plan[day]?.[meal]||[]).forEach(entry=>{
+        mealCount++;
+        const r=entry.recipe||{}, base=r.servings||entry.servings||1;
+        const factor=entry.servings/base;
+        (r.ingredients||[]).forEach(line=>{
+          const p=parseIngredient(line);
+          if(!p.canon) return;
+          const cat=category(p.canon);
+          const k=`${cat}|${p.canon}`;             // unit excluded from key
+          if(!bag[k]) bag[k]={cat, displayName:p.displayName, volMl:0, wtG:0, count:0,
+                               hasVol:false, hasWt:false, hasCount:false, noQty:false};
+          if(p.qty==null){ bag[k].noQty=true; return; }
+          const q=p.qty*factor;
+          const vRate=VOL_TO_ML[p.unit], wRate=WT_TO_G[p.unit];
+          if(vRate)      { bag[k].volMl+=q*vRate; bag[k].hasVol=true; }
+          else if(wRate) { bag[k].wtG  +=q*wRate; bag[k].hasWt=true;  }
+          else           { bag[k].count+=q;        bag[k].hasCount=true; }
+        });
+      });
+    });
+  });
+  Object.entries(bag).forEach(([k,v])=>{
+    if(!v.displayName) return;
+    let label;
+    if(v.hasVol)      { const b=mlToBest(v.volMl); label=fmtItem(b.qty,b.unit,v.displayName); }
+    else if(v.hasWt)  { const b=gToBest(v.wtG);    label=fmtItem(b.qty,b.unit,v.displayName); }
+    else if(v.hasCount){ label=fmtItem(v.count,"",v.displayName); }
+    else              { label=cap(v.displayName); }
+    (cats[v.cat]=cats[v.cat]||[]).push({k,label,name:v.displayName});
+  });
+  order.forEach(c=>cats[c].sort((a,b)=>a.name.localeCompare(b.name)));
+  return {cats,order,mealCount};
+}
+
+/* ---------------- renderers ---------------- */
+/* Photos: we try the blog's own image first (works in a normal browser), then
+   a public image proxy if the blog blocks hotlinking, then a tasteful inline
+   placeholder that always renders. Sandboxed in-app file previews block ALL
+   external images, so there you'll see the placeholder — open in a real browser
+   (or run server.js) to get the real photos. */
+function proxyImg(url,w){
+  if(!url) return url;
+  const full = url.replace(/-\d+x\d+(?=\.(jpe?g|png|webp))/i,"");   // full-size original
+  const noScheme = full.replace(/^https?:\/\//,"");
+  if(API) return `${API}/img?url=${encodeURIComponent(full)}`;     // your own backend
+  return `https://wsrv.nl/?url=ssl:${noScheme}&w=${w||800}&fit=cover`;
+}
+function placeholder(title,blog){
+  const t=(title||"Recipe").replace(/&/g,"and");
+  const svg="<svg xmlns='http://www.w3.org/2000/svg' width='800' height='600'>"+
+    "<defs><linearGradient id='g' x1='0' y1='0' x2='1' y2='1'>"+
+    "<stop offset='0' stop-color='#EAF0DF'/><stop offset='.55' stop-color='#F1E3CF'/>"+
+    "<stop offset='1' stop-color='#E6C2AC'/></linearGradient></defs>"+
+    "<rect width='800' height='600' fill='url(#g)'/>"+
+    "<circle cx='400' cy='250' r='60' fill='none' stroke='#3F5C3A' stroke-width='6' opacity='.5'/>"+
+    "<text x='400' y='398' font-family='Georgia,serif' font-size='40' fill='#2E4429' text-anchor='middle'>"+t+"</text>"+
+    (blog?"<text x='400' y='444' font-family='Georgia,serif' font-size='24' fill='#C2693F' text-anchor='middle'>"+blog+"</text>":"")+
+    "</svg>";
+  return "data:image/svg+xml;utf8,"+encodeURIComponent(svg).replace(/'/g,"%27");
+}
+function imgFallback(el){
+  const step=+(el.dataset.step||0);
+  if(step===0){ el.dataset.step="1"; el.src=el.dataset.proxied; }      // try proxy
+  else { el.onerror=null; el.src=el.dataset.ph; }                       // give up -> placeholder
+}
+function imgEl(src,title,cls,w,blog){
+  const ph=placeholder(title,blog);
+  if(!src) return `<img class="${cls}" src="${ph}" alt="${title}">`;
+  return `<img class="${cls}" loading="lazy" src="${src}" data-proxied="${proxyImg(src,w)}" data-ph="${ph}" onerror="imgFallback(this)" alt="${title}">`;
+}
+
+function home(){
+  S.view="cook"; setNav();
+  S.meal=null;S.course="main";S.picks={main:null,salad:null,dessert:null};
+  app.innerHTML=`
+   <section class="hero fade">
+     <div class="eyebrow">Family of four · fresh &amp; high-protein</div>
+     <h1 class="display">What shall we<br><span class="italic">cook</span> today?</h1>
+     <p>Pick a meal and choose from a hand-picked menu — no scrolling through ten blogs.</p>
+   </section>
+   <div class="meals stagger">
+     ${Object.entries(MEALS).map(([k,m])=>`
+       <button class="meal" onclick="openMeal('${k}')">
+         <div class="em">${m.emoji}</div>
+         <div><h3 class="display">${k[0].toUpperCase()+k.slice(1)}</h3><small>${m.sub}</small></div>
+         <div class="arrow">→</div>
+       </button>`).join("")}
+   </div>`;
+  refreshCoach();
+}
+
+async function openMeal(meal){
+  S.meal=meal; S.course="main"; S.blogFilter=null; S.proteinFilter=null; S.fullMenuList=[];
+  app.innerHTML=`<div class="back" onclick="home()">← meals</div>
+    <div class="menu-head fade">
+      <div class="eyebrow">${meal}</div>
+      <h2 class="display">${({breakfast:"Morning's",lunch:"Midday",dinner:"Tonight's",salad:"Today's"}[meal]||"Today's")} <span class="italic">menu</span></h2>
+    </div>
+    <div class="filter-bar" id="filter-bar"></div>
+    <div class="filter-bar protein-bar" id="protein-bar" style="padding-top:0"></div>
+    <div class="cards stagger" id="cards">Loading the menu…</div>`;
+  const list = await getMenu(meal);
+  renderCards(list,"main");
+}
+
+const BLOG_LABELS = {
+  eatingbirdfood:      "Eating Bird Food",
+  themediterraneandish:"Mediterranean Dish",
+  theeastcoastkitchen: "East Coast Kitchen",
+  detoxinista:         "Detoxinista",
+  skinnytaste:         "Skinnytaste",
+  pinchofyum:          "Pinch of Yum",
+};
+
+/* ---- protein-source detection ----
+   Tests recipe title + ingredient list in priority order so a recipe only ever
+   lands in one bucket. "Vegetarian" is the final fallback (covers eggs, dairy,
+   legumes, grains, tofu, etc.) */
+function proteinType(r){
+  const t=((r.title||"")+" "+(r.ingredients||[]).join(" ")).toLowerCase();
+  if(/salmon|tuna|cod|shrimp|sardine|seafood|halibut|crab|lobster|anchov|poke|clam|mussel|tilapia|haddock/.test(t)) return "seafood";
+  if(/chicken|turkey|poultry/.test(t)) return "chicken";
+  if(/\bbeef\b|ground beef|steak|brisket|burger|bison/.test(t)) return "beef";
+  if(/\bpork\b|bacon|ham\b|prosciutto|chorizo|sausage|pork chop/.test(t)) return "pork";
+  return "vegetarian";
+}
+const PROTEIN_OPTS=[
+  {v:"",           icon:"🍽️",  label:"All"},
+  {v:"seafood",    icon:"🐟",  label:"Seafood"},
+  {v:"chicken",    icon:"🍗",  label:"Chicken & Turkey"},
+  {v:"beef",       icon:"🥩",  label:"Beef"},
+  {v:"pork",       icon:"🐷",  label:"Pork"},
+  {v:"vegetarian", icon:"🌱",  label:"Vegetarian"},
+];
+
+/* ---- shared filter application ---- */
+function applyFilters(){
+  let list = S.fullMenuList;
+  if(S.blogFilter)    list = list.filter(r=>r.blog===S.blogFilter);
+  if(S.proteinFilter) list = list.filter(r=>proteinType(r)===S.proteinFilter);
+  LISTS[S.course] = list;
+  const el=$("cards"); if(!el) return;
+  el.innerHTML = renderCardItems(list, S.course);
+}
+
+/* Rebuild protein chips with live counts against the blog-filtered base list.
+   Chips with 0 matching recipes are hidden so the bar stays clean. */
+function refreshProteinBar(){
+  const pb=$("protein-bar"); if(!pb) return;
+  const base = S.blogFilter ? S.fullMenuList.filter(r=>r.blog===S.blogFilter) : S.fullMenuList;
+  pb.innerHTML = PROTEIN_OPTS.map(o=>{
+    const cnt = o.v ? base.filter(r=>proteinType(r)===o.v).length : base.length;
+    if(o.v && cnt===0) return ""; // hide if no recipes in this category/blog combo
+    const active = (o.v||"")===(S.proteinFilter||"");
+    return `<button class="chip" data-protein="${o.v}" aria-pressed="${active}" onclick="filterProtein('${o.v}')">${o.icon} ${o.label}<span class="chip-cnt">${cnt}</span></button>`;
+  }).join("");
+}
+
+function filterBlog(blog){
+  S.blogFilter = blog || null;
+  document.querySelectorAll("#filter-bar .chip").forEach(c=>
+    c.setAttribute("aria-pressed", String(c.dataset.blog===(blog||""))));
+  // If the active protein filter has 0 hits in the new blog, auto-clear it
+  if(S.proteinFilter){
+    const base = S.blogFilter ? S.fullMenuList.filter(r=>r.blog===S.blogFilter) : S.fullMenuList;
+    if(!base.some(r=>proteinType(r)===S.proteinFilter)) S.proteinFilter = null;
+  }
+  refreshProteinBar();
+  applyFilters();
+}
+
+function filterProtein(protein){
+  S.proteinFilter = protein || null;
+  document.querySelectorAll("#protein-bar .chip").forEach(c=>
+    c.setAttribute("aria-pressed", String(c.dataset.protein===(protein||""))));
+  applyFilters();
+}
+
+// Renders just the card HTML (used by applyFilters + renderCards)
+function renderCardItems(list, course){
+  if(!list.length){
+    const parts=[
+      S.blogFilter && (BLOG_LABELS[S.blogFilter]||S.blogFilter),
+      S.proteinFilter && (PROTEIN_OPTS.find(o=>o.v===S.proteinFilter)?.label),
+    ].filter(Boolean);
+    const why = parts.length ? parts.join(" + ") : "this category";
+    return `<div style="grid-column:1/-1;padding:30px 2px;color:var(--ink-soft);font-style:italic">No ${why} recipes here — try a different filter.</div>`;
+  }
+  return list.map((r,i)=>`
+    <button class="card" onclick='openRecipe(${JSON.stringify(course)},${i})'>
+      ${imgEl(r.image||r.thumb,r.title,"thumb",560,r.blog)}
+      <div class="card-body">
+        <div class="blog">${r.blog||""}</div>
+        <h4>${r.title}</h4>
+        <div class="pills">
+          ${r.times?.total?`<span class="pill">⏱ ${r.times.total}</span>`:""}
+          ${r.nutrition?.protein_g?`<span class="pill protein">💪 ${r.nutrition.protein_g}g protein / serving</span>`:""}
+        </div>
+      </div>
+    </button>`).join("");
+}
+
+function renderCards(list, course){
+  S.fullMenuList = list; S.blogFilter = null; S.proteinFilter = null;
+  LISTS[course] = list;
+  // Blog filter chips
+  const fb = $("filter-bar");
+  if(fb){
+    const blogs = [...new Set(list.map(r=>r.blog).filter(Boolean))];
+    fb.innerHTML = blogs.length > 1 ? [
+      `<button class="chip" data-blog="" aria-pressed="true" onclick="filterBlog('')">All</button>`,
+      ...blogs.map(b=>`<button class="chip" data-blog="${b}" aria-pressed="false" onclick="filterBlog('${b}')">${BLOG_LABELS[b]||b}</button>`)
+    ].join("") : "";
+  }
+  // Protein filter chips
+  refreshProteinBar();
+  const el = $("cards") || app;
+  el.innerHTML = renderCardItems(list, course);
+  el._list = list;
+}
+
+let LISTS={};
+async function openRecipe(course,i){
+  const list = course==="main" ? (DEMO[S.meal]) : DEMO[course];
+  const r = (LISTS[course]||list)[i];
+  S.picks[course]=r; S.course=course;
+  drawRecipe(r);
+  window.scrollTo({top:0,behavior:"smooth"});
+  // Fetch real nutrition from the blog in the background — replaces DEMO estimates
+  fetchLiveNutrition(r);
+}
+
+function nutriCard(v,k,hi,id){
+  if(v==null) return "";
+  const unit=k==="Calories"?"":"g";
+  return `<div id="${id}"><div class="v ${hi?'hi':''}">${Math.round(v)}${unit}</div><div class="k">${k}</div></div>`;
+}
+
+// ── Live nutrition fetcher ────────────────────────────────────────────────────
+// Keyed by source_url. Populated once per session; cleared on page reload.
+const _nutCache = new Map();
+
+async function fetchLiveNutrition(r){
+  if(API === null || !r?.source_url) return;
+  const url = r.source_url;
+
+  // Already fetched this session
+  if(_nutCache.has(url)){ _applyNutrition(r, _nutCache.get(url)); return; }
+
+  // Pulse the cells while we wait
+  const IDS = ["nCal","nProt","nCarbs","nFat","nFib"];
+  IDS.forEach(id=>{ const el=document.getElementById(id); if(el) el.classList.add("fetching"); });
+
+  try{
+    const resp = await fetch(`/api/recipe?url=${encodeURIComponent(url)}`);
+    if(!resp.ok) throw new Error(resp.status);
+    const data = await resp.json();
+    const n = data.nutrition;
+    if(!n || typeof n !== "object") throw new Error("no nutrition");
+    _nutCache.set(url, n);
+    _applyNutrition(r, n);
+  }catch{
+    // Silently keep the hardcoded estimates — stop pulsing
+    IDS.forEach(id=>{ const el=document.getElementById(id); if(el) el.classList.remove("fetching"); });
+  }
+}
+
+function _applyNutrition(r, n){
+  // Mutate the live recipe object so it stays correct this session
+  r.nutrition = Object.assign(r.nutrition || {}, n);
+
+  // Update nutrition grid cells
+  const cells = [
+    ["nCal",   n.calories,   "Calories", false],
+    ["nProt",  n.protein_g,  "Protein",  true ],
+    ["nCarbs", n.carbs_g,    "Carbs",    false],
+    ["nFat",   n.fat_g,      "Fat",      false],
+    ["nFib",   n.fiber_g,    "Fiber",    false],
+  ];
+  cells.forEach(([id, val, label, hi])=>{
+    const el = document.getElementById(id); if(!el || val==null) return;
+    const unit = label==="Calories" ? "" : "g";
+    el.classList.remove("fetching");
+    el.innerHTML = `<div class="v ${hi?'hi':''}">${Math.round(val)}${unit}</div><div class="k">${label}</div>`;
+  });
+
+  // Update protein in metarow and log button
+  const prot = Math.round(n.protein_g || 0);
+  const metaProt = document.getElementById("metaProt");
+  if(metaProt) metaProt.innerHTML = `💪 <b>${prot}g</b> protein / serving`;
+  const btn = document.getElementById("addbtn");
+  if(btn){
+    const logged = S.added.has(recipeKey(r));
+    btn.textContent = logged
+      ? `✓ Logged one serving · ${prot}g protein today`
+      : `＋ Log one serving · ${prot}g protein`;
+  }
+}
+function drawRecipe(r){
+  // reset the serving count when we switch to a different recipe
+  const key = recipeKey(r);
+  if(S.servingsFor !== key){ S.servings = r.servings || 1; S.servingsFor = key; }
+  const base = r.servings || S.servings || 1;
+  const factor = S.servings / base;            // how much to scale ingredients by
+  const scaled = Math.abs(factor-1) > 0.001;   // are we away from the original?
+  const added = S.added.has(key);
+  const protein = r.nutrition?.protein_g || 0;
+  app.innerHTML=`
+   <div class="back" onclick="openMeal('${S.meal}')">← ${S.meal} menu</div>
+   <div class="r-hero fade">
+     ${imgEl(r.image,r.title,"",1000,r.blog)}
+     <div class="grad"></div>
+     <div class="cap"><div class="blog">${r.blog||""}</div><h2>${r.title}</h2></div>
+   </div>
+   <div class="metarow">
+     ${r.times?.total?`<span>⏱ <b>${r.times.total}</b></span>`:""}
+     ${r.rating?.value?`<span>★ <b>${r.rating.value}</b> (${r.rating.count})</span>`:""}
+     <span id="metaProt">💪 <b>${protein}g</b> protein / serving</span>
+   </div>
+
+   <button class="addbtn ${added?'done':''}" id="addbtn" onclick="addProtein()">
+     ${added?`✓ Logged one serving · ${protein}g protein today`:`＋ Log one serving · ${protein}g protein`}
+   </button>
+
+   <div class="planrow">
+     <select id="planDay" aria-label="Day to plan for">${dayOptions()}</select>
+     <button class="planbtn" onclick="addToPlan()">🗓️ Add to plan</button>
+   </div>
+
+   <section class="sec">
+     <div class="serve-row">
+       <div>
+         <h3 style="margin:0">Ingredients</h3>
+         <div class="serve-note">${scaled?`scaled from ${base} · amounts update automatically`:`as written · scale for your family of four`}</div>
+       </div>
+       <div class="serve-control">
+         <span class="serve-label">servings</span>
+         <div class="scaler">
+           <button onclick="rescale(-1)" aria-label="fewer servings">−</button>
+           <span id="svCount">${S.servings}</span>
+           <button onclick="rescale(1)" aria-label="more servings">+</button>
+         </div>
+       </div>
+     </div>
+     <ul class="ingredients">${r.ingredients.map(x=>`<li>${scaleIngredient(x,factor)}</li>`).join("")}</ul>
+   </section>
+
+   <section class="sec">
+     <h3><span class="n">METHOD</span> Instructions</h3>
+     <div class="steps">
+       ${r.instructions.map(g=>`${g.name?`<div class="grp-name">${g.name}</div>`:""}
+          ${g.steps.map(s=>`<div class="step"><div class="num"></div><p>${s}</p></div>`).join("")}`).join("")}
+     </div>
+   </section>
+
+   ${r.video?.embed_url?`<section class="sec"><h3><span class="n">WATCH</span> Video</h3>
+     <div class="video"><iframe src="${r.video.embed_url}" allowfullscreen loading="lazy"></iframe></div></section>`:""}
+
+   <section class="sec">
+     <h3><span class="n">PER SERVING · 1 PERSON</span> Nutrition</h3>
+     <div class="nutri">
+       ${nutriCard(r.nutrition?.calories,  "Calories", false, "nCal")}
+       ${nutriCard(r.nutrition?.protein_g, "Protein",  true,  "nProt")}
+       ${nutriCard(r.nutrition?.carbs_g,   "Carbs",    false, "nCarbs")}
+       ${nutriCard(r.nutrition?.fat_g,     "Fat",      false, "nFat")}
+       ${nutriCard(r.nutrition?.fiber_g,   "Fiber",    false, "nFib")}
+     </div>
+     <div class="serve-note">These are per single serving — what one person eats — and don't change when you scale the batch above.</div>
+   </section>
+
+   <a class="leave" href="${r.source_url}" target="_blank" rel="noopener">
+     Open the full post on ${r.blog} ↗
+   </a>
+
+   ${nextCoursePrompt()}
+  `;
+  refreshCoach();
+}
+
+function nextCoursePrompt(){ return ""; }
+
+async function gotoCourse(course){
+  S.course=course;
+  if(S.picks[course]){drawRecipe(S.picks[course]);window.scrollTo({top:0,behavior:"smooth"});return;}
+  // show a mini-menu for this course
+  app.innerHTML=`<div class="back" onclick="drawRecipe(S.picks.main)">← back</div>
+    <div class="menu-head fade"><div class="eyebrow">${course}</div>
+      <h2 class="display">Choose a <span class="italic">${course}</span></h2></div>
+    <div class="cards stagger" id="cards"></div>`;
+  const list = await getMenu(course); LISTS[course]=list;
+  renderCards(list,course);
+}
+
+/* ---------------- ingredient scaling ---------------- */
+function rescale(dir){
+  S.servings = Math.max(1, (S.servings||1) + dir);
+  drawRecipe(S.picks[S.course]);
+}
+const gcd=(a,b)=>b?gcd(b,a%b):a;
+// parse "1", "1.5", "1/2", "1 1/2" -> number
+function parseQty(s){
+  s=s.trim();
+  if(/^\d+\s+\d+\/\d+$/.test(s)){ const [w,f]=s.split(/\s+/); const [a,b]=f.split("/"); return +w + (+a)/(+b); }
+  if(/^\d+\/\d+$/.test(s)){ const [a,b]=s.split("/"); return (+a)/(+b); }
+  return parseFloat(s);
+}
+// number -> friendly cooking amount: "2", "1 1/2", "3/4", "1/3"
+function pretty(x){
+  if(!isFinite(x)) return "";
+  if(x < 0.05) return "0";
+  const whole = Math.floor(x + 1e-9);
+  let frac = x - whole;
+  // common cooking fractions, including thirds
+  const table=[[0,""],[1/8,"1/8"],[1/4,"1/4"],[1/3,"1/3"],[3/8,"3/8"],[1/2,"1/2"],
+               [5/8,"5/8"],[2/3,"2/3"],[3/4,"3/4"],[7/8,"7/8"],[1,""]];
+  let best=table[0], bestD=1;
+  for(const t of table){ const d=Math.abs(frac-t[0]); if(d<bestD){bestD=d;best=t;} }
+  if(best[0]===1) return String(whole+1);              // rounded up to next whole
+  if(best[1]==="") return String(whole||0);            // no fractional part
+  return whole ? `${whole} ${best[1]}` : best[1];
+}
+// scale only the leading quantity of an ingredient line; leave the text alone
+function scaleIngredient(text, factor){
+  const m = text.match(/^(\d+\s+\d+\/\d+|\d+\/\d+|\d+(?:\.\d+)?)(\s.*)?$/);
+  if(!m) return text;                  // no leading number (e.g. "salt and pepper")
+  const val = parseQty(m[1]) * factor;
+  return pretty(val) + (m[2]||"");
+}
+
+/* ---------------- protein logging (per serving = one person) ---------------- */
+function addProtein(){
+  const r=S.picks[S.course]; if(!r) return;
+  const key=recipeKey(r), grams=r.nutrition?.protein_g||0, d=today();
+  S.log[d]=S.log[d]||[];
+  if(S.added.has(key)){
+    S.added.delete(key);
+    const i=S.log[d].findIndex(e=>e.key===key); if(i>=0) S.log[d].splice(i,1);
+    toast(`Removed ${grams}g`);
+  } else {
+    S.added.add(key);
+    const n=r.nutrition||{};
+    S.log[d].push({meal:S.meal,course:S.course,title:r.title,blog:r.blog,key,
+      protein:Math.round(n.protein_g||0), calories:Math.round(n.calories||0),
+      carbs:Math.round(n.carbs_g||0), fat:Math.round(n.fat_g||0), fiber:Math.round(n.fiber_g||0)});
+    toast(`Logged one serving · ${grams}g protein 💪`);
+  }
+  const b=$("addbtn");if(b){const on=S.added.has(key);
+    b.className="addbtn"+(on?" done":"");
+    b.innerHTML=on?`✓ Logged one serving · ${grams}g protein today`:`＋ Log one serving · ${grams}g protein`;}
+  refreshCoach(); save();
+}
+
+/* ---------------- Goals page ---------------- */
+function nutritionSumToday(){
+  return (S.log[today()]||[]).reduce((t,e)=>({
+    protein:  t.protein  + (e.protein ||0),
+    calories: t.calories + (e.calories||0),
+    carbs:    t.carbs    + (e.carbs   ||0),
+    fat:      t.fat      + (e.fat     ||0),
+    fiber:    t.fiber    + (e.fiber   ||0),
+  }),{protein:0,calories:0,carbs:0,fat:0,fiber:0});
+}
+
+function renderGoals(){
+  S.view="goals"; setNav();
+  const g=S.goals, n=nutritionSumToday(), pg=goal(), d=today();
+  const water=(S.waterToday||{})[d]||0;
+
+  // Build a goal card — icon, label, actual, goalVal, unitLabel, goalKey (null = no editable), tip
+  function gCard(ico,lbl,actual,goalVal,unit,key,tip,over){
+    const pct=Math.min(105,Math.round(actual/Math.max(1,goalVal)*100));
+    const exceeds=over&&pct>=100;
+    return `<div class="g-card">
+      <div class="g-row">
+        <span class="g-ico">${ico}</span>
+        <span class="g-lbl">${lbl}</span>
+        <span class="g-val" id="gv-${key||'p'}">${Math.round(actual)}</span>
+        <span class="g-of">&nbsp;/ ${Math.round(goalVal)}${unit}</span>
+      </div>
+      <div class="g-bar"><div class="g-fill${exceeds?' over':''}" id="gf-${key||'p'}" style="width:${pct}%"></div></div>
+      ${key?`<div class="g-field">
+        <label>Daily target</label>
+        <input type="number" class="g-num" value="${goalVal}" min="1"
+          onchange="setGoal('${key}',this.value)" inputmode="numeric">
+        <span class="g-unit">${unit}</span>
+      </div>`:'<div class="g-tip">Auto-calculated from body weight (0.8g × lb).</div>'}
+      ${tip&&key?`<div class="g-tip">${tip}</div>`:''}
+    </div>`;
+  }
+
+  app.innerHTML=`
+    <div class="page-h fade"><div class="eyebrow">nutrition</div><h2>Your Goals</h2>
+      <div style="font-size:13px;color:var(--ink-soft);margin-top:2px">Progress updates as you log meals.</div>
+    </div>
+
+    <div class="g-card">
+      <div class="g-row"><span class="g-ico">⚖️</span><span class="g-lbl">Body Weight</span></div>
+      <div class="g-field" style="margin-top:4px">
+        <label>Your weight</label>
+        <input type="number" class="g-num" id="bwGoal" value="${S.bw}" min="50"
+          onchange="updateBwGoal(this.value)" inputmode="numeric">
+        <span class="g-unit">lb</span>
+      </div>
+      <div class="g-tip">Protein goal: <b id="gProtGoal">${pg}g/day</b> · Adjust weight to update.</div>
+    </div>
+
+    ${gCard('💪','Protein',     n.protein,  pg,       'g',    null,      null,             false)}
+    ${gCard('🔥','Calories',    n.calories, g.calories,' kcal','calories','Typical range: 1,600–2,400 kcal/day', true)}
+    ${gCard('🌾','Fiber',       n.fiber,    g.fiber,  'g',    'fiber',   'Recommended: 25–35g/day for women',    false)}
+    ${gCard('🍞','Carbs',       n.carbs,    g.carbs,  'g',    'carbs',   '45–65% of total calories is typical',  true)}
+    ${gCard('🥑','Fat',         n.fat,      g.fat,    'g',    'fat',     '20–35% of total calories is healthy',  true)}
+
+    <div class="g-card">
+      <div class="g-row">
+        <span class="g-ico">💧</span><span class="g-lbl">Water</span>
+        <span class="g-val" id="gv-water">${water}</span>
+        <span class="g-of">&nbsp;/ ${g.water} glasses</span>
+      </div>
+      <div class="g-bar"><div class="g-fill" id="gf-water" style="width:${Math.min(100,Math.round(water/g.water*100))}%"></div></div>
+      <div class="g-stepper">
+        <button class="g-step" onclick="logWater(-1)">−</button>
+        <div style="flex:1;text-align:center">
+          <span class="g-water-n" id="gv-water2">${water}</span>
+          <span class="g-water-sub">glasses today</span>
+        </div>
+        <button class="g-step" onclick="logWater(1)">＋</button>
+      </div>
+      <div class="g-field" style="margin-top:10px">
+        <label>Daily target</label>
+        <input type="number" class="g-num" value="${g.water}" min="1"
+          onchange="setGoal('water',this.value)" inputmode="numeric">
+        <span class="g-unit">glasses</span>
+      </div>
+      <div class="g-tip">Recommended: 8 glasses (64 oz / ~2 litres) per day.</div>
+    </div>`;
+}
+function updateBwGoal(val){
+  const v=Math.round(parseFloat(val)); if(isNaN(v)||v<50) return;
+  S.bw=v; const bwH=$('bw'); if(bwH) bwH.value=v;
+  refreshCoach(); save();
+  const n=nutritionSumToday(), pg=goal();
+  const pEl=document.getElementById('gProtGoal'); if(pEl) pEl.textContent=pg+'g/day';
+  const bar=document.getElementById('gf-p'); if(bar) bar.style.width=Math.min(105,Math.round(n.protein/pg*100))+'%';
+}
+function setGoal(key,val){
+  const v=Math.round(parseFloat(val));
+  if(isNaN(v)||v<=0) return;
+  S.goals[key]=v; save();
+  // Update bar + "of" display in place
+  const n=nutritionSumToday(), w=(S.waterToday||{})[today()]||0;
+  const actual = key==='water'?w:(n[key==='calories'?'calories':key]||0);
+  const pct=Math.min(105,Math.round(actual/v*100));
+  const fill=document.getElementById('gf-'+key);
+  const ofEl=fill?.closest('.g-card')?.querySelector('.g-of');
+  const unit=key==='calories'?' kcal':'g';
+  if(fill){ fill.style.width=pct+'%'; if(key==='water'||key==='fiber')fill.classList.remove('over'); }
+  if(ofEl) ofEl.textContent=` / ${v}${unit}`;
+}
+
+function logWater(dir){
+  const d=today();
+  S.waterToday=S.waterToday||{};
+  S.waterToday[d]=Math.max(0,(S.waterToday[d]||0)+dir);
+  save();
+  const w=S.waterToday[d], g=S.goals.water;
+  const pct=Math.min(100,Math.round(w/g*100));
+  const v1=document.getElementById('gv-water'), v2=document.getElementById('gv-water2');
+  const bar=document.getElementById('gf-water');
+  if(v1) v1.textContent=w; if(v2) v2.textContent=w; if(bar) bar.style.width=pct+'%';
+}
+
+/* ---------------- navigation + summary views ---------------- */
+function setNav(){ ["cook","plan","today","week","goals"].forEach(v=>{ const b=$("tab-"+v); if(b) b.setAttribute("aria-current", String((S.view==="shopping"?"plan":S.view)===v)); }); }
+function go(view){
+  S.view=view; setNav(); window.scrollTo({top:0});
+  if(view==="today") return renderToday();
+  if(view==="week") return renderWeek();
+  if(view==="plan") return renderPlan();
+  if(view==="shopping") return renderShopping();
+  if(view==="goals")    return renderGoals();
+  return home();
+}
+const cap=s=>s?s[0].toUpperCase()+s.slice(1):s;
+function dayOptions(){
+  let out="";
+  for(let i=0;i<7;i++){ const d=dayInfo(i);
+    const lbl=i===0?"Today":i===1?"Tomorrow":d.dow+" "+d.dt.getDate();
+    out+=`<option value="${d.iso}">${lbl}</option>`; }
+  return out;
+}
+function logLine(e){
+  return `<div class="logline">
+    <div><div class="t">${e.title}</div><div class="b">${e.blog||""}${e.course&&e.course!=="main"?` · <span class="course">${e.course}</span>`:""}</div></div>
+    <div class="p">${e.protein}g</div></div>`;
+}
+function planLine(pe){
+  const suf = pe.servings && pe.servings>1 ? ` · ${pe.servings} servings` : "";
+  return `<div class="logline planned">
+    <div><div class="t">${pe.title}</div><div class="b">${pe.blog||""}${suf}</div></div>
+    <div class="plan-tag">planned</div></div>`;
+}
+/* ---- today view ---- */
+
+function renderToday(){
+  const d=dayInfo(0), entries=S.log[d.iso]||[], g=goal(), now=proteinOn(d.iso);
+  const pct=Math.min(100,Math.round(now/g*100));
+  const groups={}; entries.forEach(e=>{ (groups[e.meal]=groups[e.meal]||[]).push(e); });
+  const todayPlan=(S.plan[d.iso]||{});
+  const groupHtml=[["breakfast","Breakfast"],["lunch","Lunch"],["salad","Salad"],["dinner","Dinner"]].map(([k,label])=>{
+    const logged=groups[k]||[];
+    const loggedKeys=new Set(logged.map(e=>e.key));
+    const pendingPlan=(todayPlan[k]||[]).filter(pe=>!loggedKeys.has(pe.key));
+    const sub=logged.reduce((s,e)=>s+e.protein,0);
+    const hasAny=logged.length||pendingPlan.length;
+    return `<div class="meal-group">
+      <h3>${label}${logged.length?`<span class="sum">${sub}g protein</span>`:""}</h3>
+      ${logged.map(logLine).join("")}
+      ${pendingPlan.map(planLine).join("")}
+      ${!hasAny?`<div class="empty">Nothing logged yet.</div>`:""}
+    </div>`;
+  }).join("");
+  app.innerHTML=`
+    <div class="page-h fade"><div class="eyebrow">${d.nice}</div><h2>Today</h2></div>
+    <div class="summary fade">
+      <div style="flex:1">
+        <div class="big">${Math.round(now)}<small> / ${g}g</small></div>
+        <div class="lbl">protein eaten today · ${pct}% of daily goal</div>
+        <div class="pbar"><div style="width:${pct}%"></div></div>
+      </div>
+    </div>
+    ${groupHtml}
+    <button class="cook-cta" onclick="go('cook')">＋ Cook something</button>`;
+  refreshCoach();
+}
+function renderPlan(){
+  const g=goal();
+  const days=[]; for(let i=0;i<7;i++) days.push(dayInfo(i));
+  const anyPlanned=days.some(d=>plannedProtein(d.iso)>0);
+  const dayCards=days.map(d=>{
+    const slots=S.plan[d.iso]||{};
+    const tot=plannedProtein(d.iso);
+    const mealsHtml=["breakfast","lunch","salad","dinner"].map(m=>{
+      const list=slots[m]||[];
+      if(!list.length) return "";
+      return `<div class="plan-meal"><span class="pm-label">${cap(m)}</span>
+        ${list.map(e=>`<div class="plan-item"><div><div class="t">${e.title}</div><div class="b">${e.blog||""} · ${e.protein}g · ${e.servings} servings</div></div>
+          <button class="rm" onclick="removeFromPlan('${d.iso}','${m}','${e.key.replace(/'/g,"\\'")}')" aria-label="remove">×</button></div>`).join("")}
+      </div>`;
+    }).join("");
+    return `<div class="plan-day">
+      <div class="pd-head"><b>${d.iso===today()?"Today":d.dow}</b>
+        <span class="pd-date">${d.nice}</span>
+        ${tot?`<span class="pd-tot ${tot>=g?'':'under'}">${tot}g protein</span>`:""}</div>
+      ${(()=>{const n=plannedNutrition(d.iso); return n?`<div class="day-nutri">
+        <span><b>${n.cal.toLocaleString()}</b> cal</span>
+        <span><b>${n.carbs}g</b> carbs</span>
+        <span><b>${n.fat}g</b> fat</span>
+        <span><b>${n.fiber}g</b> fiber</span>
+      </div>`:"";})()}
+      ${mealsHtml || `<div class="empty">No meals planned — add some from <b style="cursor:pointer" onclick="go('cook')">Cook</b>.</div>`}
+    </div>`;
+  }).join("");
+  app.innerHTML=`
+    <div class="page-h fade"><div class="eyebrow">your week</div><h2>Meal plan</h2></div>
+    <button class="shop-btn fade" onclick="go('shopping')">🛒 Generate shopping list</button>
+    ${anyPlanned?"":`<div class="nudge" style="margin-top:14px">Tip: open a recipe under <b>Cook</b>, choose a day, and tap <b>Add to plan</b>.</div>`}
+    ${dayCards}
+    <p style="text-align:center;margin-top:30px" data-reset-wrap><button onclick="clearData()" style="font-size:12px;color:var(--ink-soft);font-family:inherit;text-decoration:underline">Reset all data</button></p>`;
+  refreshCoach();
+}
+/* ---- shopping list view ---- */
+/* ---- shopping list export ------------------------------------------- */
+function buildExportText(){
+  const {cats,order}=buildShoppingList();
+  const lines=["🛒 Shopping List\n"];
+  order.forEach(cat=>{
+    const items=(cats[cat]||[]).filter(it=>!S.shopChecked.has(it.k));
+    if(!items.length) return;
+    lines.push(`${cat} (${items.length})`);
+    items.forEach(it=>lines.push(`  ${it.label}`));
+    lines.push("");
+  });
+  const hasItems=lines.some(l=>l.startsWith("  "));
+  return hasItems ? lines.join("\n").trim() : null;
+}
+
+async function _copyText(text){
+  try{ await navigator.clipboard.writeText(text); return true; }catch{
+    try{
+      const ta=Object.assign(document.createElement("textarea"),
+        {value:text,style:"position:fixed;opacity:0"});
+      document.body.appendChild(ta); ta.select();
+      document.execCommand("copy"); ta.remove(); return true;
+    }catch{ return false; }
+  }
+}
+
+async function shareList(){
+  const text=buildExportText();
+  if(!text){toast("Nothing left to buy! 🎉");return;}
+  if(navigator.share){
+    try{ await navigator.share({title:"Shopping List",text}); return;}
+    catch(e){ if(e.name==="AbortError") return; } // user cancelled — don't fall through
+  }
+  if(await _copyText(text)) toast("📋 List copied — paste into any shopping app.");
+}
+
+async function copyList(){
+  const text=buildExportText();
+  if(!text){toast("Nothing left to buy! 🎉");return;}
+  if(await _copyText(text)) toast("📋 List copied to clipboard.");
+}
+
+function openWalmart(){
+  // Open Walmart Grocery — also copy list so she can paste items into their search
+  const text=buildExportText();
+  if(!text){toast("Nothing to buy!");return;}
+  window.open("https://www.walmart.com/grocery","_blank");
+  _copyText(text);
+  toast("Opening Walmart — list copied, paste items to search 🛒");
+}
+
+function openInstacart(){
+  const text=buildExportText();
+  if(!text){toast("Nothing to buy!");return;}
+  window.open("https://www.instacart.com","_blank");
+  _copyText(text);
+  toast("Opening Instacart — list copied, paste items to search 🥦");
+}
+
+function renderShopping(){
+  const {cats,order,mealCount}=buildShoppingList();
+  const total=order.reduce((s,c)=>s+cats[c].length,0);
+  const sections=order.filter(c=>cats[c].length).map(c=>`
+    <div class="shop-sec">
+      <h3>${c} <span>${cats[c].length}</span></h3>
+      ${cats[c].map(it=>{
+        const got=S.shopChecked.has(it.k);
+        return `<label class="shop-item ${got?'got':''}">
+          <input type="checkbox" ${got?"checked":""} onchange="toggleShop('${it.k.replace(/'/g,"\\'")}',this)">
+          <span>${it.label}</span></label>`;
+      }).join("")}
+    </div>`).join("");
+  app.innerHTML=`
+    <div class="back" onclick="go('plan')">← meal plan</div>
+    <div class="page-h fade" style="padding-top:6px"><div class="eyebrow">${total} items · ${mealCount} planned meals</div><h2>Shopping list</h2></div>
+    ${total? `
+      <div class="export-row">
+        <button class="exp-btn exp-share"    onclick="shareList()">📤 Share</button>
+        <button class="exp-btn exp-copy"     onclick="copyList()">📋 Copy</button>
+        <button class="exp-btn exp-walmart"  onclick="openWalmart()">🛒 Walmart</button>
+        <button class="exp-btn exp-instacart" onclick="openInstacart()">🥦 Instacart</button>
+      </div>
+      <div class="serve-note" style="margin:0 2px 8px">Tap to check off items you already have — only unchecked items are exported.</div>
+      ${sections}`
+      : `<div class="empty" style="padding:30px 4px">Nothing planned yet. Add meals to your plan first.</div>`}`;
+  refreshCoach();
+}
+function toggleShop(k,el){ if(el.checked) S.shopChecked.add(k); else S.shopChecked.delete(k);
+  el.closest(".shop-item").classList.toggle("got",el.checked); save(); }
+function weekChartSVG(days,totals,g){
+  const W=350,H=190,padL=8,padR=8,padT=22,padB=26;
+  const plotH=H-padT-padB, plotW=W-padL-padR;
+  const maxV=Math.max(g*1.15,...totals,1), n=days.length, slot=plotW/n, bw=Math.min(34,slot*0.6);
+  const goalY=padT+plotH*(1-g/maxV);
+  let bars="";
+  days.forEach((d,i)=>{
+    const v=totals[i], bh=plotH*(v/maxV), x=padL+slot*i+(slot-bw)/2, y=padT+plotH-bh;
+    const met=v>=g, isT=d.iso===today();
+    bars+=`<rect x="${x.toFixed(1)}" y="${y.toFixed(1)}" width="${bw.toFixed(1)}" height="${Math.max(0,bh).toFixed(1)}" rx="5" fill="${met?'#3F5C3A':'#CBB89C'}"/>`;
+    bars+=`<text x="${(x+bw/2).toFixed(1)}" y="${(y-5).toFixed(1)}" font-size="10" font-weight="700" fill="#5C564A" text-anchor="middle">${Math.round(v)}</text>`;
+    bars+=`<text x="${(x+bw/2).toFixed(1)}" y="${H-9}" font-size="11" font-weight="${isT?700:600}" fill="${isT?'#2E4429':'#5C564A'}" text-anchor="middle">${isT?'Today':d.dow}</text>`;
+  });
+  return `<svg viewBox="0 0 ${W} ${H}" role="img" aria-label="Protein per day this week">
+    <line x1="${padL}" y1="${goalY.toFixed(1)}" x2="${W-padR}" y2="${goalY.toFixed(1)}" stroke="#C2693F" stroke-width="1.5" stroke-dasharray="5 4"/>
+    <text x="${W-padR}" y="${(goalY-5).toFixed(1)}" font-size="10" font-weight="700" fill="#C2693F" text-anchor="end">goal ${g}g</text>
+    ${bars}</svg>`;
+}
+function renderWeek(){
+  const g=goal(), days=[]; for(let i=6;i>=0;i--) days.push(dayInfo(-i));
+  const totals=days.map(d=>proteinOn(d.iso));
+  const loggedDays=days.filter(d=>(S.log[d.iso]||[]).length>0);
+  const avg=loggedDays.length?Math.round(loggedDays.reduce((a,d)=>a+proteinOn(d.iso),0)/loggedDays.length):0;
+  const avgPct=Math.min(100,Math.round(avg/g*100));
+  const hit=totals.filter(t=>t>=g).length;
+  const dayBlocks=days.slice().reverse().map(d=>{
+    const entries=S.log[d.iso]||[], tot=proteinOn(d.iso), isT=d.iso===today();
+    return `<div class="day-block">
+      <div class="dh"><b>${isT?"Today":d.dow}</b> <span style="color:var(--ink-soft);font-size:12px">${d.nice}</span>
+        <span class="tot ${tot>=g?'':'under'}">${tot}g</span></div>
+      ${entries.length? entries.map(e=>`<div class="m"><b>${cap(e.meal)}:</b> ${e.title} <span style="color:var(--terra)">· ${e.protein}g</span></div>`).join("")
+        : `<div class="m" style="font-style:italic">No meals logged</div>`}</div>`;
+  }).join("");
+  app.innerHTML=`
+    <div class="page-h fade"><div class="eyebrow">last 7 days</div><h2>This week</h2></div>
+    <div class="summary fade"><div style="flex:1">
+      <div class="big">${avg}<small> / ${g}g</small></div>
+      <div class="lbl">average protein per day · hit her goal ${hit} of 7 days</div>
+      <div class="pbar"><div style="width:${avgPct}%"></div></div>
+    </div></div>
+    <div class="chart-wrap fade">${weekChartSVG(days,totals,g)}</div>
+    <h3 style="font-family:'Fraunces',serif;font-weight:600;font-size:20px;margin:26px 2px 2px">Every meal this week</h3>
+    ${dayBlocks}`;
+  refreshCoach();
+}
+
+(async()=>{
+  await loadState();                // restore saved state first
+  setNav();
+  refreshCoach();
+  try { home(); }
+  catch(err){
+    document.getElementById("app").innerHTML =
+      "<p style='padding:40px 4px;color:#9b2c2c;font-family:Georgia,serif'>Something went wrong starting the app:<br><br>"+
+      (err && err.message ? err.message : err)+"</p>";
+  }
+})();
+</script>
+</body>
+</html>

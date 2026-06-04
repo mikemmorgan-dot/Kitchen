@@ -1,0 +1,18 @@
+{
+  "name": "morgans-kitchen",
+  "version": "1.0.0",
+  "description": "Family meal planning app with recipe discovery and nutrition tracking",
+  "type": "module",
+  "engines": {
+    "node": ">=18"
+  },
+  "scripts": {
+    "start": "node server.js",
+    "dev": "node --watch server.js"
+  },
+  "dependencies": {
+    "cheerio": "^1.0.0",
+    "express": "^4.22.2",
+    "node-cron": "^3.0.3"
+  }
+}

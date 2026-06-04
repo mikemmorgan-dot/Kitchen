@@ -1,0 +1,13 @@
+# Render.com deployment config — see DEPLOY.md for full setup instructions
+services:
+  - type: web
+    name: morgans-kitchen
+    env: node
+    plan: free
+    buildCommand: npm install
+    startCommand: npm start
+    envVars:
+      - key: NODE_ENV
+        value: production
+      - key: NODE_VERSION
+        value: "20"
