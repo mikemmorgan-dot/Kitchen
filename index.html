@@ -230,9 +230,13 @@
     border-radius:14px;padding:11px 14px;margin-bottom:8px}
   .logline .t{font-weight:600;font-size:14.5px}
   .logline .b{color:var(--terra);font-size:12px;font-weight:700}
-  .logline .p{margin-left:auto;background:#E7EFDD;color:var(--herb-deep);font-weight:700;font-size:12.5px;
+  .logline .p{background:#E7EFDD;color:var(--herb-deep);font-weight:700;font-size:12.5px;
     border-radius:999px;padding:4px 10px;white-space:nowrap}
   .logline .course{font-size:11px;color:var(--ink-soft);text-transform:uppercase;letter-spacing:.06em}
+  .logline .rm{width:26px;height:26px;border-radius:50%;border:1.5px solid var(--line);
+    background:var(--paper);color:var(--ink-soft);font-size:16px;font-weight:400;
+    display:flex;align-items:center;justify-content:center;flex-shrink:0;cursor:pointer}
+  .logline .rm:active{background:var(--terra-soft);border-color:var(--terra);color:var(--terra)}
   /* planned-but-not-yet-logged entries in Today */
   .logline.planned{background:var(--paper);border:1.5px dashed var(--line)}
   .logline.planned .b{color:var(--ink-soft)}
@@ -2470,10 +2474,29 @@ function dayOptions(){
     out+=`<option value="${d.iso}">${lbl}</option>`; }
   return out;
 }
-function logLine(e){
+function logLine(e, idx, dateIso){
+  const course = e.course && e.course!=="main" ? ` · <span class="course">${e.course}</span>` : "";
+  const rmBtn = idx !== undefined
+    ? `<button class="rm" onclick="removeLogEntry('${dateIso}',${idx})" aria-label="Remove entry">×</button>`
+    : "";
   return `<div class="logline">
-    <div><div class="t">${e.title}</div><div class="b">${e.blog||""}${e.course&&e.course!=="main"?` · <span class="course">${e.course}</span>`:""}</div></div>
-    <div class="p">${e.protein}g</div></div>`;
+    <div style="flex:1;min-width:0">
+      <div class="t">${e.title}</div>
+      <div class="b">${e.blog||""}${course}</div>
+    </div>
+    <div class="p">${e.protein}g</div>
+    ${rmBtn}</div>`;
+}
+
+function removeLogEntry(dateIso, idx){
+  if(!S.log[dateIso]) return;
+  S.log[dateIso].splice(idx, 1);
+  if(!S.log[dateIso].length) delete S.log[dateIso];
+  // Rebuild today's S.added so the log-button state on recipe pages updates too
+  const todayIso = dayInfo(0).iso;
+  S.added = new Set((S.log[todayIso]||[]).map(e=>e.key));
+  save();
+  renderToday();
 }
 function planLine(pe){
   const suf = pe.servings && pe.servings>1 ? ` · ${pe.servings} servings` : "";
@@ -2496,7 +2519,7 @@ function renderToday(){
     const hasAny=logged.length||pendingPlan.length;
     return `<div class="meal-group">
       <h3>${label}${logged.length?`<span class="sum">${sub}g protein</span>`:""}</h3>
-      ${logged.map(logLine).join("")}
+      ${logged.map(e => logLine(e, entries.indexOf(e), d.iso)).join("")}
       ${pendingPlan.map(planLine).join("")}
       ${!hasAny?`<div class="empty">Nothing logged yet.</div>`:""}
     </div>`;
