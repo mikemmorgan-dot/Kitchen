@@ -4,8 +4,8 @@
 <meta charset="utf-8" />
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
 <meta name="color-scheme" content="only light" />
-<link rel="apple-touch-icon" href="/apple-touch-icon.jpg">
-<link rel="icon" type="image/jpeg" href="/icon.jpg">
+<link rel="apple-touch-icon" sizes="180x180" href="/apple-touch-icon.png">
+<link rel="icon" type="image/png" sizes="512x512" href="/icon.png">
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-status-bar-style" content="default">
 <meta name="apple-mobile-web-app-title" content="Morgan's Kitchen">
@@ -1346,6 +1346,14 @@ const DEMO = {
       instructions:[{name:null,steps:["Stud lamb with garlic slivers; rub all over with oil and spices.","Place in a roasting pan; add a little water; cover tightly with foil.","Slow-roast at 325°F for 4 hours until falling off the bone; uncover last 30 min."]}],
       nutrition:{calories:480,protein_g:44,carbs_g:8,fat_g:30,fiber_g:1}, video:null, rating:{value:5,count:16} },
     // ── Pinch of Yum ─────────────────────────────────────────────────────────
+    { title:"BBQ Salmon Bowls with Mango Avocado Salsa", blog:"pinchofyum",
+      source_url:"https://pinchofyum.com/bbq-salmon-mango-salsa",
+      image:"https://pinchofyum.com/tachyon/BBQ-Salmon-Bowl-Square.jpg",
+      servings:4, times:{prep:"10 mins",cook:"15 mins",total:"25 mins"},
+      ingredients:["1–2 lbs fresh salmon","1 avocado, diced","1/4 cup minced cilantro","1/4 cup minced red onion","1/2 jalapeño, minced (optional)","2 mangoes, diced","2 tbsp lime juice + 1 tsp lime zest","1.5 cups rice","2 tbsp brown sugar","1 tsp honey","2 tbsp olive oil","2 tsp smoked paprika","2 tsp onion powder","1 tsp garlic powder","1/2 tsp chili powder","1/2 tsp kosher salt"],
+      instructions:[{name:"Mango salsa",steps:["Toss avocado, mango, cilantro, red onion, jalapeño and lime juice in a bowl; season and set aside."]},{name:"Salmon",steps:["Mix brown sugar, honey, oil, paprika, onion powder, garlic powder, chili powder and salt into a rub.","Pat salmon dry and coat all over with the spice rub.","Broil on high 8–10 min until lightly caramelized. Cook rice alongside.","Serve salmon over rice with a generous scoop of mango avocado salsa."]}],
+      nutrition:{calories:479,protein_g:38,carbs_g:41,fat_g:21,fiber_g:4}, video:null, rating:{value:4.9,count:148} },
+
     { title:"Yellow Curry Meatballs with Peanut Shallot Crispies", blog:"pinchofyum",
       source_url:"https://pinchofyum.com/yellow-curry-meatballs",
       image:"https://pinchofyum.com/tachyon/Yellow-Curry-Chicken-Meatballs-2.jpg",
@@ -1922,17 +1930,22 @@ async function getMenu(course){
     if(!r.ok) throw new Error(r.status);
     const fresh = await r.json();
     if(Array.isArray(fresh) && fresh.length){
-      // Build a map of server images keyed by source_url (blogs often have better thumbnails)
+      // Build a lookup of server images keyed by source_url
       const serverImg = new Map(fresh.map(r=>[r.source_url, r.image||r.thumb||""]));
-      // DEMO recipes always win for data — but fill in missing images from server
+      // DEMO recipes always win for data — fill in missing images from server scrape
       const enriched = (DEMO[course]||[]).map(r=>
         (!r.image && r.source_url && serverImg.has(r.source_url))
           ? {...r, image: serverImg.get(r.source_url)}
           : r
       );
-      // Add genuinely new server recipes not already covered by DEMO
-      const demoKeys = new Set((DEMO[course]||[]).map(r=>r.source_url||r.title));
-      const newOnly  = fresh.filter(r=>!demoKeys.has(r.source_url||r.title));
+      // Exclude server recipes already covered by DEMO — match on both URL AND title
+      // (title match prevents empty scraped versions showing alongside full DEMO entries)
+      const demoURLs  = new Set((DEMO[course]||[]).map(r=>r.source_url||r.title));
+      const demoTitles = new Set((DEMO[course]||[]).map(r=>r.title.toLowerCase().trim()));
+      const newOnly = fresh.filter(r=>
+        !demoURLs.has(r.source_url||r.title) &&
+        !demoTitles.has((r.title||"").toLowerCase().trim())
+      );
       return [...enriched, ...newOnly];
     }
   }catch{ /* server not ready yet — use DEMO */ }
@@ -2181,6 +2194,8 @@ function imgEl(src,title,cls,w,blog){
 function home(){
   S.view="cook"; setNav();
   S.meal=null;S.course="main";S.picks={main:null,salad:null,dessert:null};
+  // Clear scroll memory so next visit to any meal starts at the top
+  Object.keys(_menuMem).forEach(k=>delete _menuMem[k]);
   app.innerHTML=`
    <section class="hero fade">
      <h1 class="display">What should we<br><span class="italic">cook</span> today?</h1>
@@ -2260,6 +2275,7 @@ async function loadFromUrl(){
 }
 
 async function openMeal(meal){
+  const cached = _menuMem[meal]; // will exist if she's coming back from a recipe
   S.meal=meal; S.course="main"; S.blogFilter=null; S.proteinFilter=null;
   S.fullMenuList=[]; S.searchQuery=null; S.favFilter=false;
   app.innerHTML=`<div class="back" onclick="home()">← meals</div>
@@ -2276,8 +2292,30 @@ async function openMeal(meal){
     <div class="filter-bar" id="filter-bar"></div>
     <div class="filter-bar protein-bar" id="protein-bar" style="padding-top:0"></div>
     <div class="cards stagger" id="cards">Loading the menu…</div>`;
-  const list = await getMenu(meal);
-  renderCards(list,"main");
+
+  if(cached){
+    // Restore the full list (skip API call entirely)
+    renderCards(cached.list, "main");
+    // renderCards resets filters — re-apply saved ones
+    S.blogFilter    = cached.blogFilter;
+    S.proteinFilter = cached.proteinFilter;
+    S.searchQuery   = cached.searchQuery;
+    S.favFilter     = cached.favFilter;
+    if(S.blogFilter || S.proteinFilter || S.searchQuery || S.favFilter){
+      applyFilters();
+    }
+    refreshFavChip();
+    // Restore search text in the input
+    const inp=$("searchInput"), clr=$("searchClear");
+    if(inp && cached.searchQuery){ inp.value=cached.searchQuery; if(clr) clr.style.display="flex"; }
+    // Restore scroll position after the paint
+    requestAnimationFrame(()=>requestAnimationFrame(()=>
+      window.scrollTo({top:cached.scrollY, behavior:"instant"})
+    ));
+  } else {
+    const list = await getMenu(meal);
+    renderCards(list,"main");
+  }
 }
 
 const BLOG_LABELS = {
@@ -2455,8 +2493,24 @@ function renderCards(list, course){
   el._list = list;
 }
 
+// Per-meal menu state cache: preserves list, filters and scroll position
+// so hitting back from a recipe instantly returns to the exact spot.
+// Cleared for a meal when she navigates back to the home screen.
+const _menuMem = {};
+
 let LISTS={};
 async function openRecipe(course,i){
+  // Save full menu state before leaving so we can restore it on back
+  if(S.meal){
+    _menuMem[S.meal] = {
+      list:        S.fullMenuList.slice(),
+      blogFilter:  S.blogFilter,
+      proteinFilter: S.proteinFilter,
+      searchQuery: S.searchQuery,
+      favFilter:   S.favFilter,
+      scrollY:     window.scrollY,
+    };
+  }
   const list = course==="main" ? (DEMO[S.meal]) : DEMO[course];
   let r = (LISTS[course]||list)[i];
   if(!r) return;
