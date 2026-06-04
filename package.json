@@ -12,7 +12,9 @@
   },
   "dependencies": {
     "cheerio": "^1.0.0",
+    "compression": "^1.8.1",
     "express": "^4.22.2",
+    "jsdom": "^29.1.1",
     "node-cron": "^3.0.3"
   }
 }

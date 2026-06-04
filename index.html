@@ -120,6 +120,10 @@
           font-size:16px;font-family:inherit;background:var(--parchment);color:var(--ink);text-align:center}
   .g-unit{font-size:13px;color:var(--ink-soft)}
   .g-tip{font-size:11.5px;color:var(--ink-soft);margin-top:7px;font-style:italic;line-height:1.5}
+  .g-sex-row{display:flex;gap:8px;margin:12px 0 4px}
+  .g-sex{flex:1;padding:10px;border-radius:13px;font-size:13.5px;font-weight:700;
+    border:1.5px solid var(--line);background:var(--paper);color:var(--ink-soft);cursor:pointer}
+  .g-sex.active{background:var(--herb-deep);color:#fff;border-color:var(--herb-deep)}
   .g-stepper{display:flex;align-items:center;gap:0;margin:10px 0 6px;background:var(--parchment);border-radius:14px;overflow:hidden}
   .g-step{width:52px;height:52px;font-size:24px;font-weight:700;color:var(--herb-deep);flex-shrink:0;display:flex;align-items:center;justify-content:center}
   .g-water-n{flex:1;text-align:center;font-size:32px;font-weight:800;line-height:1}
@@ -311,6 +315,12 @@
   .shop-item.got span{text-decoration:line-through;color:var(--ink-soft)}
 </style>
 </head>
+<script>
+  // Register service worker for fast repeat loads (only when served via HTTP/S)
+  if('serviceWorker' in navigator && location.protocol !== 'file:'){
+    navigator.serviceWorker.register('/sw.js').catch(()=>{});
+  }
+</script>
 <body>
 
 <header>
@@ -1518,7 +1528,7 @@ const S = {
   plan:{}, shopChecked:new Set(),     // plan: { "YYYY-MM-DD": { breakfast:[entry], lunch:[], dinner:[] } }
   blogFilter:null, fullMenuList:[],   // active blog filter and unfiltered list
   proteinFilter:null,                 // active protein-source filter
-  goals:{calories:2000,fiber:28,carbs:150,fat:65,water:8}, // daily targets
+  goals:{calories:2000,fiber:25,carbs:150,fat:65,water:8,sex:"female"}, // daily targets
   waterToday:{},                      // { 'YYYY-MM-DD': N glasses }
 };
 const app = document.getElementById("app");
@@ -1532,7 +1542,7 @@ function dayInfo(offset){            // offset 0 = today, -1 = yesterday ...
           nice:d.toLocaleDateString(undefined,{weekday:"long",month:"short",day:"numeric"}), dt:d};
 }
 const today = ()=>dayInfo(0).iso;
-const goal = ()=>Math.round(S.bw*0.8);                  // 0.8g protein per lb
+const goal = ()=>Math.round(S.bw*(S.goals?.sex==="male"?0.9:0.8)); // 0.8g/lb women · 0.9g/lb men
 const proteinOn = (iso)=>(S.log[iso]||[]).reduce((s,e)=>s+e.protein,0);
 const proteinToday = ()=>proteinOn(today());
 
@@ -2351,6 +2361,8 @@ function renderGoals(){
   S.view="goals"; setNav();
   const g=S.goals, n=nutritionSumToday(), pg=goal(), d=today();
   const water=(S.waterToday||{})[d]||0;
+  const sex=g.sex||"female";
+  const isMale=sex==="male";
 
   // Build a goal card — icon, label, actual, goalVal, unitLabel, goalKey (null = no editable), tip
   function gCard(ico,lbl,actual,goalVal,unit,key,tip,over){
@@ -2369,7 +2381,7 @@ function renderGoals(){
         <input type="number" class="g-num" value="${goalVal}" min="1"
           onchange="setGoal('${key}',this.value)" inputmode="numeric">
         <span class="g-unit">${unit}</span>
-      </div>`:'<div class="g-tip">Auto-calculated from body weight (0.8g × lb).</div>'}
+      </div>`:'<div class="g-tip">Auto-calculated from body weight · 0.8g/lb (women) or 0.9g/lb (men).</div>'}
       ${tip&&key?`<div class="g-tip">${tip}</div>`:''}
     </div>`;
   }
@@ -2381,20 +2393,24 @@ function renderGoals(){
 
     <div class="g-card">
       <div class="g-row"><span class="g-ico">⚖️</span><span class="g-lbl">Body Weight</span></div>
-      <div class="g-field" style="margin-top:4px">
+      <div class="g-sex-row">
+        <button class="g-sex ${!isMale?'active':''}" onclick="setSex('female')">👩 Woman</button>
+        <button class="g-sex ${isMale?'active':''}"  onclick="setSex('male')">👨 Man</button>
+      </div>
+      <div class="g-field" style="margin-top:8px">
         <label>Your weight</label>
         <input type="number" class="g-num" id="bwGoal" value="${S.bw}" min="50"
           onchange="updateBwGoal(this.value)" inputmode="numeric">
         <span class="g-unit">lb</span>
       </div>
-      <div class="g-tip">Protein goal: <b id="gProtGoal">${pg}g/day</b> · Adjust weight to update.</div>
+      <div class="g-tip">Protein goal: <b id="gProtGoal">${pg}g/day</b> · Adjust weight or toggle above to update.</div>
     </div>
 
-    ${gCard('💪','Protein',     n.protein,  pg,       'g',    null,      null,             false)}
-    ${gCard('🔥','Calories',    n.calories, g.calories,' kcal','calories','Typical range: 1,600–2,400 kcal/day', true)}
-    ${gCard('🌾','Fiber',       n.fiber,    g.fiber,  'g',    'fiber',   'Recommended: 25–35g/day for women',    false)}
-    ${gCard('🍞','Carbs',       n.carbs,    g.carbs,  'g',    'carbs',   '45–65% of total calories is typical',  true)}
-    ${gCard('🥑','Fat',         n.fat,      g.fat,    'g',    'fat',     '20–35% of total calories is healthy',  true)}
+    ${gCard('💪','Protein',     n.protein,  pg,       'g',    null,      null, false)}
+    ${gCard('🔥','Calories',    n.calories, g.calories,' kcal','calories',`Typical: 1,600–2,400 kcal (women) · 2,000–3,000 kcal (men)`, true)}
+    ${gCard('🌾','Fiber',       n.fiber,    g.fiber,  'g',    'fiber',   'Recommended: 25g/day (women) · 38g/day (men)', false)}
+    ${gCard('🍞','Carbs',       n.carbs,    g.carbs,  'g',    'carbs',   '45–65% of total calories is typical for both', true)}
+    ${gCard('🥑','Fat',         n.fat,      g.fat,    'g',    'fat',     '20–35% of total calories is healthy for both', true)}
 
     <div class="g-card">
       <div class="g-row">
@@ -2417,8 +2433,23 @@ function renderGoals(){
           onchange="setGoal('water',this.value)" inputmode="numeric">
         <span class="g-unit">glasses</span>
       </div>
-      <div class="g-tip">Recommended: 8 glasses (64 oz / ~2 litres) per day.</div>
+      <div class="g-tip">Recommended: 8 glasses/day (women) · 10 glasses/day (men).</div>
     </div>`;
+}
+function setSex(s){
+  S.goals.sex = s;
+  // Apply sex-appropriate default targets (user can still override each one)
+  if(s === "male"){
+    S.goals.calories = S.goals.calories === 2000 ? 2500 : S.goals.calories;
+    S.goals.fiber    = S.goals.fiber    === 25   ? 38   : S.goals.fiber;
+    S.goals.water    = S.goals.water    === 8    ? 10   : S.goals.water;
+  } else {
+    S.goals.calories = S.goals.calories === 2500 ? 2000 : S.goals.calories;
+    S.goals.fiber    = S.goals.fiber    === 38   ? 25   : S.goals.fiber;
+    S.goals.water    = S.goals.water    === 10   ? 8    : S.goals.water;
+  }
+  save();
+  renderGoals();
 }
 function updateBwGoal(val){
   const v=Math.round(parseFloat(val)); if(isNaN(v)||v<50) return;
@@ -2620,7 +2651,7 @@ function openWalmart(){
   // Open Walmart Grocery — also copy list so she can paste items into their search
   const text=buildExportText();
   if(!text){toast("Nothing to buy!");return;}
-  window.open("https://www.walmart.com/grocery","_blank");
+  window.open("https://www.walmart.ca/en/grocery","_blank");
   _copyText(text);
   toast("Opening Walmart — list copied, paste items to search 🛒");
 }
@@ -2628,7 +2659,7 @@ function openWalmart(){
 function openInstacart(){
   const text=buildExportText();
   if(!text){toast("Nothing to buy!");return;}
-  window.open("https://www.instacart.com","_blank");
+  window.open("https://www.instacart.ca","_blank");
   _copyText(text);
   toast("Opening Instacart — list copied, paste items to search 🥦");
 }

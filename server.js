@@ -16,6 +16,7 @@ import express from "express";
 import * as cheerio from "cheerio";
 import { readFileSync, writeFileSync, existsSync } from "fs";
 import cron from "node-cron";
+import compression from "compression";
 
 const PORT        = process.env.PORT || 3000;
 const STATE_FILE  = "./state.json";
@@ -175,6 +176,7 @@ cron.schedule("0 3 * * 0", () => {
 
 // ── Express app ───────────────────────────────────────────────────────────────
 const app = express();
+app.use(compression());          // gzip all responses — shrinks index.html ~5x
 app.use(express.json({ limit: "2mb" }));
 app.use((_, res, next) => {
   res.header("Access-Control-Allow-Origin", "*");
@@ -183,6 +185,60 @@ app.use((_, res, next) => {
   next();
 });
 app.options("*", (_, res) => res.sendStatus(204));
+
+// ── Keep-alive ping (set UptimeRobot to hit this every 5 min — prevents Render spin-down) ──
+app.get("/ping", (_, res) => res.json({ ok: true, t: Date.now() }));
+
+// ── Service worker — caches app shell for near-instant repeat loads ──────────
+app.get("/sw.js", (_, res) => {
+  res.set("Content-Type", "application/javascript");
+  res.set("Cache-Control", "no-cache");
+  res.send(`
+const CACHE = "morgans-kitchen-v2";
+
+self.addEventListener("install", e => {
+  e.waitUntil(caches.open(CACHE).then(c => c.add("/")));
+  self.skipWaiting();
+});
+self.addEventListener("activate", e => {
+  e.waitUntil(caches.keys().then(keys =>
+    Promise.all(keys.filter(k => k !== CACHE).map(k => caches.delete(k)))
+  ));
+  self.clients.claim();
+});
+self.addEventListener("fetch", e => {
+  const url = new URL(e.request.url);
+  // Images: cache-first (rarely change)
+  if (url.pathname.startsWith("/img")) {
+    e.respondWith(caches.match(e.request).then(hit =>
+      hit || fetch(e.request).then(r => {
+        if (r.ok) caches.open(CACHE).then(c => c.put(e.request, r.clone()));
+        return r;
+      }).catch(() => hit)
+    ));
+    return;
+  }
+  // API: network-first (always fresh)
+  if (url.pathname.startsWith("/api")) {
+    e.respondWith(fetch(e.request).catch(() => caches.match(e.request)));
+    return;
+  }
+  // App shell: stale-while-revalidate — instant from cache, refreshes in background
+  if (url.pathname === "/" || url.pathname === "/index.html") {
+    e.respondWith(caches.open(CACHE).then(async cache => {
+      const cached = await cache.match("/");
+      const fresh = fetch(e.request).then(r => {
+        if (r.ok) cache.put("/", r.clone());
+        return r;
+      });
+      return cached || fresh;
+    }));
+    return;
+  }
+  e.respondWith(fetch(e.request));
+});
+  `);
+});
 
 // ── Recipe menu endpoint ─────────────────────────────────────────────────────
 // Returns fresh scraped recipes for a meal type.
