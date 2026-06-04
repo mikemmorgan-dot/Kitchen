@@ -1665,11 +1665,18 @@ async function getMenu(course){
     if(!r.ok) throw new Error(r.status);
     const fresh = await r.json();
     if(Array.isArray(fresh) && fresh.length){
-      // DEMO recipes always win — they have full ingredients/nutrition/instructions.
-      // Server recipes are extras: only include ones NOT already in DEMO.
+      // Build a map of server images keyed by source_url (blogs often have better thumbnails)
+      const serverImg = new Map(fresh.map(r=>[r.source_url, r.image||r.thumb||""]));
+      // DEMO recipes always win for data — but fill in missing images from server
+      const enriched = (DEMO[course]||[]).map(r=>
+        (!r.image && r.source_url && serverImg.has(r.source_url))
+          ? {...r, image: serverImg.get(r.source_url)}
+          : r
+      );
+      // Add genuinely new server recipes not already covered by DEMO
       const demoKeys = new Set((DEMO[course]||[]).map(r=>r.source_url||r.title));
       const newOnly  = fresh.filter(r=>!demoKeys.has(r.source_url||r.title));
-      return [...(DEMO[course]||[]), ...newOnly];
+      return [...enriched, ...newOnly];
     }
   }catch{ /* server not ready yet — use DEMO */ }
   return DEMO[course]||[];
@@ -1884,9 +1891,10 @@ function buildShoppingList(){
    (or run server.js) to get the real photos. */
 function proxyImg(url,w){
   if(!url) return url;
-  const full = url.replace(/-\d+x\d+(?=\.(jpe?g|png|webp))/i,"");   // full-size original
+  const full = url.replace(/-\d+x\d+(?=\.(jpe?g|png|webp))/i,"");
   const noScheme = full.replace(/^https?:\/\//,"");
-  if(API) return `${API}/img?url=${encodeURIComponent(full)}`;     // your own backend
+  // API===null means file:// mode (no server). API==="" means running on the server.
+  if(API !== null) return `/img?url=${encodeURIComponent(full)}`;
   return `https://wsrv.nl/?url=ssl:${noScheme}&w=${w||800}&fit=cover`;
 }
 function placeholder(title,blog){
@@ -2116,6 +2124,8 @@ async function fetchLiveNutrition(r){
     const data = await resp.json();
     const n = data.nutrition;
     if(!n || typeof n !== "object") throw new Error("no nutrition");
+    // Piggyback the image onto the nutrition object so _applyNutrition can use it
+    if(data.image) n._image = data.image;
     _nutCache.set(url, n);
     _applyNutrition(r, n);
   }catch{
@@ -2145,6 +2155,12 @@ function _applyNutrition(r, n){
     el.innerHTML = `<div class="v ${hi?'hi':''}">${Math.round(val)}${unit}</div><div class="k">${label}</div>`;
   });
 
+  // Update image if the recipe was missing one
+  if(!r.image && n._image){
+    r.image = n._image;
+    const heroImg = document.querySelector(".r-hero img");
+    if(heroImg){ heroImg.src = proxyImg(n._image, 1000); heroImg.style.display="block"; }
+  }
   // Update source indicator
   const src = document.getElementById("nutri-source");
   if(src) src.innerHTML = "✓ Live nutrition from " + (r.blog||"blog");
