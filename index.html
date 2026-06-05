@@ -2676,10 +2676,12 @@ async function fetchLiveNutrition(r){
     _nutCache.set(url, n);
     _applyNutrition(r, n);
   }catch{
-    // Silently keep the hardcoded estimates — stop pulsing
+    // Cloudflare or network blocked the fetch — keep estimates, stop pulsing
     IDS.forEach(id=>{ const el=document.getElementById(id); if(el) el.classList.remove("fetching"); });
     const src=document.getElementById("nutri-source");
-    if(src) src.innerHTML="⚠️ Estimated nutrition — deploy server for live data";
+    if(src) src.innerHTML = API !== null
+      ? "⚠️ Estimated nutrition · this blog's security prevents live fetching"
+      : "⚠️ Estimated nutrition · deploy server for live data";
   }
 }
 
@@ -2799,7 +2801,7 @@ function drawRecipe(r){
      </div>
      <div class="serve-note">These are per single serving — what one person eats — and don't change when you scale the batch above.</div>
      <div id="nutri-source" class="serve-note" style="margin-top:4px;color:var(--ink-soft);font-size:11px">
-       ${API===null ? "⚠️ Estimated nutrition — <a href='DEPLOY.md' style='color:var(--terra)'>deploy the server</a> for live data from each blog" : "⏳ Fetching live nutrition from blog…"}
+       ${API===null ? "⚠️ Estimated nutrition · deploy server for live data" : "⏳ Checking for live nutrition…"}
      </div>
    </section>
 
