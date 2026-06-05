@@ -289,16 +289,56 @@ app.get("/api/status", (_, res) => {
   res.json({ lastUpdated: recipeStore.lastUpdated || null, counts });
 });
 
-// ── User state persistence ───────────────────────────────────────────────────
-app.get("/api/state", (_, res) => {
+// ── Profile management ───────────────────────────────────────────────────────
+const PROFILES_FILE = "./profiles.json";
+function sanitizeName(n){ return (n||"").replace(/[^a-zA-Z0-9_\-]/g,"").slice(0,30)||"anonymous"; }
+
+app.get("/api/profiles", (_, res) => {
+  try { if(existsSync(PROFILES_FILE)) return res.json(JSON.parse(readFileSync(PROFILES_FILE,"utf8"))); }
+  catch {}
+  res.json([]);
+});
+app.post("/api/profiles", (req, res) => {
   try {
-    if (existsSync(STATE_FILE)) return res.json(JSON.parse(readFileSync(STATE_FILE, "utf8")));
-  } catch {}
+    const list = (Array.isArray(req.body)?req.body:[]).filter(n=>typeof n==="string").slice(0,30);
+    writeFileSync(PROFILES_FILE, JSON.stringify(list));
+    res.json({ok:true});
+  } catch(e){ res.status(500).json({error:e.message}); }
+});
+
+// ── Shared state (plan + shopping) — must be defined before /:profile ────────
+app.get("/api/state/shared", (_, res) => {
+  try { if(existsSync("./state_shared.json")) return res.json(JSON.parse(readFileSync("./state_shared.json","utf8"))); }
+  catch {}
+  res.json({});
+});
+app.post("/api/state/shared", (req, res) => {
+  try { writeFileSync("./state_shared.json", JSON.stringify(req.body,null,2)); res.json({ok:true}); }
+  catch(e){ res.status(500).json({error:e.message}); }
+});
+
+// ── Personal state per profile ────────────────────────────────────────────────
+app.get("/api/state/:profile", (req, res) => {
+  const file = `./state_${sanitizeName(req.params.profile)}.json`;
+  try { if(existsSync(file)) return res.json(JSON.parse(readFileSync(file,"utf8"))); }
+  catch {}
+  res.json({});
+});
+app.post("/api/state/:profile", (req, res) => {
+  const file = `./state_${sanitizeName(req.params.profile)}.json`;
+  try { writeFileSync(file, JSON.stringify(req.body,null,2)); res.json({ok:true}); }
+  catch(e){ res.status(500).json({error:e.message}); }
+});
+
+// Legacy /api/state (backward compat — reads/writes state_anonymous.json)
+app.get("/api/state", (_, res) => {
+  try { if(existsSync("./state_anonymous.json")) return res.json(JSON.parse(readFileSync("./state_anonymous.json","utf8"))); }
+  catch {}
   res.json({});
 });
 app.post("/api/state", (req, res) => {
-  try { writeFileSync(STATE_FILE, JSON.stringify(req.body, null, 2)); res.json({ ok: true }); }
-  catch (e) { res.status(500).json({ error: e.message }); }
+  try { writeFileSync("./state_anonymous.json", JSON.stringify(req.body,null,2)); res.json({ok:true}); }
+  catch(e){ res.status(500).json({error:e.message}); }
 });
 
 // ── Single recipe parser ─────────────────────────────────────────────────────

@@ -388,6 +388,32 @@
   .notes-area::placeholder{color:var(--ink-soft);font-style:italic}
   .notes-saved{font-size:11.5px;color:var(--herb-deep);margin-top:5px;opacity:0;transition:opacity .3s;font-style:italic}
 
+  /* ── profile picker ──────────────────────────────────────────────────── */
+  .ps-screen{min-height:100dvh;display:flex;flex-direction:column;align-items:center;
+    justify-content:center;padding:40px 24px;text-align:center}
+  .ps-title{font-family:'Fraunces',serif;font-size:36px;font-weight:600;margin:14px 0 8px}
+  .ps-sub{color:var(--ink-soft);font-size:14px;max-width:34ch;margin:0 auto 32px;line-height:1.55}
+  .ps-list{display:flex;flex-direction:column;gap:12px;width:100%;max-width:340px}
+  .ps-btn{display:flex;align-items:center;gap:16px;background:var(--card);
+    border:1.5px solid var(--line);border-radius:18px;padding:16px 20px;
+    box-shadow:var(--shadow);text-align:left;transition:transform .15s}
+  .ps-btn:active{transform:scale(.97)}
+  .ps-av{width:46px;height:46px;border-radius:50%;display:flex;align-items:center;
+    justify-content:center;font-size:19px;font-weight:800;color:#fff;flex-shrink:0}
+  .ps-name{font-size:17px;font-weight:700;font-family:'Fraunces',serif}
+  .ps-add-row{display:flex;gap:10px;width:100%;max-width:340px;margin-top:12px}
+  .ps-add-input{flex:1;min-width:0;padding:13px 14px;border:1.5px solid var(--line);
+    border-radius:14px;font-size:15px;font-family:inherit;background:var(--card);
+    color:var(--ink);outline:none}
+  .ps-add-input:focus{border-color:var(--herb)}
+  .ps-add-btn{width:50px;flex-shrink:0;border-radius:14px;background:var(--herb);
+    color:#fff;font-size:24px;display:flex;align-items:center;justify-content:center}
+  .profile-chip{display:inline-flex;align-items:center;gap:6px;background:var(--paper-2);
+    border-radius:999px;padding:4px 10px 4px 6px;font-size:12px;font-weight:700;
+    cursor:pointer;border:1px solid var(--line)}
+  .profile-chip .mini-av{width:20px;height:20px;border-radius:50%;display:flex;
+    align-items:center;justify-content:center;font-size:10px;font-weight:800;color:#fff}
+
 </style>
 </head>
 <script>
@@ -1803,7 +1829,9 @@ const proteinToday = ()=>proteinOn(today());
    so save/load only kicks in when the file is opened in a real
    browser or served via node server.js.
 ================================================================ */
-const SK = "morgans_kitchen_v1";          // storage key
+/* ── State persistence — split into personal + shared ─────────────────────────
+   Personal  : log, goals, body weight, favourites, notes, water
+   Shared    : plan, shopping list checklist                                  */
 
 function findRecipeByKey(key){
   for(const course of Object.keys(DEMO)){
@@ -1813,63 +1841,144 @@ function findRecipeByKey(key){
   return null;
 }
 
-function serialState(){
-  // strip the .recipe object reference (a live DEMO pointer) before JSON-encoding
+// ── Profile helpers ──────────────────────────────────────────────────────────
+const AVATAR_COLORS=["#C2693F","#3F5C3A","#4A90D9","#8B6BAE","#D4943A","#E05C6A"];
+function avatarColor(n){ let h=0; for(const c of (n||"?")) h=(h*31+c.charCodeAt(0))&0xFF; return AVATAR_COLORS[h%AVATAR_COLORS.length]; }
+function avatarInitial(n){ return ((n||"?")[0]).toUpperCase(); }
+function getProfile(){ return localStorage.getItem("mk_profile")||null; }
+
+async function loadProfiles(){
+  try{
+    if(API!==null){ const r=await fetch("/api/profiles"); if(r.ok){ const f=await r.json(); if(f.length){ localStorage.setItem("mk_profiles",JSON.stringify(f)); return f; } } }
+  }catch{}
+  return JSON.parse(localStorage.getItem("mk_profiles")||"[]");
+}
+async function saveProfiles(list){
+  localStorage.setItem("mk_profiles",JSON.stringify(list));
+  if(API!==null) fetch("/api/profiles",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify(list)}).catch(()=>{});
+}
+
+function showProfilePicker(profiles, subtitle){
+  const app=document.getElementById("app");
+  app.innerHTML=`<div class="ps-screen fade">
+    <div style="font-size:56px;margin-bottom:4px">👩‍🍳</div>
+    <h1 class="ps-title display">Who's cooking?</h1>
+    <p class="ps-sub">${subtitle||"Your goals, favourites &amp; log are personal.<br>The meal plan is shared with everyone."}</p>
+    <div class="ps-list" id="psList">
+      ${profiles.map(n=>`
+        <button class="ps-btn" onclick="selectProfile(${JSON.stringify(n)})">
+          <div class="ps-av" style="background:${avatarColor(n)}">${avatarInitial(n)}</div>
+          <span class="ps-name">${n}</span>
+        </button>`).join("")}
+    </div>
+    <div class="ps-add-row">
+      <input class="ps-add-input" id="psNewName" placeholder="Add a name…"
+        onkeydown="if(event.key==='Enter') addProfile()">
+      <button class="ps-add-btn" onclick="addProfile()">+</button>
+    </div>
+  </div>`;
+}
+
+async function addProfile(){
+  const inp=document.getElementById("psNewName");
+  const name=(inp?.value||"").trim();
+  if(!name){ inp?.focus(); return; }
+  const profiles=await loadProfiles();
+  if(!profiles.includes(name)){ profiles.push(name); await saveProfiles(profiles); }
+  selectProfile(name);
+}
+
+async function selectProfile(name){
+  localStorage.setItem("mk_profile",name);
+  // Migrate old monolithic data on first login for this profile
+  if(!localStorage.getItem("mk_personal_"+name)){
+    const old=localStorage.getItem("morgans_kitchen_v1");
+    if(old){ try{
+      const d=JSON.parse(old);
+      localStorage.setItem("mk_personal_"+name, JSON.stringify({bw:d.bw,log:d.log,goals:d.goals,waterToday:d.waterToday,favourites:d.favourites,notes:d.notes}));
+      if(!localStorage.getItem("mk_shared")) localStorage.setItem("mk_shared",JSON.stringify({plan:d.plan,shopChecked:d.shopChecked}));
+    }catch{} }
+  }
+  await loadState();
+  setNav(); refreshCoach();
+  if(S.goals.reminderEnabled) scheduleWaterReminder();
+  home();
+}
+
+function showSwitchProfile(){
+  loadProfiles().then(profiles=>showProfilePicker(profiles,"Switching profile — your data is saved."));
+}
+
+// ── Serialisation ────────────────────────────────────────────────────────────
+function serialPersonal(){
+  return {bw:S.bw, log:S.log, goals:S.goals, waterToday:S.waterToday, favourites:[...S.favourites], notes:S.notes};
+}
+function serialShared(){
   const planClean={};
   Object.entries(S.plan).forEach(([day,meals])=>{
     planClean[day]={};
     Object.entries(meals).forEach(([m,list])=>{
-      planClean[day][m]=list.map(({recipe,...rest})=>rest);
+      planClean[day][m]=(list||[]).map(({recipe,...rest})=>rest);
     });
   });
-  return {bw:S.bw, log:S.log, plan:planClean, shopChecked:[...S.shopChecked], goals:S.goals, waterToday:S.waterToday, favourites:[...S.favourites], notes:S.notes};
+  return {plan:planClean, shopChecked:[...S.shopChecked]};
 }
 
-function applyState(data){
+function applyPersonal(data){
   if(!data||typeof data!=="object") return;
-  if(data.bw){ S.bw=+data.bw; const inp=$("bw"); if(inp) inp.value=data.bw; }
+  if(data.bw){ S.bw=+data.bw; }
   if(data.log) S.log=data.log;
+  if(data.waterToday) S.waterToday=data.waterToday;
+  if(data.favourites) S.favourites=new Set(data.favourites);
+  if(data.notes)      Object.assign(S.notes,data.notes);
+  if(data.goals)      Object.assign(S.goals,data.goals);
+  S.added=new Set((S.log[today()]||[]).map(e=>e.key));
+}
+function applyShared(data){
+  if(!data||typeof data!=="object") return;
+  if(data.shopChecked) S.shopChecked=new Set(data.shopChecked);
   if(data.plan){
     S.plan={};
     Object.entries(data.plan).forEach(([day,meals])=>{
       S.plan[day]={};
-      Object.entries(meals).forEach(([m,list])=>{
-        S.plan[day][m]=(list||[]).map(e=>({...e, recipe:findRecipeByKey(e.key)}));
+      Object.entries(meals||{}).forEach(([m,list])=>{
+        S.plan[day][m]=(list||[]).map(e=>({...e,recipe:findRecipeByKey(e.key)}));
       });
     });
   }
-  if(data.shopChecked) S.shopChecked=new Set(data.shopChecked);
-  if(data.favourites)  S.favourites=new Set(data.favourites);
-  if(data.notes)       Object.assign(S.notes, data.notes);
-  if(data.goals)     Object.assign(S.goals, data.goals);
-  if(data.waterToday) S.waterToday=data.waterToday;
-  // rebuild S.added (today's logged recipe keys) from the saved log
-  S.added=new Set((S.log[today()]||[]).map(e=>e.key));
 }
 
 let _saveTimer=null;
 function save(){
   clearTimeout(_saveTimer);
   _saveTimer=setTimeout(()=>{
-    const d=serialState();
-    try{ localStorage.setItem(SK, JSON.stringify(d)); }catch{}  // localStorage
-    if(API){ fetch(`${API}/api/state`,{method:"POST",          // server sync
-      headers:{"Content-Type":"application/json"},
-      body:JSON.stringify(d)}).catch(()=>{}); }
-  }, 300);
+    const profile=getProfile(); if(!profile) return;
+    const personal=serialPersonal(), shared=serialShared();
+    try{ localStorage.setItem("mk_personal_"+profile, JSON.stringify(personal)); }catch{}
+    try{ localStorage.setItem("mk_shared", JSON.stringify(shared)); }catch{}
+    if(API!==null){
+      fetch(`/api/state/${encodeURIComponent(profile)}`,{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify(personal)}).catch(()=>{});
+      fetch("/api/state/shared",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify(shared)}).catch(()=>{});
+    }
+  },300);
 }
 
 async function loadState(){
-  // 1. try the server (freshest source when backend is running)
-  if(API){ try{
-    const r=await fetch(`${API}/api/state`);
-    if(r.ok){ applyState(await r.json()); return; }
-  }catch{} }
-  // 2. fall back to localStorage
+  const profile=getProfile(); if(!profile) return;
+  // Personal state
   try{
-    const raw=localStorage.getItem(SK);
-    if(raw) applyState(JSON.parse(raw));
-  }catch{}
+    if(API!==null){ const r=await fetch(`/api/state/${encodeURIComponent(profile)}`); if(r.ok){ applyPersonal(await r.json()); } }
+    else { const raw=localStorage.getItem("mk_personal_"+profile); if(raw) applyPersonal(JSON.parse(raw)); }
+  }catch{
+    try{ const raw=localStorage.getItem("mk_personal_"+profile); if(raw) applyPersonal(JSON.parse(raw)); }catch{}
+  }
+  // Shared state
+  try{
+    if(API!==null){ const r=await fetch("/api/state/shared"); if(r.ok){ applyShared(await r.json()); } }
+    else { const raw=localStorage.getItem("mk_shared"); if(raw) applyShared(JSON.parse(raw)); }
+  }catch{
+    try{ const raw=localStorage.getItem("mk_shared"); if(raw) applyShared(JSON.parse(raw)); }catch{}
+  }
 }
 
 function clearData(){
@@ -2839,7 +2948,13 @@ function renderGoals(){
 
   app.innerHTML=`
     <div class="page-h fade"><div class="eyebrow">nutrition</div><h2>Your Goals</h2>
-      <div style="font-size:13px;color:var(--ink-soft);margin-top:2px">Progress updates as you log meals.</div>
+      <div style="display:flex;align-items:center;justify-content:space-between;margin-top:6px">
+        <div style="font-size:13px;color:var(--ink-soft)">Progress updates as you log meals.</div>
+        <button class="profile-chip" onclick="showSwitchProfile()">
+          <div class="mini-av" style="background:${avatarColor(getProfile()||'?')}">${avatarInitial(getProfile()||'?')}</div>
+          ${getProfile()||'Profile'}
+        </button>
+      </div>
     </div>
 
     <div class="g-card">
@@ -3271,10 +3386,17 @@ function renderWeek(){
 }
 
 (async()=>{
-  await loadState();                // restore saved state first
+  const profiles = await loadProfiles();
+  const profile  = getProfile();
+  if(!profile){
+    // First launch — show profile picker before anything else
+    showProfilePicker(profiles.length ? profiles : []);
+    return; // selectProfile() will call home() once chosen
+  }
+  await loadState();
   setNav();
   refreshCoach();
-  if(S.goals.reminderEnabled) scheduleWaterReminder(); // restart daily reminder
+  if(S.goals.reminderEnabled) scheduleWaterReminder();
   try { home(); }
   catch(err){
     document.getElementById("app").innerHTML =
