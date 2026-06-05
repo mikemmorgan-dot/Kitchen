@@ -1981,19 +1981,48 @@ function save(){
 
 async function loadState(){
   const profile=getProfile(); if(!profile) return;
-  // Personal state
-  try{
-    if(API!==null){ const r=await fetch(`/api/state/${encodeURIComponent(profile)}`); if(r.ok){ applyPersonal(await r.json()); } }
-    else { const raw=localStorage.getItem("mk_personal_"+profile); if(raw) applyPersonal(JSON.parse(raw)); }
-  }catch{
-    try{ const raw=localStorage.getItem("mk_personal_"+profile); if(raw) applyPersonal(JSON.parse(raw)); }catch{}
+
+  // ── PERSONAL (goals, log, favourites, notes) ─────────────────────────────
+  // localStorage is the primary source of truth — NEVER overwrite it with server
+  // data unless localStorage is empty (new device / cleared browser).
+  // This protects against Render wiping server files on every deploy.
+  const localPersonal = localStorage.getItem("mk_personal_"+profile);
+  if(localPersonal){
+    try{ applyPersonal(JSON.parse(localPersonal)); }catch{}
+  } else if(API!==null){
+    // localStorage is empty — try server (restores data after clearing browser)
+    try{
+      const r=await fetch(`/api/state/${encodeURIComponent(profile)}`);
+      if(r.ok){
+        const d=await r.json();
+        if(d && Object.keys(d).length>0){
+          applyPersonal(d);
+          localStorage.setItem("mk_personal_"+profile, JSON.stringify(d));
+        }
+      }
+    }catch{}
   }
-  // Shared state
-  try{
-    if(API!==null){ const r=await fetch("/api/state/shared"); if(r.ok){ applyShared(await r.json()); } }
-    else { const raw=localStorage.getItem("mk_shared"); if(raw) applyShared(JSON.parse(raw)); }
-  }catch{
-    try{ const raw=localStorage.getItem("mk_shared"); if(raw) applyShared(JSON.parse(raw)); }catch{}
+
+  // ── SHARED (meal plan, shopping list) ────────────────────────────────────
+  // Server is primary here so both partners see the same plan in real time.
+  // But if server returns empty (wiped by deploy), fall back to localStorage.
+  const localShared = localStorage.getItem("mk_shared");
+  let serverSharedLoaded = false;
+  if(API!==null){
+    try{
+      const r=await fetch("/api/state/shared");
+      if(r.ok){
+        const d=await r.json();
+        if(d && Object.keys(d).length>0){
+          applyShared(d);
+          localStorage.setItem("mk_shared",JSON.stringify(d)); // keep local cache fresh
+          serverSharedLoaded = true;
+        }
+      }
+    }catch{}
+  }
+  if(!serverSharedLoaded && localShared){
+    try{ applyShared(JSON.parse(localShared)); }catch{}
   }
 }
 
