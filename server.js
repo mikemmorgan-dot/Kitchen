@@ -74,18 +74,32 @@ function blogFromUrl(url) {
 // ── Recipe store (in-memory + disk persistence) ───────────────────────────────
 let recipeStore = { lastUpdated: null };
 
-function loadRecipeStore() {
+async function loadRecipeStore() {
+  // Try Upstash first (survives deploys)
+  const fromKV = await kvGet("recipe_cache");
+  if (fromKV && fromKV.lastUpdated) {
+    recipeStore = fromKV;
+    console.log(`[store] Loaded ${Object.values(fromKV).flat().length - 1} recipes from Upstash (updated ${fromKV.lastUpdated})`);
+    return;
+  }
+  // Fall back to local file (local dev / first run before Upstash)
   try {
     if (existsSync(RECIPES_FILE)) {
       recipeStore = JSON.parse(readFileSync(RECIPES_FILE, "utf8"));
       console.log(`[store] Loaded recipes from disk (updated ${recipeStore.lastUpdated})`);
+      // Migrate to Upstash immediately
+      await kvSet("recipe_cache", recipeStore);
+      console.log("[store] Migrated recipe cache to Upstash");
     }
   } catch (e) {
     console.warn("[store] Could not load recipes.json:", e.message);
   }
 }
 
-function saveRecipeStore() {
+async function saveRecipeStore() {
+  // Save to Upstash (primary — deploy-proof)
+  await kvSet("recipe_cache", recipeStore);
+  // Also save to disk as local backup
   try { writeFileSync(RECIPES_FILE, JSON.stringify(recipeStore)); }
   catch (e) { console.warn("[store] Could not save recipes.json:", e.message); }
 }
@@ -159,16 +173,17 @@ async function scrapeAll() {
     total += recipes.length;
   }
   recipeStore = { ...updated, lastUpdated: new Date().toISOString() };
-  saveRecipeStore();
+  await saveRecipeStore();
   console.log(`[cron] Done — ${total} recipes across ${Object.keys(updated).length} meal types.`);
 }
 
 // Load on startup, scrape if stale
-loadRecipeStore();
-if (isStale()) {
-  console.log("[startup] Recipe store is empty or stale — triggering scrape…");
-  scrapeAll().catch(e => console.error("[startup] Scrape failed:", e.message));
-}
+loadRecipeStore().then(() => {
+  if (isStale()) {
+    console.log("[startup] Recipe store is empty or stale — triggering scrape…");
+    scrapeAll().catch(e => console.error("[startup] Scrape failed:", e.message));
+  }
+});
 
 // Weekly refresh: every Sunday at 3 AM
 cron.schedule("0 3 * * 0", () => {
