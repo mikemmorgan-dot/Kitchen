@@ -352,8 +352,9 @@
   .shop-item input{width:20px;height:20px;accent-color:var(--herb);flex:none}
   .shop-item.got span{text-decoration:line-through;color:var(--ink-soft)}
   /* ── search bar ──────────────────────────────────── */
-  .search-wrap{position:relative;margin-bottom:14px}
-  .search-bar{width:100%;padding:13px 42px 13px 16px;border:1.5px solid var(--line);
+  .search-wrap{position:relative;margin-bottom:14px;display:flex;gap:8px;align-items:center}
+  .search-wrap .search-inner{flex:1;position:relative}
+  .search-bar{width:100%;padding:13px 40px 13px 16px;border:1.5px solid var(--line);
     border-radius:16px;font-size:16px;font-family:inherit;background:var(--card);
     color:var(--ink);outline:none;-webkit-appearance:none;box-sizing:border-box;display:block}
   .search-bar:focus{border-color:var(--herb)}
@@ -361,6 +362,20 @@
   .search-clear{position:absolute;right:10px;top:50%;transform:translateY(-50%);
     font-size:20px;color:var(--ink-soft);background:none;border:none;
     width:32px;height:32px;display:flex;align-items:center;justify-content:center;cursor:pointer}
+  /* sort button + dropdown */
+  .sort-wrap{position:relative;flex-shrink:0}
+  .sort-btn{width:48px;height:48px;border-radius:14px;border:1.5px solid var(--line);
+    background:var(--card);font-size:19px;display:flex;align-items:center;
+    justify-content:center;transition:background .15s,border-color .15s}
+  .sort-btn.on{background:var(--herb-deep);color:#fff;border-color:var(--herb-deep)}
+  .sort-dd{position:absolute;top:calc(100% + 6px);right:0;min-width:210px;
+    background:var(--card);border:1.5px solid var(--line);border-radius:16px;
+    box-shadow:0 20px 40px -16px rgba(60,45,20,.35);overflow:hidden;z-index:200}
+  .sort-opt{display:flex;align-items:center;gap:12px;width:100%;padding:13px 16px;
+    font-size:14.5px;text-align:left;font-weight:500;border-bottom:1px solid var(--line)}
+  .sort-opt:last-child{border-bottom:none}
+  .sort-opt.on{color:var(--herb-deep);font-weight:700}
+  .sort-opt .sort-ck{margin-left:auto;font-size:13px;color:var(--herb)}
   /* ── recipe cards: image wrapper + heart ─────────── */
   .card-img-wrap{position:relative}
   .heart-btn{position:absolute;top:9px;right:9px;width:34px;height:34px;
@@ -1800,6 +1815,7 @@ const S = {
   blogFilter:null, fullMenuList:[],   // active blog filter and unfiltered list
   proteinFilter:null,                 // active protein-source filter
   searchQuery:null, favFilter:false,  // search text + favourites-only toggle
+  sortBy:null,                        // active sort key (null = default order)
   favourites:new Set(),               // Set of recipe keys
   notes:{},                           // { recipeKey: "note text" }
   goals:{calories:2000,fiber:25,carbs:150,fat:65,water:8,sex:"female",
@@ -2393,10 +2409,17 @@ async function openMeal(meal){
       <h2 class="display">${({breakfast:"Morning's",lunch:"Midday",dinner:"Tonight's",salad:"Today's"}[meal]||"Today's")} <span class="italic">menu</span></h2>
     </div>
     <div class="search-wrap">
-      <input type="search" class="search-bar" id="searchInput"
-        placeholder="🔍  Search recipes or ingredients…"
-        oninput="filterSearch(this.value)" autocomplete="off">
-      <button class="search-clear" id="searchClear" onclick="filterSearch('')" style="display:none">×</button>
+      <div class="search-inner">
+        <input type="search" class="search-bar" id="searchInput"
+          placeholder="🔍  Search recipes or ingredients…"
+          oninput="filterSearch(this.value)" autocomplete="off">
+        <button class="search-clear" id="searchClear" onclick="filterSearch('')" style="display:none">×</button>
+      </div>
+      <div class="sort-wrap" id="sort-wrap">
+        <button class="sort-btn${S.sortBy?' on':''}" id="sortBtn" onclick="toggleSortMenu()" aria-label="Sort recipes">
+          ${SORT_OPTIONS.find(o=>o.key===S.sortBy)?.icon||"⇅"}
+        </button>
+      </div>
     </div>
     <div class="filter-bar" id="filter-bar"></div>
     <div class="filter-bar protein-bar" id="protein-bar" style="padding-top:0"></div>
@@ -2410,10 +2433,12 @@ async function openMeal(meal){
     S.proteinFilter = cached.proteinFilter;
     S.searchQuery   = cached.searchQuery;
     S.favFilter     = cached.favFilter;
-    if(S.blogFilter || S.proteinFilter || S.searchQuery || S.favFilter){
+    S.sortBy        = cached.sortBy ?? null;
+    if(S.blogFilter || S.proteinFilter || S.searchQuery || S.favFilter || S.sortBy){
       applyFilters();
     }
     refreshFavChip();
+    _updateSortBtn();
     // Restore search text in the input
     const inp=$("searchInput"), clr=$("searchClear");
     if(inp && cached.searchQuery){ inp.value=cached.searchQuery; if(clr) clr.style.display="flex"; }
@@ -2457,6 +2482,59 @@ const PROTEIN_OPTS=[
   {v:"vegetarian", icon:"🌱",  label:"Vegetarian"},
 ];
 
+/* ── Sort ─────────────────────────────────────────────────────────────────── */
+const SORT_OPTIONS = [
+  { key:null,        icon:"⇅",  label:"Default order"   },
+  { key:"protein",   icon:"💪", label:"Most protein"    },
+  { key:"fiber",     icon:"🌾", label:"Most fiber"      },
+  { key:"time",      icon:"⏱", label:"Quickest first"  },
+  { key:"calories",  icon:"🔥", label:"Fewest calories" },
+  { key:"rating",    icon:"⭐", label:"Top rated"       },
+];
+
+function _parseMinutes(r){
+  const t=r.times?.total||r.times?.cook||""; if(!t) return 999;
+  const h=(t.match(/(\d+)\s*h/i)||[])[1]||0, m=(t.match(/(\d+)\s*min/i)||[])[1]||0;
+  return (+h)*60+(+m)||999;
+}
+function sortList(list){
+  if(!S.sortBy) return list;
+  const a=[...list];
+  if(S.sortBy==="protein")  return a.sort((a,b)=>(b.nutrition?.protein_g||0)-(a.nutrition?.protein_g||0));
+  if(S.sortBy==="fiber")    return a.sort((a,b)=>(b.nutrition?.fiber_g||0)-(a.nutrition?.fiber_g||0));
+  if(S.sortBy==="time")     return a.sort((a,b)=>_parseMinutes(a)-_parseMinutes(b));
+  if(S.sortBy==="calories") return a.sort((a,b)=>(a.nutrition?.calories||9999)-(b.nutrition?.calories||9999));
+  if(S.sortBy==="rating")   return a.sort((a,b)=>(b.rating?.value||0)-(a.rating?.value||0)||(b.rating?.count||0)-(a.rating?.count||0));
+  if(S.sortBy==="az")       return a.sort((a,b)=>a.title.localeCompare(b.title));
+  return list;
+}
+function _updateSortBtn(){
+  const btn=$("sortBtn"); if(!btn) return;
+  const opt=SORT_OPTIONS.find(o=>o.key===S.sortBy);
+  btn.textContent=opt?.icon||"⇅"; btn.classList.toggle("on",!!S.sortBy);
+}
+function setSortBy(key){
+  S.sortBy=key; document.getElementById("sort-dd")?.remove();
+  _updateSortBtn(); applyFilters();
+}
+function toggleSortMenu(){
+  const existing=document.getElementById("sort-dd");
+  if(existing){ existing.remove(); return; }
+  const wrap=document.getElementById("sort-wrap"); if(!wrap) return;
+  const dd=document.createElement("div"); dd.id="sort-dd"; dd.className="sort-dd";
+  dd.innerHTML=SORT_OPTIONS.map(o=>`
+    <button class="sort-opt${S.sortBy===o.key?' on':''}" data-sk="${o.key??''}"
+      onclick="setSortBy(this.dataset.sk||null)">
+      <span>${o.icon}</span>${o.label}${S.sortBy===o.key?'<span class="sort-ck">✓</span>':''}
+    </button>`).join("");
+  wrap.appendChild(dd);
+  setTimeout(()=>{
+    document.addEventListener("click",function _c(e){
+      if(!dd.contains(e.target)&&e.target.id!=="sortBtn"){dd.remove();document.removeEventListener("click",_c);}
+    });
+  },10);
+}
+
 /* ---- shared filter application ---- */
 function applyFilters(){
   let list = S.fullMenuList;
@@ -2471,6 +2549,7 @@ function applyFilters(){
       (r.ingredients||[]).some(i=>i.toLowerCase().includes(q))
     );
   }
+  list = sortList(list);
   LISTS[S.course] = list;
   const el=$("cards"); if(!el) return;
   el.innerHTML = renderCardItems(list, S.course);
@@ -2617,6 +2696,7 @@ async function openRecipe(course,i){
       proteinFilter: S.proteinFilter,
       searchQuery: S.searchQuery,
       favFilter:   S.favFilter,
+      sortBy:      S.sortBy,
       scrollY:     window.scrollY,
     };
   }
