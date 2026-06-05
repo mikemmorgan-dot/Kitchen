@@ -1899,7 +1899,7 @@ async function addProfile(){
   const inp=document.getElementById("psNewName");
   const name=(inp?.value||"").trim();
   if(!name){ inp?.focus(); return; }
-  const profiles=await loadProfiles();
+  const profiles=JSON.parse(localStorage.getItem("mk_profiles")||"[]");
   if(!profiles.includes(name)){ profiles.push(name); await saveProfiles(profiles); }
   selectProfile(name);
 }
@@ -1982,47 +1982,33 @@ function save(){
 async function loadState(){
   const profile=getProfile(); if(!profile) return;
 
-  // ── PERSONAL (goals, log, favourites, notes) ─────────────────────────────
-  // localStorage is the primary source of truth — NEVER overwrite it with server
-  // data unless localStorage is empty (new device / cleared browser).
-  // This protects against Render wiping server files on every deploy.
+  // ── INSTANT: Apply localStorage right now (no server wait) ───────────────
   const localPersonal = localStorage.getItem("mk_personal_"+profile);
-  if(localPersonal){
-    try{ applyPersonal(JSON.parse(localPersonal)); }catch{}
-  } else if(API!==null){
-    // localStorage is empty — try server (restores data after clearing browser)
-    try{
-      const r=await fetch(`/api/state/${encodeURIComponent(profile)}`);
-      if(r.ok){
-        const d=await r.json();
-        if(d && Object.keys(d).length>0){
-          applyPersonal(d);
-          localStorage.setItem("mk_personal_"+profile, JSON.stringify(d));
-        }
-      }
-    }catch{}
-  }
+  if(localPersonal){ try{ applyPersonal(JSON.parse(localPersonal)); }catch{} }
+  const localShared   = localStorage.getItem("mk_shared");
+  if(localShared){   try{ applyShared(JSON.parse(localShared));   }catch{} }
 
-  // ── SHARED (meal plan, shopping list) ────────────────────────────────────
-  // Server is primary here so both partners see the same plan in real time.
-  // But if server returns empty (wiped by deploy), fall back to localStorage.
-  const localShared = localStorage.getItem("mk_shared");
-  let serverSharedLoaded = false;
+  // ── BACKGROUND: Sync with server without blocking the UI ─────────────────
   if(API!==null){
-    try{
-      const r=await fetch("/api/state/shared");
-      if(r.ok){
-        const d=await r.json();
-        if(d && Object.keys(d).length>0){
-          applyShared(d);
-          localStorage.setItem("mk_shared",JSON.stringify(d)); // keep local cache fresh
-          serverSharedLoaded = true;
-        }
-      }
-    }catch{}
-  }
-  if(!serverSharedLoaded && localShared){
-    try{ applyShared(JSON.parse(localShared)); }catch{}
+    // Personal: only pull from server when localStorage is empty
+    // (prevents a freshly-deployed/wiped server from overwriting good local data)
+    if(!localPersonal){
+      fetch(`/api/state/${encodeURIComponent(profile)}`)
+        .then(r=>r.ok?r.json():null)
+        .then(d=>{ if(d&&Object.keys(d).length>0){
+          applyPersonal(d);
+          localStorage.setItem("mk_personal_"+profile,JSON.stringify(d));
+          refreshCoach();
+        }}).catch(()=>{});
+    }
+    // Shared plan: always refresh so both phones see the same plan
+    fetch("/api/state/shared")
+      .then(r=>r.ok?r.json():null)
+      .then(d=>{ if(d&&Object.keys(d).length>0){
+        applyShared(d);
+        localStorage.setItem("mk_shared",JSON.stringify(d));
+        if(S.view==="plan") renderPlan();
+      }}).catch(()=>{});
   }
 }
 
@@ -2078,32 +2064,36 @@ function toast(msg){const t=$("toast");t.textContent=msg;t.classList.add("show")
 
 /* ---------------- data access ---------------- */
 async function getMenu(course){
-  if(API === null) return DEMO[course]||[];
-  try{
-    const r = await fetch(`/api/menu/${course}`);
-    if(!r.ok) throw new Error(r.status);
-    const fresh = await r.json();
-    if(Array.isArray(fresh) && fresh.length){
-      // Build a lookup of server images keyed by source_url
-      const serverImg = new Map(fresh.map(r=>[r.source_url, r.image||r.thumb||""]));
-      // DEMO recipes always win for data — fill in missing images from server scrape
-      const enriched = (DEMO[course]||[]).map(r=>
+  const demo = DEMO[course]||[];
+  if(API === null) return demo;
+
+  // Return DEMO immediately — never block the UI waiting for the server.
+  // Kick off a background fetch; when it arrives, merge new images / recipes quietly.
+  fetch(`/api/menu/${course}`)
+    .then(r=>r.ok?r.json():null)
+    .then(fresh=>{
+      if(!Array.isArray(fresh)||!fresh.length) return;
+      if(S.meal!==course||!document.getElementById("cards")) return; // navigated away
+
+      const serverImg  = new Map(fresh.map(r=>[r.source_url, r.image||r.thumb||""]));
+      const enriched   = demo.map(r=>
         (!r.image && r.source_url && serverImg.has(r.source_url))
-          ? {...r, image: serverImg.get(r.source_url)}
-          : r
-      );
-      // Exclude server recipes already covered by DEMO — match on both URL AND title
-      // (title match prevents empty scraped versions showing alongside full DEMO entries)
-      const demoURLs  = new Set((DEMO[course]||[]).map(r=>r.source_url||r.title));
-      const demoTitles = new Set((DEMO[course]||[]).map(r=>r.title.toLowerCase().trim()));
-      const newOnly = fresh.filter(r=>
+          ? {...r, image: serverImg.get(r.source_url)} : r);
+      const demoURLs   = new Set(demo.map(r=>r.source_url||r.title));
+      const demoTitles = new Set(demo.map(r=>r.title.toLowerCase().trim()));
+      const newOnly    = fresh.filter(r=>
         !demoURLs.has(r.source_url||r.title) &&
-        !demoTitles.has((r.title||"").toLowerCase().trim())
-      );
-      return [...enriched, ...newOnly];
-    }
-  }catch{ /* server not ready yet — use DEMO */ }
-  return DEMO[course]||[];
+        !demoTitles.has((r.title||"").toLowerCase().trim()));
+      const merged     = [...enriched, ...newOnly];
+
+      // Silently update the displayed list
+      S.fullMenuList = merged;
+      if(_menuMem[course]) _menuMem[course].list = merged;
+      applyFilters(); // re-renders cards with any new images / extra recipes
+    })
+    .catch(()=>{});
+
+  return demo; // instant
 }
 function recipeKey(r){return (r.source_url||r.title);}
 
@@ -3497,23 +3487,34 @@ function renderWeek(){
 }
 
 (async()=>{
-  const profiles = await loadProfiles();
-  const profile  = getProfile();
-  if(!profile){
-    // First launch — show profile picker before anything else
-    showProfilePicker(profiles.length ? profiles : []);
-    return; // selectProfile() will call home() once chosen
-  }
-  await loadState();
-  setNav();
-  refreshCoach();
+  // ── INSTANT: show the app immediately from localStorage ─────────────────
+  const cachedProfiles = JSON.parse(localStorage.getItem("mk_profiles")||"[]");
+  const profile        = getProfile();
+  await loadState();   // now nearly instant — just applies localStorage
+  setNav(); refreshCoach();
   if(S.goals.reminderEnabled) scheduleWaterReminder();
-  try { home(); }
-  catch(err){
-    document.getElementById("app").innerHTML =
-      "<p style='padding:40px 4px;color:#9b2c2c;font-family:Georgia,serif'>Something went wrong starting the app:<br><br>"+
-      (err && err.message ? err.message : err)+"</p>";
+
+  if(!profile){
+    showProfilePicker(cachedProfiles);
+  } else {
+    try { home(); }
+    catch(err){
+      document.getElementById("app").innerHTML =
+        "<p style='padding:40px 4px;color:#9b2c2c;font-family:Georgia,serif'>Something went wrong:<br><br>"+
+        (err?.message||err)+"</p>";
+    }
   }
+
+  // ── BACKGROUND: refresh profiles list from server ─────────────────────
+  if(API!==null) fetch("/api/profiles")
+    .then(r=>r.ok?r.json():null)
+    .then(list=>{
+      if(!list?.length) return;
+      localStorage.setItem("mk_profiles",JSON.stringify(list));
+      // If profile picker is still visible and has new profiles, refresh it
+      if(!getProfile() && document.querySelector(".ps-screen"))
+        showProfilePicker(list);
+    }).catch(()=>{});
 })();
 </script>
 </body>
