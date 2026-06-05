@@ -289,56 +289,90 @@ app.get("/api/status", (_, res) => {
   res.json({ lastUpdated: recipeStore.lastUpdated || null, counts });
 });
 
-// ── Profile management ───────────────────────────────────────────────────────
+// ── Upstash Redis — permanent storage that survives every Render deploy ───────
+const UPSTASH_URL   = (process.env.UPSTASH_REDIS_REST_URL  || "").replace(/\/+$/, "");
+const UPSTASH_TOKEN =  process.env.UPSTASH_REDIS_REST_TOKEN || "";
+
+async function kvGet(key) {
+  if (!UPSTASH_URL) return null;   // local dev without Upstash — fall back to files
+  try {
+    const r = await fetch(`${UPSTASH_URL}/get/${encodeURIComponent(key)}`, {
+      headers: { Authorization: `Bearer ${UPSTASH_TOKEN}` }
+    });
+    const { result } = await r.json();
+    return result ? JSON.parse(result) : null;
+  } catch { return null; }
+}
+
+async function kvSet(key, value) {
+  if (!UPSTASH_URL) return;
+  try {
+    await fetch(UPSTASH_URL, {
+      method: "POST",
+      headers: { Authorization: `Bearer ${UPSTASH_TOKEN}`, "Content-Type": "application/json" },
+      body: JSON.stringify(["SET", key, JSON.stringify(value)])
+    });
+  } catch {}
+}
+
+// ── Profile management ────────────────────────────────────────────────────────
 const PROFILES_FILE = "./profiles.json";
 function sanitizeName(n){ return (n||"").replace(/[^a-zA-Z0-9_\-]/g,"").slice(0,30)||"anonymous"; }
 
-app.get("/api/profiles", (_, res) => {
-  try { if(existsSync(PROFILES_FILE)) return res.json(JSON.parse(readFileSync(PROFILES_FILE,"utf8"))); }
-  catch {}
+app.get("/api/profiles", async (_, res) => {
+  const d = await kvGet("profiles");
+  if (d) return res.json(d);
+  try { if (existsSync(PROFILES_FILE)) return res.json(JSON.parse(readFileSync(PROFILES_FILE,"utf8"))); } catch {}
   res.json([]);
 });
-app.post("/api/profiles", (req, res) => {
-  try {
-    const list = (Array.isArray(req.body)?req.body:[]).filter(n=>typeof n==="string").slice(0,30);
-    writeFileSync(PROFILES_FILE, JSON.stringify(list));
-    res.json({ok:true});
-  } catch(e){ res.status(500).json({error:e.message}); }
+app.post("/api/profiles", async (req, res) => {
+  const list = (Array.isArray(req.body)?req.body:[]).filter(n=>typeof n==="string").slice(0,30);
+  await kvSet("profiles", list);
+  try { writeFileSync(PROFILES_FILE, JSON.stringify(list)); } catch {}
+  res.json({ ok: true });
 });
 
-// ── Shared state (plan + shopping) — must be defined before /:profile ────────
-app.get("/api/state/shared", (_, res) => {
-  try { if(existsSync("./state_shared.json")) return res.json(JSON.parse(readFileSync("./state_shared.json","utf8"))); }
-  catch {}
+// ── Shared state (plan + shopping) — defined before /:profile ─────────────────
+app.get("/api/state/shared", async (_, res) => {
+  const d = await kvGet("state_shared");
+  if (d) return res.json(d);
+  try { if (existsSync("./state_shared.json")) return res.json(JSON.parse(readFileSync("./state_shared.json","utf8"))); } catch {}
   res.json({});
 });
-app.post("/api/state/shared", (req, res) => {
-  try { writeFileSync("./state_shared.json", JSON.stringify(req.body,null,2)); res.json({ok:true}); }
-  catch(e){ res.status(500).json({error:e.message}); }
+app.post("/api/state/shared", async (req, res) => {
+  await kvSet("state_shared", req.body);
+  try { writeFileSync("./state_shared.json", JSON.stringify(req.body,null,2)); } catch {}
+  res.json({ ok: true });
 });
 
 // ── Personal state per profile ────────────────────────────────────────────────
-app.get("/api/state/:profile", (req, res) => {
-  const file = `./state_${sanitizeName(req.params.profile)}.json`;
-  try { if(existsSync(file)) return res.json(JSON.parse(readFileSync(file,"utf8"))); }
-  catch {}
+app.get("/api/state/:profile", async (req, res) => {
+  const key  = `state_${sanitizeName(req.params.profile)}`;
+  const d    = await kvGet(key);
+  if (d) return res.json(d);
+  const file = `./${key}.json`;
+  try { if (existsSync(file)) return res.json(JSON.parse(readFileSync(file,"utf8"))); } catch {}
   res.json({});
 });
-app.post("/api/state/:profile", (req, res) => {
-  const file = `./state_${sanitizeName(req.params.profile)}.json`;
-  try { writeFileSync(file, JSON.stringify(req.body,null,2)); res.json({ok:true}); }
-  catch(e){ res.status(500).json({error:e.message}); }
+app.post("/api/state/:profile", async (req, res) => {
+  const key  = `state_${sanitizeName(req.params.profile)}`;
+  await kvSet(key, req.body);
+  const file = `./${key}.json`;
+  try { writeFileSync(file, JSON.stringify(req.body,null,2)); } catch {}
+  res.json({ ok: true });
 });
 
-// Legacy /api/state (backward compat — reads/writes state_anonymous.json)
-app.get("/api/state", (_, res) => {
-  try { if(existsSync("./state_anonymous.json")) return res.json(JSON.parse(readFileSync("./state_anonymous.json","utf8"))); }
-  catch {}
+// Legacy /api/state (backward compat)
+app.get("/api/state", async (_, res) => {
+  const d = await kvGet("state_anonymous");
+  if (d) return res.json(d);
+  try { if (existsSync("./state_anonymous.json")) return res.json(JSON.parse(readFileSync("./state_anonymous.json","utf8"))); } catch {}
   res.json({});
 });
-app.post("/api/state", (req, res) => {
-  try { writeFileSync("./state_anonymous.json", JSON.stringify(req.body,null,2)); res.json({ok:true}); }
-  catch(e){ res.status(500).json({error:e.message}); }
+app.post("/api/state", async (req, res) => {
+  await kvSet("state_anonymous", req.body);
+  try { writeFileSync("./state_anonymous.json", JSON.stringify(req.body,null,2)); } catch {}
+  res.json({ ok: true });
 });
 
 // ── Single recipe parser ─────────────────────────────────────────────────────
