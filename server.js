@@ -23,6 +23,33 @@ const STATE_FILE  = "./state.json";
 const RECIPES_FILE = "./recipes.json";
 const WEEK_MS     = 7 * 24 * 60 * 60 * 1000;
 
+// ── Upstash Redis — permanent storage that survives every Render deploy ───────
+// Must be defined before loadRecipeStore which runs at startup
+const UPSTASH_URL   = (process.env.UPSTASH_REDIS_REST_URL  || "").replace(/\/+$/, "");
+const UPSTASH_TOKEN =  process.env.UPSTASH_REDIS_REST_TOKEN || "";
+
+async function kvGet(key) {
+  if (!UPSTASH_URL) return null;
+  try {
+    const r = await fetch(`${UPSTASH_URL}/get/${encodeURIComponent(key)}`, {
+      headers: { Authorization: `Bearer ${UPSTASH_TOKEN}` }
+    });
+    const { result } = await r.json();
+    return result ? JSON.parse(result) : null;
+  } catch { return null; }
+}
+
+async function kvSet(key, value) {
+  if (!UPSTASH_URL) return;
+  try {
+    await fetch(UPSTASH_URL, {
+      method: "POST",
+      headers: { Authorization: `Bearer ${UPSTASH_TOKEN}`, "Content-Type": "application/json" },
+      body: JSON.stringify(["SET", key, JSON.stringify(value)])
+    });
+  } catch {}
+}
+
 // ── Blog category URLs scraped each week ─────────────────────────────────────
 const MEAL_SOURCES = {
   breakfast: [
@@ -303,32 +330,6 @@ app.get("/api/status", (_, res) => {
   );
   res.json({ lastUpdated: recipeStore.lastUpdated || null, counts });
 });
-
-// ── Upstash Redis — permanent storage that survives every Render deploy ───────
-const UPSTASH_URL   = (process.env.UPSTASH_REDIS_REST_URL  || "").replace(/\/+$/, "");
-const UPSTASH_TOKEN =  process.env.UPSTASH_REDIS_REST_TOKEN || "";
-
-async function kvGet(key) {
-  if (!UPSTASH_URL) return null;   // local dev without Upstash — fall back to files
-  try {
-    const r = await fetch(`${UPSTASH_URL}/get/${encodeURIComponent(key)}`, {
-      headers: { Authorization: `Bearer ${UPSTASH_TOKEN}` }
-    });
-    const { result } = await r.json();
-    return result ? JSON.parse(result) : null;
-  } catch { return null; }
-}
-
-async function kvSet(key, value) {
-  if (!UPSTASH_URL) return;
-  try {
-    await fetch(UPSTASH_URL, {
-      method: "POST",
-      headers: { Authorization: `Bearer ${UPSTASH_TOKEN}`, "Content-Type": "application/json" },
-      body: JSON.stringify(["SET", key, JSON.stringify(value)])
-    });
-  } catch {}
-}
 
 // ── Profile management ────────────────────────────────────────────────────────
 const PROFILES_FILE = "./profiles.json";
