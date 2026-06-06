@@ -205,6 +205,11 @@
     background:var(--card);font-size:22px;display:flex;align-items:center;
     justify-content:center;cursor:pointer;transition:background .15s,border-color .15s}
   .detail-share:active{background:#EAF1E6;border-color:var(--herb)}
+  .move-row{display:flex;gap:10px;flex-wrap:wrap}
+  .move-btn{flex:1;min-width:90px;padding:13px 12px;border-radius:14px;border:1.5px solid var(--line);
+    background:var(--card);font-size:14.5px;font-weight:600;color:var(--ink);cursor:pointer;
+    transition:background .15s,border-color .15s}
+  .move-btn:active{background:#EAF1E6;border-color:var(--herb)}
   .sec{margin-top:30px}
   .sec h3{font-family:'Fraunces',serif;font-size:22px;font-weight:600;margin:0 0 12px;display:flex;align-items:baseline;gap:10px}
   .sec h3 .n{font-size:13px;color:var(--terra);font-weight:700;letter-spacing:.12em}
@@ -401,6 +406,11 @@
     background:var(--card);font-size:22px;display:flex;align-items:center;
     justify-content:center;cursor:pointer;transition:background .15s,border-color .15s}
   .detail-share:active{background:#EAF1E6;border-color:var(--herb)}
+  .move-row{display:flex;gap:10px;flex-wrap:wrap}
+  .move-btn{flex:1;min-width:90px;padding:13px 12px;border-radius:14px;border:1.5px solid var(--line);
+    background:var(--card);font-size:14.5px;font-weight:600;color:var(--ink);cursor:pointer;
+    transition:background .15s,border-color .15s}
+  .move-btn:active{background:#EAF1E6;border-color:var(--herb)}
   /* ── recipe notes ────────────────────────────────── */
   .notes-sec{margin-top:28px}
   .notes-sec h3{font-family:'Fraunces',serif;font-size:22px;font-weight:600;margin:0 0 10px;display:flex;align-items:baseline;gap:10px}
@@ -2754,6 +2764,8 @@ const S = {
   servings:null, servingsFor:null,   // chosen serving count + which recipe it's for
   view:"cook", log:{},               // log: { "YYYY-MM-DD": [ {meal,course,title,blog,protein,key} ] }
   plan:{}, shopChecked:new Set(),     // plan: { "YYYY-MM-DD": { breakfast:[entry], lunch:[], dinner:[] } }
+  mealMoves:{},                       // { recipeKey: "breakfast"|"lunch"|"dinner"|"salad" } — recategorized recipes
+  movedRecipes:{},                    // { recipeKey: full recipe } — snapshot so moved recipes always render
   blogFilter:null, fullMenuList:[],   // active blog filter and unfiltered list
   proteinFilter:null,                 // active protein-source filter
   searchQuery:null, favFilter:false,  // search text + favourites-only toggle
@@ -2880,7 +2892,7 @@ function serialShared(){
       planClean[day][m]=(list||[]).map(({recipe,...rest})=>rest);
     });
   });
-  return {plan:planClean, shopChecked:[...S.shopChecked]};
+  return {plan:planClean, shopChecked:[...S.shopChecked], mealMoves:S.mealMoves, movedRecipes:S.movedRecipes};
 }
 
 function applyPersonal(data){
@@ -2897,6 +2909,8 @@ function applyPersonal(data){
 function applyShared(data){
   if(!data||typeof data!=="object") return;
   if(data.shopChecked) S.shopChecked=new Set(data.shopChecked);
+  if(data.mealMoves)    Object.assign(S.mealMoves, data.mealMoves);
+  if(data.movedRecipes) Object.assign(S.movedRecipes, data.movedRecipes);
   if(data.plan){
     S.plan={};
     Object.entries(data.plan).forEach(([day,meals])=>{
@@ -3007,8 +3021,32 @@ function toast(msg){const t=$("toast");t.textContent=msg;t.classList.add("show")
   clearTimeout(t._);t._=setTimeout(()=>t.classList.remove("show"),2200);}
 
 /* ---------------- data access ---------------- */
+// Apply household recategorizations: drop recipes moved out of `course`,
+// pull in recipes moved into `course` from other categories.
+function applyMealMoves(course, list){
+  const moves = S.mealMoves||{};
+  // Drop anything reassigned to a different meal
+  let out = list.filter(r=>{
+    const t = moves[recipeKey(r)];
+    return !t || t===course;
+  });
+  const have = new Set(out.map(r=>recipeKey(r)));
+  // Pull in recipes assigned to this course from elsewhere
+  for(const [key,target] of Object.entries(moves)){
+    if(target!==course || have.has(key)) continue;
+    let found=null;
+    for(const m of ["breakfast","lunch","dinner","salad"]){
+      const hit=(DEMO[m]||[]).find(r=>recipeKey(r)===key);
+      if(hit){ found=hit; break; }
+    }
+    if(!found && S.movedRecipes?.[key]) found=S.movedRecipes[key];
+    if(found){ out=[found,...out]; have.add(key); }
+  }
+  return out;
+}
+
 async function getMenu(course){
-  const demo = DEMO[course]||[];
+  const demo = applyMealMoves(course, DEMO[course]||[]);
   if(API === null) return demo;
 
   // Return DEMO immediately — never block the UI waiting for the server.
@@ -3510,18 +3548,29 @@ function toggleSortMenu(){
 }
 
 /* ---- shared filter application ---- */
+function mealOfFavourite(key){
+  // Which meal does this favourited recipe belong to?
+  if(S.mealMoves[key]) return S.mealMoves[key];            // explicit move wins
+  if(S.favouriteRecipes[key]?._meal) return S.favouriteRecipes[key]._meal; // tagged when hearted
+  for(const m of ["breakfast","lunch","dinner","salad"]){  // fall back to DEMO lookup
+    if((DEMO[m]||[]).some(r=>recipeKey(r)===key)) return m;
+  }
+  return null;
+}
+
 function applyFilters(){
   let list = S.fullMenuList;
   if(S.favFilter){
     // Start from current menu list filtered to favourites
     list = list.filter(r=>S.favourites.has(recipeKey(r)));
-    // Inject any saved favourite recipes that aren't in the current menu
-    // (e.g. scraped recipes lost after a server deploy, or DEMO changes)
+    // Inject saved favourites missing from the current menu — but ONLY ones that
+    // belong to THIS meal (so salad favourites don't show breakfast favourites etc.)
     const currentKeys = new Set(list.map(r=>recipeKey(r)));
     for(const key of S.favourites){
-      if(!currentKeys.has(key) && S.favouriteRecipes[key]){
-        list = [...list, S.favouriteRecipes[key]];
-      }
+      if(currentKeys.has(key)) continue;
+      if(!S.favouriteRecipes[key]) continue;
+      if(mealOfFavourite(key) !== S.meal) continue;
+      list = [...list, S.favouriteRecipes[key]];
     }
   }
   if(S.blogFilter)    list = list.filter(r=>r.blog===S.blogFilter);
@@ -3563,9 +3612,9 @@ function toggleFav(key, e){
   const nowFav = !S.favourites.has(key);
   if(nowFav){
     S.favourites.add(key);
-    // Snapshot the full recipe so it survives scrape updates and deploys
+    // Snapshot the full recipe (tagged with its meal) so it survives scrape updates and deploys
     const recipe = S.picks?.[S.course] || S.fullMenuList?.find(r=>recipeKey(r)===key);
-    if(recipe) S.favouriteRecipes[key] = recipe;
+    if(recipe) S.favouriteRecipes[key] = {...recipe, _meal: S.meal};
   } else {
     S.favourites.delete(key);
     delete S.favouriteRecipes[key];
@@ -3916,6 +3965,16 @@ function drawRecipe(r){
      <div class="notes-saved" id="notesSaved">✓ Saved</div>
    </section>
 
+   <section class="sec move-sec">
+     <h3><span class="n">REORGANIZE</span> Move this recipe</h3>
+     <div class="serve-note" style="margin-bottom:10px">Shows up under a different meal for you and your kitchen.</div>
+     <div class="move-row">
+       ${["breakfast","lunch","dinner","salad"].filter(m=>m!==S.meal).map(m=>
+         `<button class="move-btn" onclick="moveRecipe('${m}')">${MEALS[m].emoji} ${m.charAt(0).toUpperCase()+m.slice(1)}</button>`
+       ).join("")}
+     </div>
+   </section>
+
    <a class="leave" href="${r.source_url}" target="_blank" rel="noopener">
      Open the full post on ${r.blog} ↗
    </a>
@@ -4008,6 +4067,24 @@ function addProtein(){
     b.className="addbtn"+(on?" done":"");
     b.innerHTML=on?`✓ Logged one serving · ${grams}g protein today`:`＋ Log one serving · ${grams}g protein`;}
   refreshCoach(); save();
+}
+
+function moveRecipe(targetMeal){
+  const r=S.picks[S.course]; if(!r||!targetMeal) return;
+  const key=recipeKey(r);
+  const fromMeal=S.meal;
+  // Record the reassignment and snapshot the full recipe so it always renders
+  S.mealMoves[key]=targetMeal;
+  S.movedRecipes[key]=r;
+  // Clear cached menu lists so both meals rebuild fresh next time they open
+  if(_menuMem[fromMeal]) delete _menuMem[fromMeal];
+  if(_menuMem[targetMeal]) delete _menuMem[targetMeal];
+  save();
+  const label=targetMeal.charAt(0).toUpperCase()+targetMeal.slice(1);
+  toast(`Moved to ${MEALS[targetMeal].emoji} ${label}`);
+  // Re-render the move section so the buttons update to exclude the new meal
+  S.meal=targetMeal;
+  drawRecipe(r);
 }
 
 async function shareRecipe(){
