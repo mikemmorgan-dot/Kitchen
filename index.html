@@ -4577,12 +4577,13 @@ function planPointerMove(e){
   _planDrag.ghost.style.left=(e.clientX-_planDrag.offX)+"px";
   _planDrag.ghost.style.top=(e.clientY-_planDrag.offY)+"px";
   _planUpdateTarget(e.clientX,e.clientY);
-  // Auto-scroll only in a thin band right at the very top/bottom (over the header/nav,
-  // NOT over the slots just above them) and only when there's actually room to scroll.
-  const EDGE=64, SPEED=14, h=window.innerHeight;
-  if(e.clientY<EDGE && !_planAtTop())            _planScrollVel=-SPEED;
-  else if(e.clientY>h-EDGE && !_planAtBottom())  _planScrollVel=SPEED;
-  else                                           _planScrollVel=0;
+  // Auto-scroll bands sit above the home indicator / below the header so they're easy to
+  // reach. When there's more page in that direction, dragging into the band scrolls; the
+  // boundary guards keep the end-of-week slots droppable.
+  const TOP_EDGE=100, BOT_EDGE=160, SPEED=16, h=window.innerHeight;
+  if(e.clientY<TOP_EDGE && !_planAtTop())            _planScrollVel=-SPEED;
+  else if(e.clientY>h-BOT_EDGE && !_planAtBottom())  _planScrollVel=SPEED;
+  else                                               _planScrollVel=0;
   if(_planScrollVel && !_planScrollRAF) _planScrollRAF=requestAnimationFrame(_planAutoScroll);
 }
 function planPointerUp(){
