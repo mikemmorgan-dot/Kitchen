@@ -347,9 +347,26 @@
     border-radius:12px;padding:9px 12px;margin-top:5px}
   .plan-item .t{font-weight:600;font-size:14px}
   .plan-item .b{color:var(--ink-soft);font-size:11.5px}
+  .pi-body{flex:1;min-width:0;cursor:pointer}
+  .pi-body:active{opacity:.6}
   .plan-item .rm{margin-left:auto;flex:none;width:30px;height:30px;border-radius:50%;font-size:18px;
     color:var(--ink-soft);background:var(--card);border:1px solid var(--line);line-height:1}
   .plan-item .rm:active{background:#FBEFE6;color:var(--terra)}
+  /* plan drag-and-drop */
+  .drag-handle{flex:none;width:26px;height:30px;display:flex;align-items:center;justify-content:center;
+    font-size:17px;color:var(--ink-soft);cursor:grab;touch-action:none;user-select:none;-webkit-user-select:none;margin-left:-4px}
+  .drag-handle:active{cursor:grabbing}
+  .plan-item.drag-source{opacity:.35}
+  .drag-ghost{position:fixed;z-index:9999;pointer-events:none;opacity:.95;
+    box-shadow:0 10px 28px rgba(0,0,0,.18);transform:scale(1.02)}
+  .plan-meal.empty-slot{display:none}
+  .dragging .plan-meal.empty-slot{display:block}
+  .drop-hint{display:none;border:1.5px dashed var(--line);border-radius:12px;padding:13px;
+    text-align:center;color:var(--ink-soft);font-size:12px;margin-top:5px}
+  .dragging .plan-meal.empty-slot .drop-hint{display:block}
+  .plan-meal.drop-target{background:#EAF1E6;border-radius:14px;outline:2px solid var(--herb);outline-offset:2px}
+  .dragging .plan-meal.drop-target .drop-hint{border-color:var(--herb);color:var(--herb)}
+  .dragging .day-empty{display:none}
   /* shopping list */
   .shop-sec{margin-top:18px}
   .shop-sec h3{font-family:'Fraunces',serif;font-size:18px;font-weight:600;margin:0 0 8px;
@@ -3729,6 +3746,19 @@ function renderCards(list, course){
 const _menuMem = {};
 
 let LISTS={};
+function openPlanRecipe(day, meal, key){
+  const entry=(S.plan[day]?.[meal]||[]).find(e=>e.key===key);
+  let r=entry?.recipe || findRecipeByKey(key);
+  // Fall back to a saved favourite snapshot if the recipe is missing details
+  if((!r||!r.ingredients) && S.favouriteRecipes[key]?.ingredients) r=S.favouriteRecipes[key];
+  if(!r){ toast("Recipe details unavailable"); return; }
+  S.recipeOrigin="plan";
+  S.meal=meal; S.course="main"; S.picks["main"]=r;
+  drawRecipe(r);
+  window.scrollTo({top:0,behavior:"smooth"});
+  fetchLiveNutrition(r);
+}
+
 async function openRecipe(course,i){
   // Save full menu state before leaving so we can restore it on back
   if(S.meal){
@@ -3768,7 +3798,7 @@ async function openRecipe(course,i){
     }catch{}
   }
 
-  S.picks[course]=r; S.course=course;
+  S.picks[course]=r; S.course=course; S.recipeOrigin="menu";
 
   // Keep saved copy of any favourited recipe up to date with latest full data
   const rKey = recipeKey(r);
@@ -3884,7 +3914,7 @@ function drawRecipe(r){
   // Show 'calculating…' if protein is null/zero — live fetch will update it
   const protLabel = (protein != null && protein > 0) ? `${protein}g protein` : `calculating…`;
   app.innerHTML=`
-   <div class="back" onclick="openMeal('${S.meal}')">← ${S.meal} menu</div>
+   <div class="back" onclick="${S.recipeOrigin==='plan'?`go('plan')`:`openMeal('${S.meal}')`}">← ${S.recipeOrigin==='plan'?'meal plan':S.meal+' menu'}</div>
    <div class="r-hero fade">
      ${imgEl(r.image,r.title,"",1000,r.blog)}
      <div class="grad"></div>
@@ -4445,12 +4475,17 @@ function renderPlan(){
     const tot=plannedProtein(d.iso);
     const mealsHtml=["breakfast","lunch","salad","dinner"].map(m=>{
       const list=slots[m]||[];
-      if(!list.length) return "";
-      return `<div class="plan-meal"><span class="pm-label">${cap(m)}</span>
-        ${list.map(e=>`<div class="plan-item"><div><div class="t">${e.title}</div><div class="b">${e.blog||""} · ${e.protein}g · ${e.servings} servings</div></div>
-          <button class="rm" onclick="removeFromPlan('${d.iso}','${m}','${e.key.replace(/'/g,"\\'")}')" aria-label="remove">×</button></div>`).join("")}
+      const itemsHtml=list.map(e=>`<div class="plan-item" data-day="${d.iso}" data-meal="${m}" data-key="${e.key.replace(/"/g,'&quot;')}">
+          <span class="drag-handle" aria-label="drag to move">⠿</span>
+          <div class="pi-body" onclick="openPlanRecipe('${d.iso}','${m}','${e.key.replace(/'/g,"\\'")}')"><div class="t">${e.title}</div><div class="b">${e.blog||""} · ${e.protein}g · ${e.servings} servings</div></div>
+          <button class="rm" onclick="removeFromPlan('${d.iso}','${m}','${e.key.replace(/'/g,"\\'")}')" aria-label="remove">×</button></div>`).join("");
+      return `<div class="plan-meal${list.length?'':' empty-slot'}" data-day="${d.iso}" data-meal="${m}">
+        <span class="pm-label">${cap(m)}</span>
+        ${itemsHtml}
+        <div class="drop-hint">Drop into ${cap(m)}</div>
       </div>`;
     }).join("");
+    const hasAny=["breakfast","lunch","salad","dinner"].some(m=>(slots[m]||[]).length);
     return `<div class="plan-day">
       <div class="pd-head"><b>${d.iso===today()?"Today":d.dow}</b>
         <span class="pd-date">${d.nice}</span>
@@ -4461,16 +4496,100 @@ function renderPlan(){
         <span><b>${n.fat}g</b> fat</span>
         <span><b>${n.fiber}g</b> fiber</span>
       </div>`:"";})()}
-      ${mealsHtml || `<div class="empty">No meals planned — add some from <b style="cursor:pointer" onclick="go('cook')">Cook</b>.</div>`}
+      ${mealsHtml}
+      ${hasAny?"":`<div class="empty day-empty">No meals planned — add some from <b style="cursor:pointer" onclick="go('cook')">Cook</b>.</div>`}
     </div>`;
   }).join("");
   app.innerHTML=`
     <div class="page-h fade"><div class="eyebrow">your week</div><h2>Meal plan</h2></div>
     <button class="shop-btn fade" onclick="go('shopping')">🛒 Generate shopping list</button>
-    ${anyPlanned?"":`<div class="nudge" style="margin-top:14px">Tip: open a recipe under <b>Cook</b>, choose a day, and tap <b>Add to plan</b>.</div>`}
+    ${anyPlanned?"":`<div class="nudge" style="margin-top:14px">Tip: open a recipe under <b>Cook</b>, choose a day, and tap <b>Add to plan</b>. Drag the <b>⠿</b> handle to move a meal to another slot or day.</div>`}
     ${dayCards}
     <p style="text-align:center;margin-top:30px" data-reset-wrap><button onclick="clearData()" style="font-size:12px;color:var(--ink-soft);font-family:inherit;text-decoration:underline">Reset all data</button></p>`;
+  initPlanDrag();
   refreshCoach();
+}
+
+/* ---- plan drag and drop (pointer events: works for touch + mouse) ---- */
+let _planDrag=null;
+function initPlanDrag(){
+  if(window._planDragInit) return;
+  window._planDragInit=true;
+  app.addEventListener("pointerdown", planPointerDown);
+}
+function planPointerDown(e){
+  const handle=e.target.closest(".drag-handle");
+  if(!handle) return;
+  const item=handle.closest(".plan-item");
+  if(!item) return;
+  if(e.pointerType==="mouse" && e.button!==0) return;  // left button only
+  e.preventDefault();
+  const rect=item.getBoundingClientRect();
+  _planDrag={
+    key:item.dataset.key, srcDay:item.dataset.day, srcMeal:item.dataset.meal,
+    offX:e.clientX-rect.left, offY:e.clientY-rect.top, target:null, item
+  };
+  const ghost=item.cloneNode(true);
+  ghost.classList.add("drag-ghost");
+  ghost.style.width=rect.width+"px";
+  ghost.style.left=rect.left+"px";
+  ghost.style.top=rect.top+"px";
+  document.body.appendChild(ghost);
+  _planDrag.ghost=ghost;
+  item.classList.add("drag-source");
+  app.classList.add("dragging");
+  document.addEventListener("pointermove", planPointerMove);
+  document.addEventListener("pointerup", planPointerUp);
+  document.addEventListener("pointercancel", planPointerUp);
+}
+function planPointerMove(e){
+  if(!_planDrag) return;
+  e.preventDefault();
+  _planDrag.ghost.style.left=(e.clientX-_planDrag.offX)+"px";
+  _planDrag.ghost.style.top=(e.clientY-_planDrag.offY)+"px";
+  const el=document.elementFromPoint(e.clientX,e.clientY);
+  const slot=el?.closest(".plan-meal");
+  document.querySelectorAll(".plan-meal.drop-target").forEach(s=>{if(s!==slot)s.classList.remove("drop-target");});
+  if(slot){ slot.classList.add("drop-target"); _planDrag.target=slot; }
+  else { _planDrag.target=null; }
+}
+function planPointerUp(){
+  document.removeEventListener("pointermove", planPointerMove);
+  document.removeEventListener("pointerup", planPointerUp);
+  document.removeEventListener("pointercancel", planPointerUp);
+  if(!_planDrag) return;
+  const slot=_planDrag.target;
+  const {srcDay,srcMeal,key}=_planDrag;
+  _planDrag.ghost?.remove();
+  app.classList.remove("dragging");
+  document.querySelectorAll(".plan-meal.drop-target").forEach(s=>s.classList.remove("drop-target"));
+  const drag=_planDrag; _planDrag=null;
+  if(slot){
+    const dstDay=slot.dataset.day, dstMeal=slot.dataset.meal;
+    if(dstDay && dstMeal && !(dstDay===srcDay && dstMeal===srcMeal)){
+      movePlanEntry(srcDay,srcMeal,key,dstDay,dstMeal);
+      return;
+    }
+  }
+  drag.item?.classList.remove("drag-source");  // dropped in place — just restore
+}
+function movePlanEntry(srcDay,srcMeal,key,dstDay,dstMeal){
+  const srcList=S.plan[srcDay]?.[srcMeal];
+  if(!srcList) return;
+  const idx=srcList.findIndex(e=>e.key===key);
+  if(idx<0) return;
+  const [entry]=srcList.splice(idx,1);
+  entry.meal=dstMeal;                                  // keep the entry's meal in sync
+  S.plan[dstDay]=S.plan[dstDay]||{};
+  S.plan[dstDay][dstMeal]=S.plan[dstDay][dstMeal]||[];
+  if(S.plan[dstDay][dstMeal].some(e=>e.key===key)){
+    toast(`Already in ${cap(dstMeal)} that day`);
+  } else {
+    S.plan[dstDay][dstMeal].push(entry);
+    toast(`Moved to ${cap(dstMeal)}`);
+  }
+  save();
+  renderPlan();
 }
 /* ---- shopping list view ---- */
 /* ---- shopping list export ------------------------------------------- */
