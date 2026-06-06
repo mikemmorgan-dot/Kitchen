@@ -201,6 +201,10 @@
     background:var(--card);font-size:24px;display:flex;align-items:center;
     justify-content:center;cursor:pointer;transition:background .15s,border-color .15s}
   .detail-heart.active{background:#FDECEA;border-color:#E07070}
+  .detail-share{width:54px;flex-shrink:0;border-radius:14px;border:1.5px solid var(--line);
+    background:var(--card);font-size:22px;display:flex;align-items:center;
+    justify-content:center;cursor:pointer;transition:background .15s,border-color .15s}
+  .detail-share:active{background:#EAF1E6;border-color:var(--herb)}
   .sec{margin-top:30px}
   .sec h3{font-family:'Fraunces',serif;font-size:22px;font-weight:600;margin:0 0 12px;display:flex;align-items:baseline;gap:10px}
   .sec h3 .n{font-size:13px;color:var(--terra);font-weight:700;letter-spacing:.12em}
@@ -393,6 +397,10 @@
     background:var(--card);font-size:24px;display:flex;align-items:center;
     justify-content:center;cursor:pointer;transition:background .15s,border-color .15s}
   .detail-heart.active{background:#FDECEA;border-color:#E07070}
+  .detail-share{width:54px;flex-shrink:0;border-radius:14px;border:1.5px solid var(--line);
+    background:var(--card);font-size:22px;display:flex;align-items:center;
+    justify-content:center;cursor:pointer;transition:background .15s,border-color .15s}
+  .detail-share:active{background:#EAF1E6;border-color:var(--herb)}
   /* ── recipe notes ────────────────────────────────── */
   .notes-sec{margin-top:28px}
   .notes-sec h3{font-family:'Fraunces',serif;font-size:22px;font-weight:600;margin:0 0 10px;display:flex;align-items:baseline;gap:10px}
@@ -3847,6 +3855,7 @@ function drawRecipe(r){
        onclick="toggleFav(this.dataset.fk)" aria-label="Favourite">
        ${S.favourites.has(key)?'❤️':'🤍'}
      </button>
+     <button class="detail-share" onclick="shareRecipe()" aria-label="Share recipe">📤</button>
    </div>
 
    <div class="planrow">
@@ -3999,6 +4008,48 @@ function addProtein(){
     b.className="addbtn"+(on?" done":"");
     b.innerHTML=on?`✓ Logged one serving · ${grams}g protein today`:`＋ Log one serving · ${grams}g protein`;}
   refreshCoach(); save();
+}
+
+async function shareRecipe(){
+  const r=S.picks[S.course]; if(!r) return;
+  const n=r.nutrition||{};
+  // Build a tidy text summary of the recipe
+  const lines=[];
+  lines.push(r.title);
+  if(r.blog) lines.push("via "+(BLOG_LABELS[r.blog]||r.blog));
+  if(r.times?.total) lines.push("⏱ "+r.times.total);
+  if(n.protein_g) lines.push(`💪 ${Math.round(n.protein_g)}g protein${n.calories?` · ${Math.round(n.calories)} cal`:""} per serving`);
+  if(Array.isArray(r.ingredients)&&r.ingredients.length){
+    lines.push("\nIngredients:");
+    r.ingredients.forEach(i=>lines.push("• "+i));
+  }
+  const steps=r.instructions?.[0]?.steps;
+  if(Array.isArray(steps)&&steps.length){
+    lines.push("\nInstructions:");
+    steps.forEach((st,i)=>lines.push(`${i+1}. ${st}`));
+  }
+  if(r.source_url) lines.push("\nFull recipe: "+r.source_url);
+  lines.push("\nShared from Morgan's Kitchen");
+  const text=lines.join("\n");
+
+  const shareData={title:r.title, text};
+  if(r.source_url) shareData.url=r.source_url;
+
+  try{
+    if(navigator.share){
+      await navigator.share(shareData);   // brings up the native phone share sheet
+      return;
+    }
+  }catch(e){
+    if(e?.name==="AbortError") return;    // user dismissed the sheet — do nothing
+  }
+  // Fallback for browsers without Web Share (e.g. desktop): copy to clipboard
+  try{
+    await navigator.clipboard.writeText(text);
+    toast("Recipe copied to clipboard 📋");
+  }catch{
+    toast("Couldn't share on this device");
+  }
 }
 
 /* ---------------- Goals page ---------------- */
