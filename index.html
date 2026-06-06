@@ -367,6 +367,7 @@
   .plan-meal.drop-target{background:#EAF1E6;border-radius:14px;outline:2px solid var(--herb);outline-offset:2px}
   .dragging .plan-meal.drop-target .drop-hint{border-color:var(--herb);color:var(--herb)}
   .dragging .day-empty{display:none}
+  .dragging nav.tabbar{pointer-events:none}
   /* shopping list */
   .shop-sec{margin-top:18px}
   .shop-sec h3{font-family:'Fraunces',serif;font-size:18px;font-weight:600;margin:0 0 8px;
@@ -4527,7 +4528,8 @@ function planPointerDown(e){
   const rect=item.getBoundingClientRect();
   _planDrag={
     key:item.dataset.key, srcDay:item.dataset.day, srcMeal:item.dataset.meal,
-    offX:e.clientX-rect.left, offY:e.clientY-rect.top, target:null, item
+    offX:e.clientX-rect.left, offY:e.clientY-rect.top, target:null, item,
+    lastX:e.clientX, lastY:e.clientY
   };
   const ghost=item.cloneNode(true);
   ghost.classList.add("drag-ghost");
@@ -4537,26 +4539,57 @@ function planPointerDown(e){
   document.body.appendChild(ghost);
   _planDrag.ghost=ghost;
   item.classList.add("drag-source");
+  // Revealing all the empty drop slots adds height ABOVE the grabbed item, which would
+  // otherwise shove it off-screen (the "jumps up to Monday" bug). Measure the shift and
+  // compensate the scroll so the item stays exactly under the finger.
+  const beforeTop=item.getBoundingClientRect().top;
   app.classList.add("dragging");
+  const afterTop=item.getBoundingClientRect().top;
+  if(afterTop!==beforeTop) window.scrollBy(0, afterTop-beforeTop);
   document.addEventListener("pointermove", planPointerMove);
   document.addEventListener("pointerup", planPointerUp);
   document.addEventListener("pointercancel", planPointerUp);
 }
-function planPointerMove(e){
+function _planUpdateTarget(x,y){
   if(!_planDrag) return;
-  e.preventDefault();
-  _planDrag.ghost.style.left=(e.clientX-_planDrag.offX)+"px";
-  _planDrag.ghost.style.top=(e.clientY-_planDrag.offY)+"px";
-  const el=document.elementFromPoint(e.clientX,e.clientY);
+  const el=document.elementFromPoint(x,y);
   const slot=el?.closest(".plan-meal");
   document.querySelectorAll(".plan-meal.drop-target").forEach(s=>{if(s!==slot)s.classList.remove("drop-target");});
   if(slot){ slot.classList.add("drop-target"); _planDrag.target=slot; }
   else { _planDrag.target=null; }
 }
+let _planScrollVel=0,_planScrollRAF=null;
+function _planAtTop(){ return window.scrollY<=0; }
+function _planAtBottom(){ return (window.innerHeight+window.scrollY) >= (document.documentElement.scrollHeight-2); }
+function _planAutoScroll(){
+  if(!_planDrag||!_planScrollVel){ _planScrollRAF=null; return; }
+  // Stop at the page boundaries so it never spins uselessly (which blocked drops near the ends)
+  if((_planScrollVel<0&&_planAtTop())||(_planScrollVel>0&&_planAtBottom())){ _planScrollVel=0; _planScrollRAF=null; return; }
+  window.scrollBy(0,_planScrollVel);
+  _planUpdateTarget(_planDrag.lastX,_planDrag.lastY);
+  if(_planDrag.ghost) _planDrag.ghost.style.top=(_planDrag.lastY-_planDrag.offY)+"px";
+  _planScrollRAF=requestAnimationFrame(_planAutoScroll);
+}
+function planPointerMove(e){
+  if(!_planDrag) return;
+  e.preventDefault();
+  _planDrag.lastX=e.clientX; _planDrag.lastY=e.clientY;
+  _planDrag.ghost.style.left=(e.clientX-_planDrag.offX)+"px";
+  _planDrag.ghost.style.top=(e.clientY-_planDrag.offY)+"px";
+  _planUpdateTarget(e.clientX,e.clientY);
+  // Auto-scroll only in a thin band right at the very top/bottom (over the header/nav,
+  // NOT over the slots just above them) and only when there's actually room to scroll.
+  const EDGE=64, SPEED=14, h=window.innerHeight;
+  if(e.clientY<EDGE && !_planAtTop())            _planScrollVel=-SPEED;
+  else if(e.clientY>h-EDGE && !_planAtBottom())  _planScrollVel=SPEED;
+  else                                           _planScrollVel=0;
+  if(_planScrollVel && !_planScrollRAF) _planScrollRAF=requestAnimationFrame(_planAutoScroll);
+}
 function planPointerUp(){
   document.removeEventListener("pointermove", planPointerMove);
   document.removeEventListener("pointerup", planPointerUp);
   document.removeEventListener("pointercancel", planPointerUp);
+  _planScrollVel=0;
   if(!_planDrag) return;
   const slot=_planDrag.target;
   const {srcDay,srcMeal,key}=_planDrag;
