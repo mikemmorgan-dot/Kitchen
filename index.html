@@ -263,6 +263,31 @@
   nav.tabbar button .ic{font-size:19px;line-height:1}
   nav.tabbar button[aria-current="true"]{color:var(--herb-deep);background:#E7EFDD}
 
+  /* ---------- larger screens: iPad & desktop ---------- */
+  .plan-grid{display:grid;gap:14px}
+  @media (min-width:740px){
+    .wrap{max-width:920px;padding:0 30px 132px}
+    .bar{max-width:920px;padding:12px 26px}
+    .brand{font-size:20px}
+    .hs{font-size:12px}
+    .hero{padding:64px 6px 14px}
+    .hero h1{font-size:clamp(40px,6vw,56px)}
+    .hero p{font-size:18px;max-width:48ch}
+    .meals{grid-template-columns:1fr 1fr;gap:18px}
+    .cards{grid-template-columns:repeat(3,1fr);gap:18px}
+    .plan-grid{grid-template-columns:1fr 1fr;gap:16px;align-items:start}
+    .r-hero img{max-height:440px}
+    .sec h3{font-size:24px}
+    nav.tabbar{gap:10px}
+    nav.tabbar button{font-size:13px;max-width:148px}
+    nav.tabbar button .ic{font-size:22px}
+  }
+  @media (min-width:1024px){
+    .wrap{max-width:1060px}
+    .bar{max-width:1060px}
+    .cards{grid-template-columns:repeat(3,1fr)}
+  }
+
   /* ---------- Today / Week ---------- */
   .page-h{padding:24px 4px 6px}
   .page-h .eyebrow{margin-bottom:4px}
@@ -1956,19 +1981,19 @@ const DEMO = {
       nutrition:{calories:440,protein_g:30,carbs_g:58,fat_g:10,fiber_g:4}, video:null, rating:{value:4.8,count:180} },
     { title:"Baked Chicken Tenders", blog:"eatingbirdfood",
       source_url:"https://www.eatingbirdfood.com/baked-paleo-chicken-tenders/",
-      image:"", servings:4, times:{prep:"10 mins",cook:"20 mins",total:"30 mins"},
+      image:"https://www.eatingbirdfood.com/wp-content/uploads/2021/08/baked-chicken-tenders-hero.jpg", servings:4, times:{prep:"10 mins",cook:"20 mins",total:"30 mins"},
       ingredients:["1.5 lb chicken tenders","2 eggs","1.5 cups almond flour","1 tsp paprika","1 tsp garlic powder","salt"],
       instructions:[{name:null,steps:["Dip tenders in egg then seasoned almond flour.","Place on a lined sheet pan.","Bake at 400°F for 18–20 min, flipping once."]}],
       nutrition:{calories:360,protein_g:40,carbs_g:8,fat_g:18,fiber_g:2}, video:null, rating:{value:4.8,count:260} },
     { title:"Lemon Herb Baked Salmon", blog:"eatingbirdfood",
       source_url:"https://www.eatingbirdfood.com/lemon-herb-salmon/",
-      image:"", servings:4, times:{prep:"5 mins",cook:"18 mins",total:"23 mins"},
+      image:"https://www.eatingbirdfood.com/wp-content/uploads/2022/04/honey-lemon-garlic-salmon-hero.jpg", servings:4, times:{prep:"5 mins",cook:"18 mins",total:"23 mins"},
       ingredients:["4 salmon fillets","2 tbsp olive oil","1 lemon, zested and sliced","2 cloves garlic","fresh dill","salt and pepper"],
       instructions:[{name:null,steps:["Place salmon on a sheet pan; rub with oil, garlic and lemon zest.","Top with lemon slices and dill.","Bake at 400°F for 15–18 min until flaky."]}],
       nutrition:{calories:360,protein_g:36,carbs_g:2,fat_g:22,fiber_g:0}, video:null, rating:{value:4.9,count:145} },
     { title:"Turkey Meatballs", blog:"eatingbirdfood",
       source_url:"https://www.eatingbirdfood.com/turkey-meatballs/",
-      image:"", servings:4, times:{prep:"15 mins",cook:"25 mins",total:"40 mins"},
+      image:"https://www.eatingbirdfood.com/wp-content/uploads/2023/08/baked-turkey-meatballs-hero-new.jpg", servings:4, times:{prep:"15 mins",cook:"25 mins",total:"40 mins"},
       ingredients:["1 lb ground turkey","1/4 cup breadcrumbs","1 egg","1/4 cup parmesan","2 cloves garlic","1 tsp Italian herbs","marinara, to serve"],
       instructions:[{name:null,steps:["Mix turkey, breadcrumbs, egg, parmesan, garlic and herbs.","Roll into balls and bake at 400°F for 20–22 min.","Serve with warm marinara."]}],
       nutrition:{calories:310,protein_g:34,carbs_g:10,fat_g:14,fiber_g:1}, video:null, rating:{value:4.8,count:200} },
@@ -2120,7 +2145,7 @@ const DEMO = {
       nutrition:{calories:340,protein_g:28,carbs_g:14,fat_g:18,fiber_g:4}, video:null, rating:{value:4.9,count:810} },
     { title:"Cauliflower Rice Chicken Bowl", blog:"skinnytaste",
       source_url:"https://www.skinnytaste.com/cauliflower-rice-chicken-bowl/",
-      image:"", servings:4, times:{prep:"10 mins",cook:"20 mins",total:"30 mins"},
+      image:"https://www.skinnytaste.com/wp-content/uploads/2014/03/Cauliflower-Fried-Rice-7.jpg", servings:4, times:{prep:"10 mins",cook:"20 mins",total:"30 mins"},
       ingredients:["1.5 lb chicken breast","4 cups cauliflower rice","1 cup black beans","1 cup corn","1 avocado","lime juice","cumin and chili powder"],
       instructions:[{name:null,steps:["Season and grill chicken; slice.","Sauté cauliflower rice with cumin and chili powder.","Build bowls with cauliflower rice, beans, corn, chicken and avocado."]}],
       nutrition:{calories:400,protein_g:44,carbs_g:28,fat_g:14,fiber_g:9}, video:null, rating:{value:4.8,count:430} },
@@ -2355,7 +2380,7 @@ const DEMO = {
     {"title": "Sheet Pan Pesto Salmon and Veggies", "blog": "pinchofyum", "source_url": "https://pinchofyum.com/pesto-salmon-veggies", "image": "", "servings": 4, "times": {"prep": "10 mins", "cook": "20 mins", "total": "30 mins"}, "ingredients": ["4 salmon fillets", "1/4 cup pesto", "zucchini, tomatoes", "olive oil", "lemon"], "instructions": [{"name": null, "steps": ["Spread pesto on salmon.", "Add veg to sheet pan with oil.", "Roast 400F 18 min; finish with lemon."]}], "nutrition": {"calories": 380, "protein_g": 34, "carbs_g": 8, "fat_g": 24, "fiber_g": 3}, "video": null, "rating": {"value": 4.8, "count": 168}},
     {"title": "Slow Cooker Chicken Curry", "blog": "pinchofyum", "source_url": "https://pinchofyum.com/slow-cooker-chicken-curry", "image": "", "servings": 6, "times": {"prep": "15 mins", "cook": "4 hr", "total": "4 hr 15 mins"}, "ingredients": ["2 lb chicken thighs", "1 can coconut milk", "curry paste", "onion, garlic, ginger", "spinach", "rice"], "instructions": [{"name": null, "steps": ["Place chicken, coconut milk and curry paste in slow cooker.", "Cook Low 4 hr.", "Stir in spinach; serve over rice."]}], "nutrition": {"calories": 400, "protein_g": 36, "carbs_g": 18, "fat_g": 22, "fiber_g": 3}, "video": null, "rating": {"value": 4.9, "count": 234}},
     {"title": "Garlic Herb Roast Chicken", "blog": "themediterraneandish", "source_url": "https://www.themediterraneandish.com/roast-chicken/", "image": "", "servings": 6, "times": {"prep": "15 mins", "cook": "75 mins", "total": "1 hr 30 mins"}, "ingredients": ["1 whole chicken", "garlic, lemon", "rosemary, thyme", "olive oil", "potatoes, carrots"], "instructions": [{"name": null, "steps": ["Rub chicken with garlic, herbs and oil.", "Surround with veg.", "Roast 425F 70-75 min."]}], "nutrition": {"calories": 440, "protein_g": 42, "carbs_g": 18, "fat_g": 22, "fiber_g": 3}, "video": null, "rating": {"value": 4.9, "count": 286}},
-    {"title": "Bang Bang Shrimp Bowl", "blog": "skinnytaste", "source_url": "https://www.skinnytaste.com/bang-bang-shrimp-bowl/", "image": "", "servings": 4, "times": {"prep": "15 mins", "cook": "12 mins", "total": "27 mins"}, "ingredients": ["1.5 lb shrimp", "bang bang sauce", "2 cups rice", "cabbage slaw", "green onions"], "instructions": [{"name": null, "steps": ["Crisp shrimp in air fryer.", "Toss in bang bang sauce.", "Serve over rice with slaw."]}], "nutrition": {"calories": 400, "protein_g": 32, "carbs_g": 42, "fat_g": 12, "fiber_g": 3}, "video": null, "rating": {"value": 4.9, "count": 268}},
+    {"title": "Bang Bang Shrimp Bowl", "blog": "skinnytaste", "source_url": "https://www.skinnytaste.com/bang-bang-shrimp-bowl/", "image": "https://www.skinnytaste.com/wp-content/uploads/2011/05/Banging-Good-Shrimp-1-4.jpg", "servings": 4, "times": {"prep": "15 mins", "cook": "12 mins", "total": "27 mins"}, "ingredients": ["1.5 lb shrimp", "bang bang sauce", "2 cups rice", "cabbage slaw", "green onions"], "instructions": [{"name": null, "steps": ["Crisp shrimp in air fryer.", "Toss in bang bang sauce.", "Serve over rice with slaw."]}], "nutrition": {"calories": 400, "protein_g": 32, "carbs_g": 42, "fat_g": 12, "fiber_g": 3}, "video": null, "rating": {"value": 4.9, "count": 268}},
     {"title": "Sheet Pan Steak Fajitas", "blog": "pinchofyum", "source_url": "https://pinchofyum.com/steak-fajitas", "image": "", "servings": 4, "times": {"prep": "15 mins", "cook": "20 mins", "total": "35 mins"}, "ingredients": ["1.5 lb flank steak", "3 bell peppers", "onion", "fajita seasoning", "tortillas, lime"], "instructions": [{"name": null, "steps": ["Toss steak and veg with seasoning.", "Roast 425F 18 min.", "Serve in tortillas with lime."]}], "nutrition": {"calories": 400, "protein_g": 34, "carbs_g": 30, "fat_g": 16, "fiber_g": 5}, "video": null, "rating": {"value": 4.9, "count": 246}},
     {"title": "Lemon Garlic Butter Chicken", "blog": "theeastcoastkitchen", "source_url": "https://theeastcoastkitchen.com/lemon-garlic-butter-chicken/", "image": "", "servings": 4, "times": {"prep": "10 mins", "cook": "20 mins", "total": "30 mins"}, "ingredients": ["4 chicken breasts", "4 cloves garlic", "butter", "lemon", "parsley", "broth"], "instructions": [{"name": null, "steps": ["Sear chicken.", "Make garlic butter lemon sauce.", "Return chicken; simmer. Garnish with parsley."]}], "nutrition": {"calories": 340, "protein_g": 40, "carbs_g": 4, "fat_g": 18, "fiber_g": 0}, "video": null, "rating": {"value": 4.8, "count": 128}},
     {"title": "Freekeh with Roasted Chicken", "blog": "fufuskitchen", "source_url": "https://www.fufuskitchen.com/freekeh-chicken/", "image": "", "servings": 4, "times": {"prep": "15 mins", "cook": "40 mins", "total": "55 mins"}, "ingredients": ["1.5 lb chicken", "2 cups freekeh", "7 spice", "broth", "toasted almonds"], "instructions": [{"name": null, "steps": ["Cook freekeh in broth.", "Roast spiced chicken.", "Serve chicken over freekeh with almonds."]}], "nutrition": {"calories": 480, "protein_g": 40, "carbs_g": 48, "fat_g": 16, "fiber_g": 8}, "video": null, "rating": {"value": 4.9, "count": 42}},
@@ -4505,7 +4530,7 @@ function renderPlan(){
     <div class="page-h fade"><div class="eyebrow">your week</div><h2>Meal plan</h2></div>
     <button class="shop-btn fade" onclick="go('shopping')">🛒 Generate shopping list</button>
     ${anyPlanned?"":`<div class="nudge" style="margin-top:14px">Tip: open a recipe under <b>Cook</b>, choose a day, and tap <b>Add to plan</b>. Drag the <b>⠿</b> handle to move a meal to another slot or day.</div>`}
-    ${dayCards}
+    <div class="plan-grid">${dayCards}</div>
     <p style="text-align:center;margin-top:30px" data-reset-wrap><button onclick="clearData()" style="font-size:12px;color:var(--ink-soft);font-family:inherit;text-decoration:underline">Reset all data</button></p>`;
   initPlanDrag();
   refreshCoach();
