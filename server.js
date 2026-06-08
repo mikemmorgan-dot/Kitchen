@@ -238,7 +238,7 @@ app.get("/sw.js", (_, res) => {
   res.set("Content-Type", "application/javascript");
   res.set("Cache-Control", "no-cache");
   res.send(`
-const CACHE = "morgans-kitchen-v26";
+const CACHE = "morgans-kitchen-v28";
 
 self.addEventListener("install", e => {
   e.waitUntil(caches.open(CACHE).then(c => c.add("/")));
