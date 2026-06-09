@@ -136,6 +136,43 @@ function isStale() {
   return Date.now() - new Date(recipeStore.lastUpdated).getTime() > WEEK_MS;
 }
 
+// ── Image extraction ───────────────────────────────────────────────────────
+// Recipe blogs (pinchofyum, detoxinista, skinnytaste…) lazy-load card images:
+// the visible <img src> is a data: placeholder, and the real URL lives in
+// srcset / data-lazy-src / data-src or a <noscript> fallback (which cheerio
+// keeps as text). Pull the first genuine image URL out of any of those.
+function bestFromSrcset(v) {
+  if (!v) return null;
+  const parts = v.split(",").map(s => s.trim().split(/\s+/)[0]).filter(Boolean);
+  return parts.length ? parts[parts.length - 1] : null; // last = largest
+}
+function looksLikeRealImage(u) {
+  if (!u || u.startsWith("data:")) return false;
+  if (/(sprite|icon|logo|favicon|placeholder|blank|spacer|1x1|avatar|gravatar|emoji)/i.test(u)) return false;
+  return /\.(jpe?g|png|webp)(\?|$)/i.test(u);
+}
+function pickImage($, el) {
+  const cands = [];
+  $(el).find("img").each((_, im) => {
+    const $im = $(im);
+    ["data-lazy-src", "data-src", "data-original", "src"].forEach(a => {
+      const v = $im.attr(a); if (v) cands.push(v);
+    });
+    ["data-lazy-srcset", "data-srcset", "srcset"].forEach(a => {
+      const u = bestFromSrcset($im.attr(a)); if (u) cands.push(u);
+    });
+  });
+  // <noscript> contents are parsed as text by cheerio — scan the raw HTML too.
+  const html = $(el).html() || "";
+  let m;
+  const re = /(?:src|data-lazy-src|data-src|srcset)=["']([^"']+)["']/gi;
+  while ((m = re.exec(html))) {
+    cands.push(m[1].includes(",") ? bestFromSrcset(m[1]) : m[1]);
+  }
+  for (const u of cands) if (looksLikeRealImage(u)) return u;
+  return "";
+}
+
 // ── Scraping ──────────────────────────────────────────────────────────────────
 async function scrapeCategoryPage(pageUrl) {
   const blog = blogFromUrl(pageUrl);
@@ -157,11 +194,10 @@ async function scrapeCategoryPage(pageUrl) {
     if (seen.has(href)) return;
     seen.add(href);
 
-    const img   = $(el).find("img").first();
-    const thumb =
-      img.attr("data-lazy-src") || img.attr("data-src") || img.attr("src") || null;
     // Skip category/tag/author pages — must look like a real post slug
     if (/\/(category|tag|author|page)\//.test(href)) return;
+
+    const thumb = pickImage($, el);
 
     const title =
       $(el).find("h2, h3, .entry-title, .recipe-card__title").first().text().trim() ||
