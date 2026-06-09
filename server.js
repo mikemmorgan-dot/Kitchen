@@ -352,8 +352,8 @@ app.get("/api/menu/:meal", (req, res) => {
 });
 
 // Trigger a manual refresh (useful right after first deploy)
-app.post("/api/refresh", async (req, res) => {
-  res.json({ ok: true, message: "Refresh started in background" });
+app.all("/api/refresh", async (req, res) => {
+  res.send("Refresh started — give it a minute or two, then reopen the app and pull to refresh.");
   scrapeAll().catch(e => console.error("[manual] Scrape failed:", e.message));
 });
 
