@@ -63,35 +63,36 @@ const demoImagesLoaded = kvGet("demo_images")
 const BF_UA = "Mozilla/5.0 (iPhone; CPU iPhone OS 17_5 like Mac OS X) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/17.5 Mobile/15E148 Safari/604.1";
 
 async function bfFetchPage(url) {
+  const T = () => ({ signal: AbortSignal.timeout(15000) }); // 15s cap per attempt
   // 1) direct (works for non-blocked blogs)
   try {
-    const r = await fetch(url, { headers: { "User-Agent": BF_UA, Accept: "text/html" }, redirect: "follow" });
+    const r = await fetch(url, { headers: { "User-Agent": BF_UA, Accept: "text/html" }, redirect: "follow", ...T() });
     if (r.ok) { const t = await r.text(); if (t.includes("og:image")) return t; }
   } catch {}
   // 2) jina.ai reader proxy (fetches from its own infra — bypasses Cloudflare)
   try {
-    const r = await fetch("https://r.jina.ai/" + url, { headers: { "X-Return-Format": "html" } });
+    const r = await fetch("https://r.jina.ai/" + url, { headers: { "X-Return-Format": "html" }, ...T() });
     if (r.ok) { const t = await r.text(); if (t.includes("og:image")) return t; }
   } catch {}
   // 3) allorigins raw proxy
   try {
-    const r = await fetch("https://api.allorigins.win/raw?url=" + encodeURIComponent(url));
+    const r = await fetch("https://api.allorigins.win/raw?url=" + encodeURIComponent(url), T());
     if (r.ok) { const t = await r.text(); if (t.includes("og:image")) return t; }
   } catch {}
   // 4) codetabs proxy
   try {
-    const r = await fetch("https://api.codetabs.com/v1/proxy?quest=" + encodeURIComponent(url));
+    const r = await fetch("https://api.codetabs.com/v1/proxy?quest=" + encodeURIComponent(url), T());
     if (r.ok) { const t = await r.text(); if (t.includes("og:image")) return t; }
   } catch {}
   // 5) Wayback Machine snapshot — archive.org never blocks server fetches and
   // has nearly every recipe page saved. og:image survives in snapshots.
   try {
-    const a = await fetch("https://archive.org/wayback/available?url=" + encodeURIComponent(url));
+    const a = await fetch("https://archive.org/wayback/available?url=" + encodeURIComponent(url), T());
     if (a.ok) {
       const j = await a.json();
       const snap = j?.archived_snapshots?.closest?.url;
       if (snap) {
-        const r = await fetch(snap.replace(/^http:/, "https:"), { headers: { "User-Agent": BF_UA } });
+        const r = await fetch(snap.replace(/^http:/, "https:"), { headers: { "User-Agent": BF_UA }, ...T() });
         if (r.ok) { const t = await r.text(); if (t.includes("og:image")) return t; }
       }
     }
@@ -455,7 +456,7 @@ app.all("/api/backfill-images", async (req, res) => {
   }
   bfState = { running: true, done: 0, total: todo.length, ok: 0, fail: 0, failures: [] };
   res.type("text/plain").send(
-    `Backfill started for ${todo.length} recipes (roughly ${Math.max(2, Math.ceil(todo.length * 2.5 / 60))} minutes). Reopen this page to check progress, then pull to refresh the app when it finishes.`);
+    `Backfill started for ${todo.length} remaining recipes — ${Object.keys(demoImages).length} photos from earlier runs are already saved and will be kept. Reopen this page to check progress; pull to refresh the app when it finishes.`);
   (async () => {
     for (const u of todo) {
       try {
@@ -471,7 +472,7 @@ app.all("/api/backfill-images", async (req, res) => {
       // Render free tier sleeps after ~15 min without inbound traffic, which
       // would kill this run. Ping our own public URL periodically to stay awake.
       const SELF = process.env.RENDER_EXTERNAL_URL || "";
-      if (SELF && bfState.done % 20 === 0) fetch(SELF + "/api/status").catch(() => {});
+      if (SELF && bfState.done % 5 === 0) fetch(SELF + "/api/status").catch(() => {});
       await new Promise(r => setTimeout(r, 1200)); // be polite to the blogs
     }
     await kvSet("demo_images", demoImages);
