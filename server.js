@@ -274,7 +274,7 @@ app.get("/sw.js", (_, res) => {
   res.set("Content-Type", "application/javascript");
   res.set("Cache-Control", "no-cache");
   res.send(`
-const CACHE = "morgans-kitchen-v35";
+const CACHE = "morgans-kitchen-v38";
 
 self.addEventListener("install", e => {
   e.waitUntil(caches.open(CACHE).then(c => c.add("/")));
@@ -446,20 +446,29 @@ const imgCache = new Map();
 app.get("/img", async (req, res) => {
   const { url } = req.query;
   if (!url) return res.status(400).end();
+  const UA = "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36";
+  const grab = (u, extraHeaders) =>
+    fetch(u, {
+      headers: { "User-Agent": UA, ...extraHeaders },
+      signal: AbortSignal.timeout(10_000),
+    });
   try {
     if (imgCache.has(url)) {
       const { type, buf } = imgCache.get(url);
       res.set("Content-Type", type).set("Cache-Control", "public, max-age=604800");
       return res.end(buf);
     }
-    const r = await fetch(url, {
-      headers: {
-        "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36",
-        "Referer": new URL(url).origin + "/",
-      },
-      signal: AbortSignal.timeout(10_000),
-    });
-    if (!r.ok) return res.status(502).end();
+    // 1) Try the origin directly (with a matching Referer to beat basic hotlink rules).
+    let r = null;
+    try { r = await grab(url, { Referer: new URL(url).origin + "/" }); } catch { r = null; }
+    // 2) If the origin blocks datacenter IPs (Cloudflare / hotlink protection),
+    //    retry through weserv.nl, which fetches from its own infrastructure.
+    if (!r || !r.ok) {
+      const noScheme = url.replace(/^https?:\/\//, "");
+      const weserv = "https://images.weserv.nl/?url=ssl:" + noScheme;
+      try { r = await grab(weserv); } catch { r = null; }
+    }
+    if (!r || !r.ok) return res.status(502).end();
     const type = r.headers.get("content-type") || "image/jpeg";
     const buf  = Buffer.from(await r.arrayBuffer());
     if (buf.length < 3_000_000) imgCache.set(url, { type, buf });
