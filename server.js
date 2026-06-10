@@ -76,6 +76,24 @@ async function bfFetchPage(url) {
     const r = await fetch("https://api.allorigins.win/raw?url=" + encodeURIComponent(url));
     if (r.ok) { const t = await r.text(); if (t.includes("og:image")) return t; }
   } catch {}
+  // 4) codetabs proxy
+  try {
+    const r = await fetch("https://api.codetabs.com/v1/proxy?quest=" + encodeURIComponent(url));
+    if (r.ok) { const t = await r.text(); if (t.includes("og:image")) return t; }
+  } catch {}
+  // 5) Wayback Machine snapshot — archive.org never blocks server fetches and
+  // has nearly every recipe page saved. og:image survives in snapshots.
+  try {
+    const a = await fetch("https://archive.org/wayback/available?url=" + encodeURIComponent(url));
+    if (a.ok) {
+      const j = await a.json();
+      const snap = j?.archived_snapshots?.closest?.url;
+      if (snap) {
+        const r = await fetch(snap.replace(/^http:/, "https:"), { headers: { "User-Agent": BF_UA } });
+        if (r.ok) { const t = await r.text(); if (t.includes("og:image")) return t; }
+      }
+    }
+  } catch {}
   return null;
 }
 
@@ -83,7 +101,10 @@ function bfExtractOgImage(html, pageUrl) {
   const m = html.match(/property=["']og:image["'][^>]*?content=["']([^"']+)["']/i)
          || html.match(/content=["']([^"']+)["'][^>]*?property=["']og:image["']/i);
   if (!m) return null;
-  const img = m[1].replace(/&amp;/g, "&");
+  let img = m[1].replace(/&amp;/g, "&");
+  // Unwrap Wayback Machine URLs back to the original blog URL
+  const arch = img.match(/^https?:\/\/web\.archive\.org\/web\/[^/]+\/(https?.+)$/);
+  if (arch) img = arch[1].replace(/^(https?):\/+/, "$1://");
   try {
     const base = new URL(pageUrl).hostname.replace(/^www\./, "");
     if (!img.includes(base)) return null;                       // must belong to same blog
@@ -335,7 +356,7 @@ app.get("/sw.js", (_, res) => {
   res.set("Content-Type", "application/javascript");
   res.set("Cache-Control", "no-cache");
   res.send(`
-const CACHE = "morgans-kitchen-v42";
+const CACHE = "morgans-kitchen-v43";
 
 self.addEventListener("install", e => {
   e.waitUntil(caches.open(CACHE).then(c => c.add("/")));
@@ -424,7 +445,7 @@ app.all("/api/backfill-images", (req, res) => {
   } catch (e) {
     return res.status(500).type("text/plain").send("Could not read index.html: " + e.message);
   }
-  const todo = [...new Set(targets)].filter(u => !demoImages[u] && !u.includes("fufuskitchen"));
+  const todo = [...new Set(targets)].filter(u => !demoImages[u]);
   if (!todo.length) {
     return res.type("text/plain").send(
       `Nothing left to do — images already harvested for all blank recipes (${Object.keys(demoImages).length} stored). Pull to refresh the app.`);
