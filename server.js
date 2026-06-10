@@ -201,7 +201,7 @@ async function scrapeCategoryPage(pageUrl) {
 
     const title =
       $(el).find("h2, h3, .entry-title, .recipe-card__title").first().text().trim() ||
-      a.attr("title") || img.attr("alt") || "";
+      a.attr("title") || $(el).find("img").first().attr("alt") || "";
     if (!title || title.length < 4) return;
 
     items.push({ title, source_url: href, blog, image: thumb || "" });
@@ -274,7 +274,7 @@ app.get("/sw.js", (_, res) => {
   res.set("Content-Type", "application/javascript");
   res.set("Cache-Control", "no-cache");
   res.send(`
-const CACHE = "morgans-kitchen-v38";
+const CACHE = "morgans-kitchen-v39";
 
 self.addEventListener("install", e => {
   e.waitUntil(caches.open(CACHE).then(c => c.add("/")));
