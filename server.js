@@ -56,47 +56,54 @@ async function kvSet(key, value) {
 // stored in Redis ("demo_images") and served to the frontend via /api/menu,
 // where existing merge code fills blank DEMO card images by source_url.
 let demoImages = {};
-const demoImagesLoaded = kvGet("demo_images")
-  .then(d => { if (d && typeof d === "object") demoImages = d; })
-  .catch(() => {});
+let demoNoPhoto = {}; // url -> trace of why every route failed (parked; skipped on reruns)
+const demoImagesLoaded = Promise.all([
+  kvGet("demo_images").then(d => { if (d && typeof d === "object") demoImages = d; }),
+  kvGet("demo_nophoto").then(d => { if (d && typeof d === "object") demoNoPhoto = d; }),
+]).catch(() => {});
 
 const BF_UA = "Mozilla/5.0 (iPhone; CPU iPhone OS 17_5 like Mac OS X) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/17.5 Mobile/15E148 Safari/604.1";
 
 async function bfFetchPage(url) {
   const T = () => ({ signal: AbortSignal.timeout(15000) }); // 15s cap per attempt
+  const trace = [];
   // 1) direct (works for non-blocked blogs)
   try {
     const r = await fetch(url, { headers: { "User-Agent": BF_UA, Accept: "text/html" }, redirect: "follow", ...T() });
-    if (r.ok) { const t = await r.text(); if (t.includes("og:image")) return t; }
-  } catch {}
-  // 2) jina.ai reader proxy (fetches from its own infra — bypasses Cloudflare)
+    if (r.ok) { const t = await r.text(); if (t.includes("og:image")) return { html: t, trace }; trace.push("direct:no-og"); }
+    else trace.push("direct:" + r.status);
+  } catch { trace.push("direct:err"); }
+  // 2) jina.ai reader proxy
   try {
     const r = await fetch("https://r.jina.ai/" + url, { headers: { "X-Return-Format": "html" }, ...T() });
-    if (r.ok) { const t = await r.text(); if (t.includes("og:image")) return t; }
-  } catch {}
+    if (r.ok) { const t = await r.text(); if (t.includes("og:image")) return { html: t, trace }; trace.push("jina:no-og"); }
+    else trace.push("jina:" + r.status);
+  } catch { trace.push("jina:err"); }
   // 3) allorigins raw proxy
   try {
     const r = await fetch("https://api.allorigins.win/raw?url=" + encodeURIComponent(url), T());
-    if (r.ok) { const t = await r.text(); if (t.includes("og:image")) return t; }
-  } catch {}
+    if (r.ok) { const t = await r.text(); if (t.includes("og:image")) return { html: t, trace }; trace.push("allorigins:no-og"); }
+    else trace.push("allorigins:" + r.status);
+  } catch { trace.push("allorigins:err"); }
   // 4) codetabs proxy
   try {
     const r = await fetch("https://api.codetabs.com/v1/proxy?quest=" + encodeURIComponent(url), T());
-    if (r.ok) { const t = await r.text(); if (t.includes("og:image")) return t; }
-  } catch {}
-  // 5) Wayback Machine — single direct request ("id_" returns the original,
-  // unmodified HTML of the nearest snapshot). archive.org throttles bursts,
-  // so on 429 cool off and retry once instead of giving up.
+    if (r.ok) { const t = await r.text(); if (t.includes("og:image")) return { html: t, trace }; trace.push("codetabs:no-og"); }
+    else trace.push("codetabs:" + r.status);
+  } catch { trace.push("codetabs:err"); }
+  // 5) Wayback Machine ("id_" returns the original, unmodified snapshot HTML);
+  // cool off and retry once on throttling.
   for (let attempt = 0; attempt < 2; attempt++) {
     try {
       const r = await fetch("https://web.archive.org/web/20240101000000id_/" + url,
         { headers: { "User-Agent": BF_UA }, redirect: "follow", signal: AbortSignal.timeout(25000) });
-      if (r.status === 429) { await new Promise(rs => setTimeout(rs, 45000)); continue; }
-      if (r.ok) { const t = await r.text(); if (t.includes("og:image")) return t; }
+      if (r.status === 429) { trace.push("wayback:429"); await new Promise(rs => setTimeout(rs, 45000)); continue; }
+      if (r.ok) { const t = await r.text(); if (t.includes("og:image")) return { html: t, trace }; trace.push("wayback:no-og"); }
+      else trace.push("wayback:" + r.status);
       break;
-    } catch { break; }
+    } catch { trace.push("wayback:err"); break; }
   }
-  return null;
+  return { html: null, trace };
 }
 
 function bfExtractOgImage(html, pageUrl) {
@@ -448,10 +455,11 @@ app.all("/api/backfill-images", async (req, res) => {
   } catch (e) {
     return res.status(500).type("text/plain").send("Could not read index.html: " + e.message);
   }
-  const todo = [...new Set(targets)].filter(u => !demoImages[u]);
+  const force = "retry" in req.query;
+  const todo = [...new Set(targets)].filter(u => !demoImages[u] && (force || !demoNoPhoto[u]));
   if (!todo.length) {
     return res.type("text/plain").send(
-      `Nothing left to do — images already harvested for all blank recipes (${Object.keys(demoImages).length} stored). Pull to refresh the app.`);
+      `Done: ${Object.keys(demoImages).length} photos saved. ${Object.keys(demoNoPhoto).length} recipes have no findable photo anywhere (likely dead or unarchived pages) — see /api/backfill-status for the list. Add ?retry=1 to this URL to force another attempt on those.`);
   }
   bfState = { running: true, done: 0, total: todo.length, ok: 0, fail: 0, failures: [] };
   res.type("text/plain").send(
@@ -459,14 +467,20 @@ app.all("/api/backfill-images", async (req, res) => {
   (async () => {
     for (const u of todo) {
       try {
-        const page = await bfFetchPage(u);
-        const img = page ? bfExtractOgImage(page, u) : null;
+        const { html, trace } = await bfFetchPage(u);
+        const img = html ? bfExtractOgImage(html, u) : null;
         if (img) {
           demoImages[u] = img;
+          delete demoNoPhoto[u];
           bfState.ok++;
           await kvSet("demo_images", demoImages); // checkpoint every success
-        } else { bfState.fail++; bfState.failures.push(u); }
-      } catch { bfState.fail++; bfState.failures.push(u); }
+          await kvSet("demo_nophoto", demoNoPhoto);
+        } else {
+          bfState.fail++; bfState.failures.push(u);
+          demoNoPhoto[u] = (html ? "og-rejected " : "") + trace.join(" ");
+          await kvSet("demo_nophoto", demoNoPhoto);
+        }
+      } catch (e) { bfState.fail++; bfState.failures.push(u); }
       bfState.done++;
       // Render free tier sleeps after ~15 min without inbound traffic, which
       // would kill this run. Ping our own public URL periodically to stay awake.
@@ -481,8 +495,20 @@ app.all("/api/backfill-images", async (req, res) => {
 });
 
 // Backfill report — see what failed
-app.get("/api/backfill-status", (_, res) => {
-  res.json({ ...bfState, stored: Object.keys(demoImages).length });
+app.get("/api/backfill-status", async (_, res) => {
+  await demoImagesLoaded;
+  const byBlog = {};
+  for (const u of Object.keys(demoNoPhoto)) {
+    let b = "?"; try { b = new URL(u).hostname.replace(/^www\./, "").split(".")[0]; } catch {}
+    byBlog[b] = (byBlog[b] || 0) + 1;
+  }
+  res.json({
+    running: bfState.running, progress: `${bfState.done}/${bfState.total}`,
+    photosSaved: Object.keys(demoImages).length,
+    noPhotoFound: Object.keys(demoNoPhoto).length,
+    noPhotoByBlog: byBlog,
+    details: demoNoPhoto,
+  });
 });
 
 // ── Recipe menu endpoint ─────────────────────────────────────────────────────
