@@ -56,7 +56,9 @@ async function kvSet(key, value) {
 // stored in Redis ("demo_images") and served to the frontend via /api/menu,
 // where existing merge code fills blank DEMO card images by source_url.
 let demoImages = {};
-kvGet("demo_images").then(d => { if (d && typeof d === "object") demoImages = d; });
+const demoImagesLoaded = kvGet("demo_images")
+  .then(d => { if (d && typeof d === "object") demoImages = d; })
+  .catch(() => {});
 
 const BF_UA = "Mozilla/5.0 (iPhone; CPU iPhone OS 17_5 like Mac OS X) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/17.5 Mobile/15E148 Safari/604.1";
 
@@ -426,7 +428,8 @@ self.addEventListener("notificationclick", e => {
 
 let bfState = { running: false, done: 0, total: 0, ok: 0, fail: 0, failures: [] };
 
-app.all("/api/backfill-images", (req, res) => {
+app.all("/api/backfill-images", async (req, res) => {
+  await demoImagesLoaded; // never start before saved progress is loaded
   if (bfState.running) {
     return res.type("text/plain").send(
       `Backfill running: ${bfState.done}/${bfState.total} checked, ${bfState.ok} images found so far. Reopen this page to check progress.`);
@@ -461,10 +464,14 @@ app.all("/api/backfill-images", (req, res) => {
         if (img) {
           demoImages[u] = img;
           bfState.ok++;
-          if (bfState.ok % 10 === 0) await kvSet("demo_images", demoImages); // checkpoint
+          await kvSet("demo_images", demoImages); // checkpoint every success
         } else { bfState.fail++; bfState.failures.push(u); }
       } catch { bfState.fail++; bfState.failures.push(u); }
       bfState.done++;
+      // Render free tier sleeps after ~15 min without inbound traffic, which
+      // would kill this run. Ping our own public URL periodically to stay awake.
+      const SELF = process.env.RENDER_EXTERNAL_URL || "";
+      if (SELF && bfState.done % 20 === 0) fetch(SELF + "/api/status").catch(() => {});
       await new Promise(r => setTimeout(r, 1200)); // be polite to the blogs
     }
     await kvSet("demo_images", demoImages);
