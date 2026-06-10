@@ -84,19 +84,18 @@ async function bfFetchPage(url) {
     const r = await fetch("https://api.codetabs.com/v1/proxy?quest=" + encodeURIComponent(url), T());
     if (r.ok) { const t = await r.text(); if (t.includes("og:image")) return t; }
   } catch {}
-  // 5) Wayback Machine snapshot — archive.org never blocks server fetches and
-  // has nearly every recipe page saved. og:image survives in snapshots.
-  try {
-    const a = await fetch("https://archive.org/wayback/available?url=" + encodeURIComponent(url), T());
-    if (a.ok) {
-      const j = await a.json();
-      const snap = j?.archived_snapshots?.closest?.url;
-      if (snap) {
-        const r = await fetch(snap.replace(/^http:/, "https:"), { headers: { "User-Agent": BF_UA }, ...T() });
-        if (r.ok) { const t = await r.text(); if (t.includes("og:image")) return t; }
-      }
-    }
-  } catch {}
+  // 5) Wayback Machine — single direct request ("id_" returns the original,
+  // unmodified HTML of the nearest snapshot). archive.org throttles bursts,
+  // so on 429 cool off and retry once instead of giving up.
+  for (let attempt = 0; attempt < 2; attempt++) {
+    try {
+      const r = await fetch("https://web.archive.org/web/20240101000000id_/" + url,
+        { headers: { "User-Agent": BF_UA }, redirect: "follow", signal: AbortSignal.timeout(25000) });
+      if (r.status === 429) { await new Promise(rs => setTimeout(rs, 45000)); continue; }
+      if (r.ok) { const t = await r.text(); if (t.includes("og:image")) return t; }
+      break;
+    } catch { break; }
+  }
   return null;
 }
 
@@ -473,7 +472,7 @@ app.all("/api/backfill-images", async (req, res) => {
       // would kill this run. Ping our own public URL periodically to stay awake.
       const SELF = process.env.RENDER_EXTERNAL_URL || "";
       if (SELF && bfState.done % 5 === 0) fetch(SELF + "/api/status").catch(() => {});
-      await new Promise(r => setTimeout(r, 1200)); // be polite to the blogs
+      await new Promise(r => setTimeout(r, 2500)); // gentle pace — avoids archive.org throttling
     }
     await kvSet("demo_images", demoImages);
     bfState.running = false;
