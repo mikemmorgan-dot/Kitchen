@@ -50,6 +50,67 @@ async function kvSet(key, value) {
   } catch {}
 }
 
+// ── DEMO image backfill ───────────────────────────────────────────────────────
+// Harvests og:image for DEMO recipes with blank images (Cloudflare-blocked
+// blogs). Run once by opening /api/backfill-images in a browser. Results are
+// stored in Redis ("demo_images") and served to the frontend via /api/menu,
+// where existing merge code fills blank DEMO card images by source_url.
+let demoImages = {};
+kvGet("demo_images").then(d => { if (d && typeof d === "object") demoImages = d; });
+
+const BF_UA = "Mozilla/5.0 (iPhone; CPU iPhone OS 17_5 like Mac OS X) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/17.5 Mobile/15E148 Safari/604.1";
+
+async function bfFetchPage(url) {
+  // 1) direct (works for non-blocked blogs)
+  try {
+    const r = await fetch(url, { headers: { "User-Agent": BF_UA, Accept: "text/html" }, redirect: "follow" });
+    if (r.ok) { const t = await r.text(); if (t.includes("og:image")) return t; }
+  } catch {}
+  // 2) jina.ai reader proxy (fetches from its own infra — bypasses Cloudflare)
+  try {
+    const r = await fetch("https://r.jina.ai/" + url, { headers: { "X-Return-Format": "html" } });
+    if (r.ok) { const t = await r.text(); if (t.includes("og:image")) return t; }
+  } catch {}
+  // 3) allorigins raw proxy
+  try {
+    const r = await fetch("https://api.allorigins.win/raw?url=" + encodeURIComponent(url));
+    if (r.ok) { const t = await r.text(); if (t.includes("og:image")) return t; }
+  } catch {}
+  return null;
+}
+
+function bfExtractOgImage(html, pageUrl) {
+  const m = html.match(/property=["']og:image["'][^>]*?content=["']([^"']+)["']/i)
+         || html.match(/content=["']([^"']+)["'][^>]*?property=["']og:image["']/i);
+  if (!m) return null;
+  const img = m[1].replace(/&amp;/g, "&");
+  try {
+    const base = new URL(pageUrl).hostname.replace(/^www\./, "");
+    if (!img.includes(base)) return null;                       // must belong to same blog
+    if (!/\.(jpe?g|png|webp)(\?.*)?$/i.test(img)) return null;  // must be a real photo
+    return img;
+  } catch { return null; }
+}
+
+// Find the enclosing {...} object around a string index (same brace-matching
+// used for all DEMO edits).
+function bfEntryBounds(s, idx) {
+  let depth = 0, st = -1;
+  for (let i = idx; i >= 0; i--) {
+    const c = s[i];
+    if (c === "}") depth++;
+    else if (c === "{") { if (depth === 0) { st = i; break; } depth--; }
+  }
+  if (st < 0) return null;
+  depth = 0;
+  for (let j = st; j < s.length; j++) {
+    const c = s[j];
+    if (c === "{") depth++;
+    else if (c === "}") { depth--; if (!depth) return [st, j + 1]; }
+  }
+  return null;
+}
+
 // ── Blog category URLs scraped each week ─────────────────────────────────────
 const MEAL_SOURCES = {
   breakfast: [
@@ -274,7 +335,7 @@ app.get("/sw.js", (_, res) => {
   res.set("Content-Type", "application/javascript");
   res.set("Cache-Control", "no-cache");
   res.send(`
-const CACHE = "morgans-kitchen-v39";
+const CACHE = "morgans-kitchen-v42";
 
 self.addEventListener("install", e => {
   e.waitUntil(caches.open(CACHE).then(c => c.add("/")));
@@ -342,13 +403,80 @@ self.addEventListener("notificationclick", e => {
   `);
 });
 
+let bfState = { running: false, done: 0, total: 0, ok: 0, fail: 0, failures: [] };
+
+app.all("/api/backfill-images", (req, res) => {
+  if (bfState.running) {
+    return res.type("text/plain").send(
+      `Backfill running: ${bfState.done}/${bfState.total} checked, ${bfState.ok} images found so far. Reopen this page to check progress.`);
+  }
+  let targets = [];
+  try {
+    const html = readFileSync("./index.html", "utf8");
+    const re = /["']?image["']?\s*:\s*""/g;
+    let m;
+    while ((m = re.exec(html))) {
+      const b = bfEntryBounds(html, m.index);
+      if (!b) continue;
+      const sm = html.slice(b[0], b[1]).match(/["']?source_url["']?\s*:\s*"(https?:\/\/[^"]+)"/);
+      if (sm) targets.push(sm[1]);
+    }
+  } catch (e) {
+    return res.status(500).type("text/plain").send("Could not read index.html: " + e.message);
+  }
+  const todo = [...new Set(targets)].filter(u => !demoImages[u] && !u.includes("fufuskitchen"));
+  if (!todo.length) {
+    return res.type("text/plain").send(
+      `Nothing left to do — images already harvested for all blank recipes (${Object.keys(demoImages).length} stored). Pull to refresh the app.`);
+  }
+  bfState = { running: true, done: 0, total: todo.length, ok: 0, fail: 0, failures: [] };
+  res.type("text/plain").send(
+    `Backfill started for ${todo.length} recipes (roughly ${Math.max(2, Math.ceil(todo.length * 2.5 / 60))} minutes). Reopen this page to check progress, then pull to refresh the app when it finishes.`);
+  (async () => {
+    for (const u of todo) {
+      try {
+        const page = await bfFetchPage(u);
+        const img = page ? bfExtractOgImage(page, u) : null;
+        if (img) {
+          demoImages[u] = img;
+          bfState.ok++;
+          if (bfState.ok % 10 === 0) await kvSet("demo_images", demoImages); // checkpoint
+        } else { bfState.fail++; bfState.failures.push(u); }
+      } catch { bfState.fail++; bfState.failures.push(u); }
+      bfState.done++;
+      await new Promise(r => setTimeout(r, 1200)); // be polite to the blogs
+    }
+    await kvSet("demo_images", demoImages);
+    bfState.running = false;
+    console.log(`[backfill] finished: ${bfState.ok} found, ${bfState.fail} failed`);
+  })().catch(e => { bfState.running = false; console.error("[backfill]", e.message); });
+});
+
+// Backfill report — see what failed
+app.get("/api/backfill-status", (_, res) => {
+  res.json({ ...bfState, stored: Object.keys(demoImages).length });
+});
+
 // ── Recipe menu endpoint ─────────────────────────────────────────────────────
 // Returns fresh scraped recipes for a meal type.
 // The frontend merges these with hardcoded DEMO data (DEMO fills in nutrition).
 app.get("/api/menu/:meal", (req, res) => {
   const { meal } = req.params;
   const recipes = recipeStore[meal] || [];
-  res.json(recipes);
+  // Append image-only stubs for DEMO recipes whose photos were harvested by
+  // /api/backfill-images. The frontend uses these solely to fill blank DEMO
+  // card images by source_url; they never render as new cards (all stub blogs
+  // are in the frontend's CLOUDFLARE_BLOGS exclusion list and their URLs match
+  // existing DEMO entries).
+  const have = new Set(recipes.map(r => r.source_url));
+  const stubs = Object.entries(demoImages)
+    .filter(([u]) => !have.has(u))
+    .map(([u, img]) => {
+      let blog = "";
+      try { blog = new URL(u).hostname.replace(/^www\./, "").split(".")[0]; } catch {}
+      return { source_url: u, image: img, title: "", blog };
+    });
+  res.json([...recipes, ...stubs]);
 });
 
 // Trigger a manual refresh (useful right after first deploy)
