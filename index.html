@@ -3800,22 +3800,33 @@ function normUrl(u){
     .replace(/[?#].*$/,"").replace(/\/+$/,"");
 }
 function dedupeRecipes(list){
-  const out=[], byUrl=new Map(), byTitle=new Map();
+  const out=[], byUrl=new Map(), byTB=new Map();
   for(const r of list){
-    const u=normUrl(r.source_url);
-    const t=(r.title||"").trim().toLowerCase();
-    const sig=u||("title:"+t);
-    const prevIdx = byUrl.has(sig) ? byUrl.get(sig)
-                  : (!u && byTitle.has(t) ? byTitle.get(t) : undefined);
+    const u  = normUrl(r.source_url);
+    // Normalize invisible differences: HTML entities, NBSP, repeated spaces —
+    // they render identically on screen but would defeat a naive comparison.
+    const normT = t => (t||"").toLowerCase()
+      .replace(/&[#a-z0-9]+;/g," ").replace(/[\u00a0\s]+/g," ")
+      .replace(/[^a-z0-9 ]/g,"").trim();
+    const tb = normT(r.blog)+"|"+normT(r.title);
+    // Same normalized URL OR same blog+title = same recipe (different slugs
+    // for one dish happen when the feed and the scraper disagree on the URL).
+    const tbEmpty = tb.endsWith("|");
+    let prevIdx = (u && byUrl.has(u)) ? byUrl.get(u)
+                : (!tbEmpty && byTB.has(tb)) ? byTB.get(tb) : undefined;
     if(prevIdx===undefined){
       const idx=out.length; out.push(r);
-      byUrl.set(sig,idx); if(!u) byTitle.set(t,idx);
+      if(u) byUrl.set(u,idx);
+      if(!tbEmpty) byTB.set(tb,idx);
     }else{
-      // keep whichever has a photo (and otherwise the richer record)
       const cur=out[prevIdx];
-      const better = (!(cur.image||cur.thumb) && (r.image||r.thumb)) ||
-                     ((r.ingredients?.length||0) > (cur.ingredients?.length||0) && (r.image||r.thumb));
-      if(better) out[prevIdx]=r;
+      const curImg=!!(cur.image||cur.thumb), rImg=!!(r.image||r.thumb);
+      const better =
+        (!curImg && rImg) ||                                            // photo wins
+        (curImg===rImg && (r.ingredients?.length||0)>(cur.ingredients?.length||0)) || // richer wins
+        (curImg===rImg && (r.ingredients?.length||0)===(cur.ingredients?.length||0)
+          && S.favourites.has(recipeKey(r)) && !S.favourites.has(recipeKey(cur)));    // favourited wins
+      if(better){ out[prevIdx]=r; if(u) byUrl.set(u,prevIdx); if(!tbEmpty) byTB.set(tb,prevIdx); }
     }
   }
   return out;
