@@ -3113,6 +3113,7 @@ async function getMenu(course){
     .then(r=>r.ok?r.json():null)
     .then(fresh=>{
       if(!Array.isArray(fresh)||!fresh.length) return;
+      window._serverAnswered = true; // server is alive — photo-hiding may apply now
       if(S.meal!==course||!document.getElementById("cards")) return; // navigated away
 
       // Enrich DEMO recipes with server-fetched images
@@ -3854,10 +3855,12 @@ function dedupeRecipes(list){
 
 function renderCards(list, course){
   list = dedupeRecipes(list);
-  // Hide recipes with no photo — these are mostly dead/unfetchable source pages.
-  // Display-only: the entries stay in DEMO, so any recipe that later gains an
-  // image (repointed slug, server backfill) reappears automatically.
-  list = list.filter(r => r.image || r.thumb);
+  // Hide recipes with no photo — BUT only once the server has actually answered
+  // with image data. If the server is down/slow, hiding here would blank ~90% of
+  // the library (photos are server-supplied), so we show everything until then.
+  if(window._serverAnswered){
+    list = list.filter(r => r.image || r.thumb);
+  }
   S.fullMenuList = list; S.blogFilter = null; S.proteinFilter = null;
   LISTS[course] = list;
   refreshFavChip();
