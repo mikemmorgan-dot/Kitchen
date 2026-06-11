@@ -3142,6 +3142,11 @@ async function getMenu(course){
       S.fullMenuList = merged;
       if(_menuMem[course]) _menuMem[course].list = merged;
       applyFilters(); // re-renders cards with any new images / extra recipes
+      // The chip bars (favourites/new + blogs + protein counts) were built from
+      // the instant local list — rebuild them now that the full list is in, so
+      // counts don't sit stale until a chip is tapped.
+      refreshFavChip();
+      refreshProteinBar();
     })
     .catch(()=>{});
 
