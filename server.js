@@ -337,7 +337,12 @@ loadRecipeStore().then(() => {
     console.log("[startup] Recipe store is empty or stale — triggering scrape…");
     scrapeAll().catch(e => console.error("[startup] Scrape failed:", e.message));
   }
-});
+}).catch(e => console.error("[startup] loadRecipeStore failed (continuing):", e.message));
+
+// Never let a background/init error take the whole server down — the app must
+// stay up serving recipes even if Redis or a scrape hiccups.
+process.on("unhandledRejection", e => console.error("[unhandledRejection]", e?.message || e));
+process.on("uncaughtException",  e => console.error("[uncaughtException]",  e?.message || e));
 
 // Weekly refresh: every Sunday at 3 AM
 cron.schedule("0 3 * * 0", () => {
