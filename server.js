@@ -365,7 +365,7 @@ app.get("/sw.js", (_, res) => {
   res.set("Content-Type", "application/javascript");
   res.set("Cache-Control", "no-cache");
   res.send(`
-const CACHE = "morgans-kitchen-v45";
+const CACHE = "morgans-kitchen-v46";
 
 self.addEventListener("install", e => {
   e.waitUntil(caches.open(CACHE).then(c => c.add("/")));
@@ -615,9 +615,12 @@ app.get("/api/recipe", async (req, res) => {
   const { url } = req.query;
   if (!url) return res.status(400).json({ error: "missing ?url=" });
   try {
-    const { fetchAndParseRecipe } = await import("./recipe-parser.js");
-    const data = await fetchAndParseRecipe(url);
-    res.json(data);
+    // Fetch through the full chain (direct -> proxies -> Wayback) so recipes
+    // from Cloudflare-blocked blogs load reliably, then parse the JSON-LD.
+    const { parseRecipeFromHtml } = await import("./recipe-parser.js");
+    const { html } = await bfFetchPage(url);
+    if (!html) return res.status(502).json({ error: "Could not reach that page from any route" });
+    res.json(parseRecipeFromHtml(html, url));
   } catch (e) {
     res.status(502).json({ error: e.message });
   }

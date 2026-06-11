@@ -2808,6 +2808,7 @@ const S = {
   view:"cook", log:{},               // log: { "YYYY-MM-DD": [ {meal,course,title,blog,protein,key} ] }
   plan:{}, shopChecked:new Set(),     // plan: { "YYYY-MM-DD": { breakfast:[entry], lunch:[], dinner:[] } }
   savedRecipes:{},                    // key -> full recipe snapshot for every planned recipe (survives reloads/sync)
+  library:{},                         // key -> recipe added via "load from URL" — permanent, shared, shown in menus
   mealMoves:{},                       // { recipeKey: "breakfast"|"lunch"|"dinner"|"salad" } — recategorized recipes
   movedRecipes:{},                    // { recipeKey: full recipe } — snapshot so moved recipes always render
   blogFilter:null, fullMenuList:[],   // active blog filter and unfiltered list
@@ -2853,7 +2854,7 @@ function findRecipeByKey(key){
     const r=(DEMO[course]||[]).find(r=>recipeKey(r)===key);
     if(r) return r;
   }
-  return S.savedRecipes?.[key] || S.favouriteRecipes?.[key] || null;
+  return S.library?.[key] || S.savedRecipes?.[key] || S.favouriteRecipes?.[key] || null;
 }
 
 // ── Profile helpers ──────────────────────────────────────────────────────────
@@ -2943,7 +2944,7 @@ function serialShared(){
   Object.values(S.plan).forEach(meals=>Object.values(meals||{}).forEach(list=>(list||[]).forEach(e=>refKeys.add(e.key))));
   const savedClean={};
   refKeys.forEach(k=>{ if(S.savedRecipes[k]) savedClean[k]=S.savedRecipes[k]; });
-  return {plan:planClean, savedRecipes:savedClean, shopChecked:[...S.shopChecked], mealMoves:S.mealMoves, movedRecipes:S.movedRecipes};
+  return {plan:planClean, savedRecipes:savedClean, library:S.library, shopChecked:[...S.shopChecked], mealMoves:S.mealMoves, movedRecipes:S.movedRecipes};
 }
 
 function applyPersonal(data){
@@ -2963,6 +2964,7 @@ function applyShared(data){
   if(data.mealMoves)    Object.assign(S.mealMoves, data.mealMoves);
   if(data.movedRecipes) Object.assign(S.movedRecipes, data.movedRecipes);
   if(data.savedRecipes) S.savedRecipes={...S.savedRecipes, ...data.savedRecipes};
+  if(data.library) S.library=data.library;
   if(data.plan){
     S.plan={};
     Object.entries(data.plan).forEach(([day,meals])=>{
@@ -3097,8 +3099,11 @@ function applyMealMoves(course, list){
   return out;
 }
 
+function libraryFor(course){
+  return Object.values(S.library||{}).filter(r=>(r.course||"dinner")===course);
+}
 async function getMenu(course){
-  const demo = applyMealMoves(course, DEMO[course]||[]);
+  const demo = applyMealMoves(course, [...libraryFor(course), ...(DEMO[course]||[])]);
   if(API === null) return demo;
 
   // Return DEMO immediately — never block the UI waiting for the server.
@@ -3449,6 +3454,17 @@ async function loadFromUrl(){
     S.course = "main";
     S.picks["main"] = recipe;
     LISTS["main"] = [recipe];
+
+    // Permanently add to the shared library (filed under the current meal tab)
+    // so it shows up in the menus on both phones from now on.
+    if(recipe.ingredients?.length){
+      recipe.course = ["breakfast","lunch","dinner","salad"].includes(S.meal) ? S.meal : "dinner";
+      if(!S.library[recipeKey(recipe)]){
+        S.library[recipeKey(recipe)] = recipe;
+        save();
+        toast(`Saved to your ${recipe.course} menu 📚`);
+      }
+    }
 
     drawRecipe(recipe);
     window.scrollTo({top:0, behavior:"smooth"});
