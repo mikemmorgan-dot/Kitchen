@@ -3618,6 +3618,24 @@ function toggleSortMenu(){
 }
 
 /* ---- shared filter application ---- */
+// The favourites that should appear in the current meal's menu: those present
+// in the live list PLUS saved-snapshot favourites tagged to this meal. Chip
+// count and the Favourites filter both use this, so they always agree.
+function mealFavList(){
+  const out=[], seen=new Set();
+  for(const r of S.fullMenuList){
+    const k=recipeKey(r);
+    if(S.favourites.has(k) && !seen.has(k)){ out.push(r); seen.add(k); }
+  }
+  for(const key of S.favourites){
+    if(seen.has(key)) continue;
+    if(!S.favouriteRecipes[key]) continue;
+    if(mealOfFavourite(key)!==S.meal) continue;
+    out.push(S.favouriteRecipes[key]); seen.add(key);
+  }
+  return out;
+}
+
 function mealOfFavourite(key){
   // Which meal does this favourited recipe belong to?
   if(S.mealMoves[key]) return S.mealMoves[key];            // explicit move wins
@@ -3631,17 +3649,7 @@ function mealOfFavourite(key){
 function applyFilters(){
   let list = S.fullMenuList;
   if(S.favFilter){
-    // Start from current menu list filtered to favourites
-    list = list.filter(r=>S.favourites.has(recipeKey(r)));
-    // Inject saved favourites missing from the current menu — but ONLY ones that
-    // belong to THIS meal (so salad favourites don't show breakfast favourites etc.)
-    const currentKeys = new Set(list.map(r=>recipeKey(r)));
-    for(const key of S.favourites){
-      if(currentKeys.has(key)) continue;
-      if(!S.favouriteRecipes[key]) continue;
-      if(mealOfFavourite(key) !== S.meal) continue;
-      list = [...list, S.favouriteRecipes[key]];
-    }
+    list = mealFavList();
   }
   if(S.blogFilter)    list = list.filter(r=>r.blog===S.blogFilter);
   if(S.proteinFilter) list = list.filter(r=>proteinType(r)===S.proteinFilter);
@@ -3653,7 +3661,7 @@ function applyFilters(){
       (r.ingredients||[]).some(i=>i.toLowerCase().includes(q))
     );
   }
-  list = sortList(list);
+  list = dedupeRecipes(sortList(list));
   LISTS[S.course] = list;
   const el=$("cards"); if(!el) return;
   el.innerHTML = renderCardItems(list, S.course);
@@ -3702,7 +3710,7 @@ function toggleFav(key, e){
 
 function refreshFavChip(){
   const fb=$("filter-bar"); if(!fb||!S.fullMenuList.length) return;
-  const favCount=S.fullMenuList.filter(r=>S.favourites.has(recipeKey(r))).length;
+  const favCount=mealFavList().length;
   const blogs=[...new Set(S.fullMenuList.map(r=>r.blog).filter(Boolean))];
   fb.innerHTML=[
     favCount>0?`<button class="chip${S.favFilter?' fav-active':''}" onclick="filterFavourites()">❤️ Favourites<span class="chip-cnt">${favCount}</span></button>`:"",
@@ -3783,7 +3791,38 @@ function renderCardItems(list, course){
   }).join("");
 }
 
+// Collapse entries that are the same recipe reached by cosmetically different
+// URLs (trailing slash, www, http/https) or identical titles. Display-only —
+// does NOT change recipeKey or anything stored. Prefers the copy that has a photo.
+function normUrl(u){
+  return (u||"").trim().toLowerCase()
+    .replace(/^https?:\/\//,"").replace(/^www\./,"")
+    .replace(/[?#].*$/,"").replace(/\/+$/,"");
+}
+function dedupeRecipes(list){
+  const out=[], byUrl=new Map(), byTitle=new Map();
+  for(const r of list){
+    const u=normUrl(r.source_url);
+    const t=(r.title||"").trim().toLowerCase();
+    const sig=u||("title:"+t);
+    const prevIdx = byUrl.has(sig) ? byUrl.get(sig)
+                  : (!u && byTitle.has(t) ? byTitle.get(t) : undefined);
+    if(prevIdx===undefined){
+      const idx=out.length; out.push(r);
+      byUrl.set(sig,idx); if(!u) byTitle.set(t,idx);
+    }else{
+      // keep whichever has a photo (and otherwise the richer record)
+      const cur=out[prevIdx];
+      const better = (!(cur.image||cur.thumb) && (r.image||r.thumb)) ||
+                     ((r.ingredients?.length||0) > (cur.ingredients?.length||0) && (r.image||r.thumb));
+      if(better) out[prevIdx]=r;
+    }
+  }
+  return out;
+}
+
 function renderCards(list, course){
+  list = dedupeRecipes(list);
   // Hide recipes with no photo — these are mostly dead/unfetchable source pages.
   // Display-only: the entries stay in DEMO, so any recipe that later gains an
   // image (repointed slug, server backfill) reappears automatically.
