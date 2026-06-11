@@ -3099,6 +3099,12 @@ function applyMealMoves(course, list){
   return out;
 }
 
+// Photos harvested by the server backfill, keyed by normalized recipeKey.
+// Lets favourites (and any saved snapshot) show a photo even if their own
+// `image` field was blank when first saved.
+const PHOTO_INDEX = {};
+function indexPhoto(r){ if(r&&r.source_url&&(r.image||r.thumb)) PHOTO_INDEX[recipeKey(r)] = r.image||r.thumb; }
+function photoFor(r){ return r.image || r.thumb || PHOTO_INDEX[recipeKey(r)] || ""; }
 function libraryFor(course){
   return Object.values(S.library||{}).filter(r=>(r.course||"dinner")===course);
 }
@@ -3114,6 +3120,8 @@ async function getMenu(course){
       if(!Array.isArray(fresh)||!fresh.length) return;
       if(S.meal!==course||!document.getElementById("cards")) return; // navigated away
 
+      // Index every server photo by normalized key (covers favourites too)
+      fresh.forEach(indexPhoto);
       // Enrich DEMO recipes with server-fetched images
       const serverImg  = new Map(fresh.map(r=>[r.source_url, r.image||r.thumb||""]));
       const enriched   = demo.map(r=>
@@ -3146,7 +3154,18 @@ async function getMenu(course){
 
   return demo; // instant
 }
-function recipeKey(r){return (r.source_url||r.title);}
+function recipeKey(r){
+  // Normalize so trailing slashes, www and http/https can't fork one recipe
+  // into duplicates (they'd otherwise read as different keys everywhere).
+  let u = r.source_url || "";
+  if(u){
+    u = u.trim().toLowerCase()
+         .replace(/^https?:\/\//,"").replace(/^www\./,"")
+         .replace(/[?#].*$/,"").replace(/\/+$/,"");
+    return u;
+  }
+  return (r.title||"").trim().toLowerCase();
+}
 
 /* ---------------- meal plan ---------------- */
 function planEntry(r,meal,servings){
@@ -3765,7 +3784,7 @@ function renderCardItems(list, course){
     return `
     <div class="card" onclick='openRecipe(${JSON.stringify(course)},${i})' role="button" tabindex="0">
       <div class="card-img-wrap">
-        ${imgEl(r.image||r.thumb,r.title,"thumb",560,r.blog)}
+        ${imgEl(photoFor(r),r.title,"thumb",560,r.blog)}
         <button class="heart-btn${isFav?' active':''}" data-fk="${key.replace(/"/g,'&quot;')}"
           onclick="toggleFav(this.dataset.fk,event)" aria-label="${isFav?'Remove from':'Save to'} favourites">
           ${isFav?'❤️':'🤍'}
