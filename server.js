@@ -494,6 +494,45 @@ app.all("/api/backfill-images", async (req, res) => {
   })().catch(e => { bfState.running = false; console.error("[backfill]", e.message); });
 });
 
+// ── RSS feed reachability check ───────────────────────────────────────────────
+// One-tap diagnostic: which blogs' RSS feeds can this server actually read?
+// Tries each /feed/ directly, then through the proxies. Wayback is skipped on
+// purpose — archived feeds are stale, useless for discovering new posts.
+app.get("/api/feed-check", async (_, res) => {
+  const blogs = ["skinnytaste.com","eatingbirdfood.com","themediterraneandish.com",
+    "pinchofyum.com","detoxinista.com","theeastcoastkitchen.com","fufuskitchen.com"];
+  const looksLikeFeed = t => /<rss[\s>]|<feed[\s>]/i.test(t) && /<item[\s>]|<entry[\s>]/i.test(t);
+  const tryOne = async (label, u, opts) => {
+    try {
+      const r = await fetch(u, { ...opts, signal: AbortSignal.timeout(8000) });
+      if (!r.ok) return { label, fail: r.status };
+      const t = await r.text();
+      if (!looksLikeFeed(t)) return { label, fail: "not-a-feed" };
+      const items = (t.match(/<item[\s>]|<entry[\s>]/gi) || []).length;
+      const title = (t.match(/<item[\s\S]*?<title>(?:<!\[CDATA\[)?([^<\]]+)/i) || [])[1] || "?";
+      return { label, ok: true, items, title: title.trim() };
+    } catch { return { label, fail: "err" }; }
+  };
+  const checkBlog = async host => {
+    const feed = `https://www.${host}/feed/`;
+    const routes = [
+      ["direct", feed, { headers: { "User-Agent": BF_UA, Accept: "application/rss+xml,text/xml,*/*" } }],
+      ["jina", "https://r.jina.ai/" + feed, { headers: { "X-Return-Format": "html" } }],
+      ["allorigins", "https://api.allorigins.win/raw?url=" + encodeURIComponent(feed), {}],
+      ["codetabs", "https://api.codetabs.com/v1/proxy?quest=" + encodeURIComponent(feed), {}],
+    ];
+    const fails = [];
+    for (const [label, u, opts] of routes) {
+      const r = await tryOne(label, u, opts);
+      if (r.ok) return `✅ ${host} — readable via ${label} (${r.items} posts, latest: "${r.title}")`;
+      fails.push(`${label}:${r.fail}`);
+    }
+    return `❌ ${host} — unreadable (${fails.join(" ")})`;
+  };
+  const results = await Promise.all(blogs.map(checkBlog));
+  res.type("text/plain").send("RSS FEED CHECK\n\n" + results.join("\n\n"));
+});
+
 // Backfill report — see what failed
 app.get("/api/backfill-status", async (_, res) => {
   await demoImagesLoaded;
