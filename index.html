@@ -3133,7 +3133,7 @@ async function getMenu(course){
         r.title &&  // skip image-only stubs from the backfill
         !demoURLs.has(r.source_url||r.title) &&
         !demoTitles.has((r.title||"").toLowerCase().trim()) &&
-        !CLOUDFLARE_BLOGS.has(r.blog||"")
+        ((r.ingredients||[]).length > 0 || !CLOUDFLARE_BLOGS.has(r.blog||""))
       );
       const merged     = [...enriched, ...newOnly];
 

@@ -365,7 +365,7 @@ app.get("/sw.js", (_, res) => {
   res.set("Content-Type", "application/javascript");
   res.set("Cache-Control", "no-cache");
   res.send(`
-const CACHE = "morgans-kitchen-v46";
+const CACHE = "morgans-kitchen-v47";
 
 self.addEventListener("install", e => {
   e.waitUntil(caches.open(CACHE).then(c => c.add("/")));
@@ -494,6 +494,96 @@ app.all("/api/backfill-images", async (req, res) => {
   })().catch(e => { bfState.running = false; console.error("[backfill]", e.message); });
 });
 
+// ── RSS auto-discovery ────────────────────────────────────────────────────────
+// Reads each blog's RSS feed, parses every new post through the JSON-LD recipe
+// parser (full ingredients, the blog's own nutrition facts, official photo).
+// Posts without a Recipe schema (roundups, essays) and desserts/snacks/drinks
+// are skipped. Results persist in Redis and are served through /api/menu.
+let discovered = {};
+const discoveredLoaded = kvGet("discovered_recipes")
+  .then(d => { if (d && typeof d === "object") discovered = d; }).catch(() => {});
+
+const FEED_BLOGS = ["skinnytaste.com","eatingbirdfood.com","themediterraneandish.com",
+  "pinchofyum.com","detoxinista.com","theeastcoastkitchen.com","fufuskitchen.com"];
+
+const SKIP_CATS = /dessert|snack|drink|cocktail|smoothie bowl cake|sweets|baking|cookie|cake|muffin|brownie/i;
+function feedCourse(cats) {
+  const c = cats.join(" ").toLowerCase();
+  if (SKIP_CATS.test(c)) return null;            // not a meal — skip
+  if (/breakfast|brunch/.test(c)) return "breakfast";
+  if (/salad/.test(c))            return "salad";
+  if (/lunch|sandwich|wrap/.test(c)) return "lunch";
+  return "dinner";                                // mains, soups, everything else
+}
+
+let discState = { running: false, done: 0, total: 0, added: 0, skipped: 0, lastRun: null };
+
+async function discoverNew() {
+  if (discState.running) return;
+  await Promise.all([discoveredLoaded, demoImagesLoaded]);
+  discState = { running: true, done: 0, total: 0, added: 0, skipped: 0, lastRun: new Date().toISOString() };
+  try {
+    const { parseRecipeFromHtml } = await import("./recipe-parser.js");
+    // URLs the app already has: DEMO entries + previously discovered
+    const known = new Set(Object.keys(discovered));
+    try {
+      const html = readFileSync("./index.html", "utf8");
+      for (const m of html.matchAll(/["']?source_url["']?\s*:\s*"(https?:\/\/[^"]+)"/g)) known.add(m[1].replace(/\/$/, ""));
+    } catch {}
+    // Collect candidate posts from all feeds
+    const candidates = [];
+    for (const host of FEED_BLOGS) {
+      try {
+        const r = await fetch(`https://www.${host}/feed/?nocache=${Date.now()}`,
+          { headers: { "User-Agent": BF_UA, Accept: "application/rss+xml,text/xml,*/*", "Cache-Control": "no-cache" },
+            signal: AbortSignal.timeout(10000) });
+        if (!r.ok) continue;
+        const $ = cheerio.load(await r.text(), { xmlMode: true });
+        $("item").each((_, el) => {
+          const link = $(el).find("link").first().text().trim();
+          const cats = $(el).find("category").map((_, c) => $(c).text()).get();
+          if (link) candidates.push({ link, cats });
+        });
+      } catch {}
+      await new Promise(rs => setTimeout(rs, 500));
+    }
+    const todo = candidates.filter(c => !known.has(c.link.replace(/\/$/, "")));
+    discState.total = todo.length;
+    for (const { link, cats } of todo) {
+      try {
+        const course = feedCourse(cats);
+        if (!course) { discState.skipped++; discState.done++; continue; }
+        const { html } = await bfFetchPage(link);
+        const rec = html ? parseRecipeFromHtml(html, link) : null;
+        if (rec?.title && rec.ingredients?.length) {
+          rec.course = course;
+          rec.blog = rec.blog || new URL(link).hostname.replace(/^www\./, "").split(".")[0];
+          discovered[link] = rec;
+          discState.added++;
+          await kvSet("discovered_recipes", discovered);
+        } else discState.skipped++;
+      } catch { discState.skipped++; }
+      discState.done++;
+      const SELF = process.env.RENDER_EXTERNAL_URL || "";
+      if (SELF && discState.done % 5 === 0) fetch(SELF + "/api/status").catch(() => {});
+      await new Promise(rs => setTimeout(rs, 2000));
+    }
+  } finally {
+    discState.running = false;
+    console.log(`[discover] done: +${discState.added} recipes, ${discState.skipped} skipped`);
+  }
+}
+
+app.all("/api/discover", async (req, res) => {
+  if (discState.running) {
+    return res.type("text/plain").send(
+      `Discovery running: ${discState.done}/${discState.total} posts checked, ${discState.added} recipes added, ${discState.skipped} skipped.`);
+  }
+  res.type("text/plain").send(
+    `Discovery started — reading all 7 blog feeds for new recipes. Reopen this page for progress; pull to refresh the app when done. (Library so far: ${Object.keys(discovered).length} discovered recipes.)`);
+  discoverNew().catch(e => console.error("[discover]", e.message));
+});
+
 // ── RSS feed reachability check ───────────────────────────────────────────────
 // One-tap diagnostic: which blogs' RSS feeds can this server actually read?
 // Tries each /feed/ directly, then through the proxies. Wayback is skipped on
@@ -562,6 +652,10 @@ app.get("/api/menu/:meal", (req, res) => {
   // are in the frontend's CLOUDFLARE_BLOGS exclusion list and their URLs match
   // existing DEMO entries).
   const have = new Set(recipes.map(r => r.source_url));
+  // Recipes auto-discovered from the blogs' RSS feeds (full details parsed)
+  const disc = Object.values(discovered).filter(r =>
+    (r.course || "dinner") === meal && !have.has(r.source_url));
+  disc.forEach(r => have.add(r.source_url));
   const stubs = Object.entries(demoImages)
     .filter(([u]) => !have.has(u))
     .map(([u, img]) => {
@@ -569,13 +663,14 @@ app.get("/api/menu/:meal", (req, res) => {
       try { blog = new URL(u).hostname.replace(/^www\./, "").split(".")[0]; } catch {}
       return { source_url: u, image: img, title: "", blog };
     });
-  res.json([...recipes, ...stubs]);
+  res.json([...recipes, ...disc, ...stubs]);
 });
 
 // Trigger a manual refresh (useful right after first deploy)
 app.all("/api/refresh", async (req, res) => {
   res.send("Refresh started — give it a minute or two, then reopen the app and pull to refresh.");
-  scrapeAll().catch(e => console.error("[manual] Scrape failed:", e.message));
+  scrapeAll().catch(e => console.error("[manual] Scrape failed:", e.message))
+    .finally(() => discoverNew().catch(e => console.error("[discover]", e.message)));
 });
 
 // Scrape status
