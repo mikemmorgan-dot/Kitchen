@@ -835,7 +835,7 @@ const DEMO = {
       ingredients:["8 large eggs","1 cup baby spinach, chopped","1/2 cup cherry tomatoes, halved","1/4 cup diced red onion","1/4 cup feta","salt and pepper"],
       instructions:[{name:null,steps:["Divide veggies among 12 greased muffin cups.","Pour in whisked eggs.","Bake 350°F, 18–20 min."]}],
       nutrition:{calories:100,protein_g:9,carbs_g:2,fat_g:6,fiber_g:0}, video:null, rating:{value:4.9,count:210} },
-    { title:"Blueberry Protein Smoothie", blog:"eatingbirdfood", source_url:"https://www.eatingbirdfood.com/blueberry-protein-smoothie/", image:"",
+    { title:"Blueberry Protein Smoothie", blog:"eatingbirdfood", source_url:"https://www.eatingbirdfood.com/health-nut-blueberry-smoothie/", image:"",
       servings:1, times:{prep:"5 mins",cook:null,total:"5 mins"},
       ingredients:["1 cup frozen blueberries","1 scoop vanilla protein powder","1 cup almond milk","1/2 cup Greek yogurt","1 tbsp almond butter","handful spinach"],
       instructions:[{name:null,steps:["Blend all ingredients on high until smooth.","Serve immediately."]}],
@@ -3370,16 +3370,20 @@ function proxyImg(url,w){
   if(API !== null) return `/img?url=${encodeURIComponent(full)}`;
   return `https://wsrv.nl/?url=ssl:${noScheme}&w=${w||800}&fit=cover`;
 }
-function placeholder(title,blog){
+function placeholder(title,blog,noText){
   const t=(title||"Recipe").replace(/&/g,"and");
+  // noText: gradient + ring only (used where a caption already shows the title,
+  // e.g. the recipe detail hero — otherwise the name would print twice).
+  const words = noText ? "" :
+    "<text x='400' y='398' font-family='Georgia,serif' font-size='40' fill='#2E4429' text-anchor='middle'>"+t+"</text>"+
+    (blog?"<text x='400' y='444' font-family='Georgia,serif' font-size='24' fill='#C2693F' text-anchor='middle'>"+blog+"</text>":"");
   const svg="<svg xmlns='http://www.w3.org/2000/svg' width='800' height='600'>"+
     "<defs><linearGradient id='g' x1='0' y1='0' x2='1' y2='1'>"+
     "<stop offset='0' stop-color='#EAF0DF'/><stop offset='.55' stop-color='#F1E3CF'/>"+
     "<stop offset='1' stop-color='#E6C2AC'/></linearGradient></defs>"+
     "<rect width='800' height='600' fill='url(#g)'/>"+
     "<circle cx='400' cy='250' r='60' fill='none' stroke='#3F5C3A' stroke-width='6' opacity='.5'/>"+
-    "<text x='400' y='398' font-family='Georgia,serif' font-size='40' fill='#2E4429' text-anchor='middle'>"+t+"</text>"+
-    (blog?"<text x='400' y='444' font-family='Georgia,serif' font-size='24' fill='#C2693F' text-anchor='middle'>"+blog+"</text>":"")+
+    words+
     "</svg>";
   return "data:image/svg+xml;utf8,"+encodeURIComponent(svg).replace(/'/g,"%27");
 }
@@ -3388,8 +3392,8 @@ function imgFallback(el){
   if(step===0){ el.dataset.step="1"; el.src=el.dataset.proxied; }      // try proxy
   else { el.onerror=null; el.src=el.dataset.ph; }                       // give up -> placeholder
 }
-function imgEl(src,title,cls,w,blog){
-  const ph=placeholder(title,blog);
+function imgEl(src,title,cls,w,blog,noText){
+  const ph=placeholder(title,blog,noText);
   if(!src) return `<img class="${cls}" src="${ph}" alt="${title}">`;
   return `<img class="${cls}" loading="lazy" src="${src}" data-proxied="${proxyImg(src,w)}" data-ph="${ph}" onerror="imgFallback(this)" alt="${title}">`;
 }
@@ -4055,7 +4059,7 @@ function drawRecipe(r){
   app.innerHTML=`
    <div class="back" onclick="${S.recipeOrigin==='plan'?`go('plan')`:`openMeal('${S.meal}')`}">← ${S.recipeOrigin==='plan'?'meal plan':S.meal+' menu'}</div>
    <div class="r-hero fade">
-     ${imgEl(r.image,r.title,"",1000,r.blog)}
+     ${imgEl(r.image,r.title,"",1000,r.blog,true)}
      <div class="grad"></div>
      <div class="cap"><div class="blog">${r.blog||""}</div><h2>${r.title}</h2></div>
    </div>
