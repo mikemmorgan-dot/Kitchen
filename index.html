@@ -2807,6 +2807,7 @@ const S = {
   servings:null, servingsFor:null,   // chosen serving count + which recipe it's for
   view:"cook", log:{},               // log: { "YYYY-MM-DD": [ {meal,course,title,blog,protein,key} ] }
   plan:{}, shopChecked:new Set(),     // plan: { "YYYY-MM-DD": { breakfast:[entry], lunch:[], dinner:[] } }
+  savedRecipes:{},                    // key -> full recipe snapshot for every planned recipe (survives reloads/sync)
   mealMoves:{},                       // { recipeKey: "breakfast"|"lunch"|"dinner"|"salad" } — recategorized recipes
   movedRecipes:{},                    // { recipeKey: full recipe } — snapshot so moved recipes always render
   blogFilter:null, fullMenuList:[],   // active blog filter and unfiltered list
@@ -2852,7 +2853,7 @@ function findRecipeByKey(key){
     const r=(DEMO[course]||[]).find(r=>recipeKey(r)===key);
     if(r) return r;
   }
-  return null;
+  return S.savedRecipes?.[key] || S.favouriteRecipes?.[key] || null;
 }
 
 // ── Profile helpers ──────────────────────────────────────────────────────────
@@ -2935,7 +2936,14 @@ function serialShared(){
       planClean[day][m]=(list||[]).map(({recipe,...rest})=>rest);
     });
   });
-  return {plan:planClean, shopChecked:[...S.shopChecked], mealMoves:S.mealMoves, movedRecipes:S.movedRecipes};
+  // Persist full snapshots for every recipe referenced by the plan, so plan
+  // items always reopen after reload/sync — including URL-loaded recipes that
+  // exist nowhere else. Pruned to current plan keys so it can't grow forever.
+  const refKeys=new Set();
+  Object.values(S.plan).forEach(meals=>Object.values(meals||{}).forEach(list=>(list||[]).forEach(e=>refKeys.add(e.key))));
+  const savedClean={};
+  refKeys.forEach(k=>{ if(S.savedRecipes[k]) savedClean[k]=S.savedRecipes[k]; });
+  return {plan:planClean, savedRecipes:savedClean, shopChecked:[...S.shopChecked], mealMoves:S.mealMoves, movedRecipes:S.movedRecipes};
 }
 
 function applyPersonal(data){
@@ -2954,6 +2962,7 @@ function applyShared(data){
   if(data.shopChecked) S.shopChecked=new Set(data.shopChecked);
   if(data.mealMoves)    Object.assign(S.mealMoves, data.mealMoves);
   if(data.movedRecipes) Object.assign(S.movedRecipes, data.movedRecipes);
+  if(data.savedRecipes) S.savedRecipes={...S.savedRecipes, ...data.savedRecipes};
   if(data.plan){
     S.plan={};
     Object.entries(data.plan).forEach(([day,meals])=>{
@@ -3147,6 +3156,7 @@ function addToPlan(){
   S.plan[day][meal]=S.plan[day][meal]||[];
   if(S.plan[day][meal].some(e=>e.key===recipeKey(r))){ toast("Already in the plan"); return; }
   S.plan[day][meal].push(planEntry(r,meal,S.servings));
+  S.savedRecipes[recipeKey(r)] = r; // persist the full recipe so it always reopens (incl. URL-loaded ones)
   const lbl=$("planDay")?$("planDay").selectedOptions[0].textContent:"the plan";
   toast(`Added to ${lbl} 🗓️`); save();
 }
@@ -3758,6 +3768,10 @@ function renderCardItems(list, course){
 }
 
 function renderCards(list, course){
+  // Hide recipes with no photo — these are mostly dead/unfetchable source pages.
+  // Display-only: the entries stay in DEMO, so any recipe that later gains an
+  // image (repointed slug, server backfill) reappears automatically.
+  list = list.filter(r => r.image || r.thumb);
   S.fullMenuList = list; S.blogFilter = null; S.proteinFilter = null;
   LISTS[course] = list;
   refreshFavChip();
