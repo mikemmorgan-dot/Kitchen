@@ -2814,6 +2814,7 @@ const S = {
   blogFilter:null, fullMenuList:[],   // active blog filter and unfiltered list
   proteinFilter:null,                 // active protein-source filter
   searchQuery:null, favFilter:false,  // search text + favourites-only toggle
+  newFilter:false,                    // show only recipes added in the last 7 days
   sortBy:null,                        // active sort key (null = default order)
   favourites:new Set(),               // Set of recipe keys
   favouriteRecipes:{},                // { key: full recipe object } — survives scrapes/deploys
@@ -3459,6 +3460,7 @@ async function loadFromUrl(){
     // so it shows up in the menus on both phones from now on.
     if(recipe.ingredients?.length){
       recipe.course = ["breakfast","lunch","dinner","salad"].includes(S.meal) ? S.meal : "dinner";
+      recipe.added = Date.now();
       if(!S.library[recipeKey(recipe)]){
         S.library[recipeKey(recipe)] = recipe;
         save();
@@ -3484,7 +3486,7 @@ async function loadFromUrl(){
 async function openMeal(meal){
   const cached = _menuMem[meal]; // will exist if she's coming back from a recipe
   S.meal=meal; S.course="main"; S.blogFilter=null; S.proteinFilter=null;
-  S.fullMenuList=[]; S.searchQuery=null; S.favFilter=false;
+  S.fullMenuList=[]; S.searchQuery=null; S.favFilter=false; S.newFilter=false;
   app.innerHTML=`<div class="back" onclick="home()">← meals</div>
     <div class="menu-head fade">
       <div class="eyebrow">${meal}</div>
@@ -3515,8 +3517,9 @@ async function openMeal(meal){
     S.proteinFilter = cached.proteinFilter;
     S.searchQuery   = cached.searchQuery;
     S.favFilter     = cached.favFilter;
+    S.newFilter     = cached.newFilter ?? false;
     S.sortBy        = cached.sortBy ?? null;
-    if(S.blogFilter || S.proteinFilter || S.searchQuery || S.favFilter || S.sortBy){
+    if(S.blogFilter || S.proteinFilter || S.searchQuery || S.favFilter || S.newFilter || S.sortBy){
       applyFilters();
     }
     refreshFavChip();
@@ -3651,6 +3654,7 @@ function applyFilters(){
   if(S.favFilter){
     list = mealFavList();
   }
+  if(S.newFilter) list = list.filter(isNewRecipe);
   if(S.blogFilter)    list = list.filter(r=>r.blog===S.blogFilter);
   if(S.proteinFilter) list = list.filter(r=>proteinType(r)===S.proteinFilter);
   if(S.searchQuery){
@@ -3674,6 +3678,15 @@ function filterSearch(q){
   if(clr) clr.style.display = S.searchQuery ? "flex":"none";
   if(inp && inp.value!==q) inp.value = q;
   applyFilters();
+}
+
+function isNewRecipe(r){
+  return !!r.added && (Date.now() - r.added) < 7*86400000; // added in last 7 days
+}
+function filterNew(){
+  S.newFilter = !S.newFilter;
+  S.blogFilter = null;
+  refreshFavChip(); refreshProteinBar(); applyFilters();
 }
 
 function filterFavourites(){
@@ -3711,10 +3724,12 @@ function toggleFav(key, e){
 function refreshFavChip(){
   const fb=$("filter-bar"); if(!fb||!S.fullMenuList.length) return;
   const favCount=mealFavList().length;
+  const newCount=S.fullMenuList.filter(isNewRecipe).length;
   const blogs=[...new Set(S.fullMenuList.map(r=>r.blog).filter(Boolean))];
   fb.innerHTML=[
     favCount>0?`<button class="chip${S.favFilter?' fav-active':''}" onclick="filterFavourites()">❤️ Favourites<span class="chip-cnt">${favCount}</span></button>`:"",
-    `<button class="chip" data-blog="" aria-pressed="${!S.blogFilter&&!S.favFilter}" onclick="filterBlog('')">All</button>`,
+    newCount>0?`<button class="chip${S.newFilter?' fav-active':''}" onclick="filterNew()">🆕 New<span class="chip-cnt">${newCount}</span></button>`:"",
+    `<button class="chip" data-blog="" aria-pressed="${!S.blogFilter&&!S.favFilter&&!S.newFilter}" onclick="filterBlog('')">All</button>`,
     ...blogs.map(b=>`<button class="chip" data-blog="${b}" aria-pressed="${S.blogFilter===b}" onclick="filterBlog('${b}')">${BLOG_LABELS[b]||b}</button>`)
   ].filter(Boolean).join("");
 }
@@ -3875,6 +3890,7 @@ async function openRecipe(course,i){
       proteinFilter: S.proteinFilter,
       searchQuery: S.searchQuery,
       favFilter:   S.favFilter,
+      newFilter:   S.newFilter,
       sortBy:      S.sortBy,
       scrollY:     window.scrollY,
     };

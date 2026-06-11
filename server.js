@@ -365,7 +365,7 @@ app.get("/sw.js", (_, res) => {
   res.set("Content-Type", "application/javascript");
   res.set("Cache-Control", "no-cache");
   res.send(`
-const CACHE = "morgans-kitchen-v49";
+const CACHE = "morgans-kitchen-v50";
 
 self.addEventListener("install", e => {
   e.waitUntil(caches.open(CACHE).then(c => c.add("/")));
@@ -501,7 +501,16 @@ app.all("/api/backfill-images", async (req, res) => {
 // are skipped. Results persist in Redis and are served through /api/menu.
 let discovered = {};
 const discoveredLoaded = kvGet("discovered_recipes")
-  .then(d => { if (d && typeof d === "object") discovered = d; }).catch(() => {});
+  .then(d => {
+    if (d && typeof d === "object") {
+      discovered = d;
+      // Recipes saved before timestamps existed get stamped now (one-time),
+      // so they appear under the app's "New" filter.
+      let stamped = false;
+      for (const r of Object.values(discovered)) if (!r.added) { r.added = Date.now(); stamped = true; }
+      if (stamped) kvSet("discovered_recipes", discovered).catch(() => {});
+    }
+  }).catch(() => {});
 
 const FEED_BLOGS = ["skinnytaste.com","eatingbirdfood.com","themediterraneandish.com",
   "pinchofyum.com","detoxinista.com","theeastcoastkitchen.com","fufuskitchen.com"];
@@ -557,6 +566,7 @@ async function discoverNew() {
         const rec = html ? parseRecipeFromHtml(html, link) : null;
         if (rec?.title && rec.ingredients?.length) {
           rec.course = course;
+          rec.added = Date.now();
           rec.blog = rec.blog || new URL(link).hostname.replace(/^www\./, "").split(".")[0];
           discovered[link] = rec;
           discState.added++;
@@ -675,12 +685,18 @@ app.all("/api/refresh", async (req, res) => {
 
 // Scrape status
 app.get("/api/status", (_, res) => {
+  const discByCourse = {};
+  for (const r of Object.values(discovered)) {
+    const c = r.course || "dinner";
+    discByCourse[c] = (discByCourse[c] || 0) + 1;
+  }
+  res.set("X-Discovered", String(Object.keys(discovered).length));
   const counts = Object.fromEntries(
     Object.entries(recipeStore)
       .filter(([k]) => k !== "lastUpdated")
       .map(([k, v]) => [k, Array.isArray(v) ? v.length : 0])
   );
-  res.json({ lastUpdated: recipeStore.lastUpdated || null, counts });
+  res.json({ discovered: discByCourse, lastUpdated: recipeStore.lastUpdated || null, counts });
 });
 
 // ── Profile management ────────────────────────────────────────────────────────
