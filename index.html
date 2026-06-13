@@ -3452,6 +3452,7 @@ function slotOptions(kind){
 }
 function drawSlots(){
   S.view="cook"; setNav(); S.meal=null;
+  window.scrollTo(0,0); // always open at the top (reels first, results below)
   SLOT.pool = slotPool();
   for(const k of ["p","v","k"]) if(!SLOT.sel[k]){ const o=slotOptions(k); SLOT.sel[k]=o[Math.floor(Math.random()*o.length)]||null; }
   app.innerHTML=`
@@ -3495,16 +3496,22 @@ function slotRender(){
   const out=document.getElementById("slotResults"); if(!out) return;
   const sel=SLOT.sel;
   const showable = window._serverAnswered ? SLOT.pool.filter(r=>r.image||r.thumb) : SLOT.pool;
-  const scored = showable.map(r=>({r,hits:slotMatches(r,sel)})).filter(x=>x.hits>0)
+  // The protein reel is the ANCHOR: recipes must contain it (you don't cook
+  // chicken when you've picked shrimp). Veggie + pantry rank within that.
+  const scored = showable.map(r=>{
+    const ing=(r.ingredients||[]).join(" ");
+    if(sel.p && !slotIngRx(sel.p).test(ing)) return null;
+    return {r,hits:slotMatches(r,sel)};
+  }).filter(x=>x && x.hits>0)
     .sort((a,b)=>b.hits-a.hits || (b.r.nutrition?.protein_g||0)-(a.r.nutrition?.protein_g||0))
     .slice(0,25);
-  if(!scored.length){ out.innerHTML=`<p style="text-align:center;color:var(--ink-soft)">No matches — spin again!</p>`; return; }
+  if(!scored.length){ out.innerHTML=`<p style="text-align:center;color:var(--ink-soft)">No ${sel.p||""} recipes match — spin again or pick a different protein!</p>`; return; }
   const missing=(r)=>Object.values(sel).filter(w=>w && !slotIngRx(w).test((r.ingredients||[]).join(" ")));
   out.innerHTML = `<div class="eyebrow">${scored.length} matching recipe${scored.length>1?"s":""}</div>` +
     scored.map(({r,hits},i)=>`
       <div class="slot-row" onclick="slotOpen(${i})">
         <div style="flex:1"><b>${r.title}</b><div class="meta">${r.blog||""} · 💪 ${r.nutrition?.protein_g||"?"}g</div></div>
-        <div class="hit hit-${hits}">${hits===3?"uses all 3":hits===2?`missing ${missing(r)[0]||""}`:"uses 1"}</div>
+        <div class="hit hit-${hits}">${hits===3?"uses all 3":hits===2?`missing ${missing(r)[0]||""}`:`just ${sel.p||"1 match"}`}</div>
       </div>`).join("");
   SLOT._scored = scored;
 }
