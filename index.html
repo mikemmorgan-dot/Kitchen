@@ -3457,7 +3457,7 @@ function slotOptions(kind){
   return SLOT_VOCAB[kind].words.filter(w=>pool.some(r=>slotIngRx(w).test((r.ingredients||[]).join(" "))));
 }
 function drawSlots(){
-  S.view="cook"; setNav(); S.meal=null;
+  S.view="cook"; setNav(); S.meal=null; S.fromSlots=false;
   window.scrollTo(0,0); // always open at the top (reels first, results below)
   SLOT.pool = slotPool();
   for(const k of ["p","v","k"]) if(!SLOT.sel[k]){ const o=slotOptions(k); SLOT.sel[k]=o[Math.floor(Math.random()*o.length)]||null; }
@@ -3527,6 +3527,7 @@ function slotRender(){
 function slotOpen(i){
   const r=SLOT._scored?.[i]?.r; if(!r) return;
   S.course="main"; S.picks.main=r; LISTS.main=[r];
+  S.fromSlots = true; // back chip returns to spin results, not a meal menu
   drawRecipe(r); window.scrollTo({top:0,behavior:"smooth"});
 }
 
@@ -4061,7 +4062,11 @@ async function openRecipe(course,i){
   // New server-scraped recipes only have title/url/image — fetch full data before rendering
   if(!r.ingredients && r.source_url && API !== null){
     app.innerHTML=`
-      <div class="back" onclick="openMeal('${S.meal}')">← ${S.meal} menu</div>
+      ${S.fromSlots
+        ? `<div class="back" onclick="S.fromSlots=false;drawSlots()">← spin results</div>`
+        : S.meal
+          ? `<div class="back" onclick="openMeal('${S.meal}')">← ${S.meal} menu</div>`
+          : `<div class="back" onclick="home()">← back</div>`}
       <div style="padding:80px 18px;text-align:center;color:var(--ink-soft)">
         <div style="font-size:36px;margin-bottom:14px">⏳</div>
         <div>Loading recipe from ${r.blog||"blog"}…</div>
