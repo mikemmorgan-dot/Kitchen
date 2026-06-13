@@ -110,6 +110,25 @@
     color:var(--ink);outline:none;-webkit-appearance:none}
   .url-input:focus{border-color:var(--herb)}
   .url-input::placeholder{color:var(--ink-soft)}
+  /* ── Spin-to-cook slot machine ── */
+  .slot-section{margin-top:18px}
+  .slot-open{width:100%;display:flex;align-items:center;gap:14px;background:linear-gradient(120deg,#3F5C3A,#2E4429);
+    color:#FDF8EE;border:none;border-radius:18px;padding:18px 20px;font-size:1.05rem;cursor:pointer;box-shadow:0 6px 18px rgba(46,68,41,.25)}
+  .slot-open .em{font-size:1.7rem}
+  .slot-open small{display:block;opacity:.75;font-size:.8rem}
+  .reels{display:flex;gap:10px;margin:18px 0}
+  .reel{flex:1;background:#fff;border:2px solid var(--line,#E8DCC8);border-radius:16px;padding:10px 8px;text-align:center;position:relative}
+  .reel.locked{border-color:#C2693F;background:#FBF3EA}
+  .reel .r-em{font-size:1.5rem}
+  .reel select{width:100%;border:none;background:transparent;font-family:Georgia,serif;font-size:.95rem;color:#2E4429;text-align:center;text-align-last:center;margin-top:4px}
+  .reel.spinning select{filter:blur(2px);transition:filter .1s}
+  .reel .lockbtn{position:absolute;top:-10px;right:-6px;background:#fff;border:1px solid var(--line,#E8DCC8);border-radius:50%;width:30px;height:30px;font-size:.85rem;cursor:pointer}
+  .spin-btn{width:100%;background:#C2693F;color:#fff;border:none;border-radius:16px;padding:16px;font-size:1.1rem;cursor:pointer;box-shadow:0 6px 16px rgba(194,105,63,.3)}
+  .spin-btn:active{transform:scale(.98)}
+  .slot-row{display:flex;align-items:center;gap:12px;background:#fff;border-radius:14px;padding:12px 14px;margin-bottom:10px;cursor:pointer;box-shadow:0 2px 8px rgba(0,0,0,.05)}
+  .slot-row .hit{font-size:.72rem;padding:4px 8px;border-radius:10px;white-space:nowrap}
+  .hit-3{background:#E3EFD9;color:#2E4429}.hit-2{background:#FBF0E2;color:#9A5B2F}.hit-1{background:#F4EDE2;color:#8C8270}
+  .slot-row .meta{font-size:.75rem;color:var(--ink-soft)}
   .url-go{width:50px;flex-shrink:0;border-radius:14px;background:var(--herb);
     color:#fff;font-size:22px;display:flex;align-items:center;justify-content:center;
     transition:background .15s}
@@ -3398,6 +3417,103 @@ function imgEl(src,title,cls,w,blog,noText){
   return `<img class="${cls}" loading="lazy" src="${src}" data-proxied="${proxyImg(src,w)}" data-ph="${ph}" onerror="imgFallback(this)" alt="${title}">`;
 }
 
+/* ── Spin-to-cook slot machine ───────────────────────────────────────────────
+   Three reels (protein / veggie / pantry) built from ingredients that actually
+   appear in the library, so every combination maps to real recipes. Reels can
+   be locked, or set directly via their dropdowns; SPIN randomizes the rest.
+   Results rank live by how many selected ingredients each recipe uses. */
+const SLOT_VOCAB = {
+  p:{em:"🥩",label:"Protein",words:["chicken","ground turkey","turkey","beef","salmon","shrimp","tuna","egg","tofu","chickpeas","black beans","lentils","cottage cheese","greek yogurt","pork"]},
+  v:{em:"🥦",label:"Veggie", words:["spinach","broccoli","zucchini","bell pepper","tomato","cucumber","kale","cauliflower","mushroom","avocado","sweet potato","corn","carrot","green beans","onion"]},
+  k:{em:"🧺",label:"Pantry", words:["rice","pasta","quinoa","feta","mozzarella","parmesan","tortilla","oats","peanut butter","pesto","coconut milk","honey","lemon","garlic","soy sauce"]}
+};
+const SLOT = { sel:{p:null,v:null,k:null}, locked:{p:false,v:false,k:false}, pool:[] };
+
+function slotIngRx(w){ // word-boundary match w/ simple plural: "egg" hits "eggs" not "eggplant"
+  return new RegExp("\\b"+w.replace(/[.*+?^${}()|[\]\\]/g,"\\$&")+"(e?s)?\\b","i");
+}
+function slotPool(){
+  const seen=new Set(), pool=[];
+  const push=r=>{ if(!r||!r.title||!(r.ingredients||[]).length) return;
+    const k=recipeKey(r); if(seen.has(k)) return; seen.add(k); pool.push(r); };
+  Object.values(DEMO).forEach(list=>(list||[]).forEach(push));
+  Object.values(S.library||{}).forEach(push);
+  Object.values(S.savedRecipes||{}).forEach(push);
+  Object.values(S.favouriteRecipes||{}).forEach(push);
+  return pool;
+}
+function slotMatches(r,sel){
+  const ing=(r.ingredients||[]).join(" ");
+  return Object.values(sel).filter(w=>w && slotIngRx(w).test(ing)).length;
+}
+function slotOptions(kind){
+  // only offer ingredients that actually hit ≥1 recipe in the pool
+  return SLOT_VOCAB[kind].words.filter(w=>SLOT.pool.some(r=>slotIngRx(w).test((r.ingredients||[]).join(" "))));
+}
+function drawSlots(){
+  S.view="cook"; setNav(); S.meal=null;
+  SLOT.pool = slotPool();
+  for(const k of ["p","v","k"]) if(!SLOT.sel[k]){ const o=slotOptions(k); SLOT.sel[k]=o[Math.floor(Math.random()*o.length)]||null; }
+  app.innerHTML=`
+   <div class="back" onclick="home()">← back</div>
+   <section class="hero fade"><h1 class="display">Spin to <span class="italic">cook</span> 🎰</h1>
+   <p>Lock what you must use, spin the rest — recipes that match appear below.</p></section>
+   <div class="reels">
+     ${["p","v","k"].map(k=>`
+       <div class="reel ${SLOT.locked[k]?"locked":""}" id="reel-${k}">
+         <button class="lockbtn" onclick="slotLock('${k}')" aria-label="lock">${SLOT.locked[k]?"🔒":"🔓"}</button>
+         <div class="r-em">${SLOT_VOCAB[k].em}</div>
+         <select onchange="slotSet('${k}',this.value)">
+           ${slotOptions(k).map(w=>`<option ${w===SLOT.sel[k]?"selected":""}>${w}</option>`).join("")}
+         </select>
+       </div>`).join("")}
+   </div>
+   <button class="spin-btn" onclick="slotSpin()">SPIN 🎲</button>
+   <div id="slotResults" style="margin-top:20px"></div>`;
+  slotRender();
+}
+function slotLock(k){ SLOT.locked[k]=!SLOT.locked[k]; const el=document.getElementById("reel-"+k);
+  if(el){ el.classList.toggle("locked",SLOT.locked[k]); el.querySelector(".lockbtn").textContent=SLOT.locked[k]?"🔒":"🔓"; } }
+function slotSet(k,v){ SLOT.sel[k]=v; slotRender(); }
+function slotSpin(){
+  const free=["p","v","k"].filter(k=>!SLOT.locked[k]);
+  if(!free.length){ slotRender(); return; }
+  free.forEach(k=>document.getElementById("reel-"+k)?.classList.add("spinning"));
+  let ticks=0;
+  const iv=setInterval(()=>{
+    ticks++;
+    free.forEach(k=>{
+      const o=slotOptions(k); const w=o[Math.floor(Math.random()*o.length)];
+      SLOT.sel[k]=w; const sel=document.querySelector(`#reel-${k} select`); if(sel) sel.value=w;
+    });
+    if(ticks>=8){ clearInterval(iv);
+      free.forEach(k=>document.getElementById("reel-"+k)?.classList.remove("spinning"));
+      slotRender(); }
+  },120);
+}
+function slotRender(){
+  const out=document.getElementById("slotResults"); if(!out) return;
+  const sel=SLOT.sel;
+  const showable = window._serverAnswered ? SLOT.pool.filter(r=>r.image||r.thumb) : SLOT.pool;
+  const scored = showable.map(r=>({r,hits:slotMatches(r,sel)})).filter(x=>x.hits>0)
+    .sort((a,b)=>b.hits-a.hits || (b.r.nutrition?.protein_g||0)-(a.r.nutrition?.protein_g||0))
+    .slice(0,25);
+  if(!scored.length){ out.innerHTML=`<p style="text-align:center;color:var(--ink-soft)">No matches — spin again!</p>`; return; }
+  const missing=(r)=>Object.values(sel).filter(w=>w && !slotIngRx(w).test((r.ingredients||[]).join(" ")));
+  out.innerHTML = `<div class="eyebrow">${scored.length} matching recipe${scored.length>1?"s":""}</div>` +
+    scored.map(({r,hits},i)=>`
+      <div class="slot-row" onclick="slotOpen(${i})">
+        <div style="flex:1"><b>${r.title}</b><div class="meta">${r.blog||""} · 💪 ${r.nutrition?.protein_g||"?"}g</div></div>
+        <div class="hit hit-${hits}">${hits===3?"uses all 3":hits===2?`missing ${missing(r)[0]||""}`:"uses 1"}</div>
+      </div>`).join("");
+  SLOT._scored = scored;
+}
+function slotOpen(i){
+  const r=SLOT._scored?.[i]?.r; if(!r) return;
+  S.course="main"; S.picks.main=r; LISTS.main=[r];
+  drawRecipe(r); window.scrollTo({top:0,behavior:"smooth"});
+}
+
 function home(){
   S.view="cook"; setNav();
   S.meal=null;S.course="main";S.picks={main:null,salad:null,dessert:null};
@@ -3415,6 +3531,13 @@ function home(){
          <div><h3 class="display">${k[0].toUpperCase()+k.slice(1)}</h3><small>${m.sub}</small></div>
          <div class="arrow">→</div>
        </button>`).join("")}
+   </div>
+   <div class="slot-section fade">
+     <button class="slot-open" onclick="drawSlots()">
+       <div class="em">🎰</div>
+       <div style="text-align:left"><b>Spin to cook</b><small>Pick your ingredients — or let fate decide tonight's dinner</small></div>
+       <div class="arrow" style="margin-left:auto">→</div>
+     </button>
    </div>
    <div class="url-section fade">
      <div class="eyebrow">or load any recipe</div>
