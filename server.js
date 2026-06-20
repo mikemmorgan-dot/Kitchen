@@ -599,6 +599,60 @@ app.all("/api/discover", async (req, res) => {
   discoverNew().catch(e => console.error("[discover]", e.message));
 });
 
+// ── Featured recipes loader (curated, parsed through the same pipeline) ───────
+// Verified real URLs are fetched via the full chain and parsed for the blog's
+// own ingredients / nutrition / photo, then stored alongside discovered recipes
+// (date-stamped, so they also show under the app's New filter). One tap.
+const FEATURED = [
+  { url: "https://theeastcoastkitchen.com/nova-scotian-lobster-boil/", course: "dinner" },
+  { url: "https://theeastcoastkitchen.com/lobster-mac-cheese/", course: "dinner" },
+  { url: "https://theeastcoastkitchen.com/lobster-pasta/", course: "dinner" },
+  { url: "https://theeastcoastkitchen.com/creamed-lobster-on-toast-a-cozy-nova-scotia-classic/", course: "dinner" },
+  { url: "https://theeastcoastkitchen.com/east-coast-lobster-rolls-delicious-dinner-recipes/", course: "lunch" },
+  { url: "https://theeastcoastkitchen.com/lobster-roll/", course: "lunch" },
+];
+let featState = { running: false, done: 0, total: 0, added: 0, failed: [] };
+
+app.all("/api/add-featured", async (req, res) => {
+  if (featState.running) {
+    return res.type("text/plain").send(`Loading featured recipes: ${featState.done}/${featState.total} done, ${featState.added} added.`);
+  }
+  await discoveredLoaded;
+  const todo = FEATURED.filter(f => !discovered[f.url]);
+  if (!todo.length) {
+    return res.type("text/plain").send(`All ${FEATURED.length} featured recipes are already in your library 🦞 — pull to refresh the app.`);
+  }
+  featState = { running: true, done: 0, total: todo.length, added: 0, failed: [] };
+  res.type("text/plain").send(`Loading ${todo.length} featured lobster recipes 🦞 — reopen this page for progress, then pull to refresh the app.`);
+  (async () => {
+    const { parseRecipeFromHtml } = await import("./recipe-parser.js");
+    for (const { url, course } of todo) {
+      try {
+        const { html } = await bfFetchPage(url);
+        const rec = html ? parseRecipeFromHtml(html, url) : null;
+        if (rec && rec.title && (rec.ingredients || []).length) {
+          rec.course = course;
+          rec.added = Date.now();
+          rec.blog = rec.blog || new URL(url).hostname.replace(/^www\./, "").split(".")[0];
+          discovered[url] = rec;
+          featState.added++;
+          await kvSet("discovered_recipes", discovered);
+        } else {
+          featState.failed.push(url);
+        }
+      } catch (e) {
+        featState.failed.push(url);
+      }
+      featState.done++;
+      await new Promise(r => setTimeout(r, 1500));
+    }
+    featState.running = false;
+    console.log(`[featured] done: +${featState.added}, failed ${featState.failed.length}`);
+  })().catch(e => { featState.running = false; console.error("[featured]", e.message); });
+});
+
+app.get("/api/add-featured-status", (_, res) => res.json(featState));
+
 // ── RSS feed reachability check ───────────────────────────────────────────────
 // One-tap diagnostic: which blogs' RSS feeds can this server actually read?
 // Tries each /feed/ directly, then through the proxies. Wayback is skipped on
