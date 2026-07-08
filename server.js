@@ -370,7 +370,7 @@ app.get("/sw.js", (_, res) => {
   res.set("Content-Type", "application/javascript");
   res.set("Cache-Control", "no-cache");
   res.send(`
-const CACHE = "morgans-kitchen-v61";
+const CACHE = "morgans-kitchen-v62";
 
 self.addEventListener("install", e => {
   e.waitUntil(caches.open(CACHE).then(c => c.add("/")));
@@ -532,7 +532,7 @@ function feedCourse(cats) {
 
 let discState = { running: false, done: 0, total: 0, added: 0, skipped: 0, lastRun: null };
 
-async function discoverNew() {
+async function discoverNew(pages = 1) {
   if (discState.running) return;
   await Promise.all([discoveredLoaded, demoImagesLoaded]);
   discState = { running: true, done: 0, total: 0, added: 0, skipped: 0, lastRun: new Date().toISOString() };
@@ -547,19 +547,25 @@ async function discoverNew() {
     // Collect candidate posts from all feeds
     const candidates = [];
     for (const host of FEED_BLOGS) {
-      try {
-        const r = await fetch(`https://www.${host}/feed/?nocache=${Date.now()}`,
-          { headers: { "User-Agent": BF_UA, Accept: "application/rss+xml,text/xml,*/*", "Cache-Control": "no-cache" },
-            signal: AbortSignal.timeout(10000) });
-        if (!r.ok) continue;
-        const $ = cheerio.load(await r.text(), { xmlMode: true });
-        $("item").each((_, el) => {
-          const link = $(el).find("link").first().text().trim();
-          const cats = $(el).find("category").map((_, c) => $(c).text()).get();
-          if (link) candidates.push({ link, cats });
-        });
-      } catch {}
-      await new Promise(rs => setTimeout(rs, 500));
+      // WordPress feeds are paginated (?paged=N) — deep mode walks back through
+      // history to bulk-add older recipes; weekly runs read just page 1.
+      for (let p = 1; p <= pages; p++) {
+        try {
+          const r = await fetch(`https://www.${host}/feed/?paged=${p}&nocache=${Date.now()}`,
+            { headers: { "User-Agent": BF_UA, Accept: "application/rss+xml,text/xml,*/*", "Cache-Control": "no-cache" },
+              signal: AbortSignal.timeout(10000) });
+          if (!r.ok) break; // past the last page (WP returns 404) — stop this blog
+          const $ = cheerio.load(await r.text(), { xmlMode: true });
+          let found = 0;
+          $("item").each((_, el) => {
+            const link = $(el).find("link").first().text().trim();
+            const cats = $(el).find("category").map((_, c) => $(c).text()).get();
+            if (link) { candidates.push({ link, cats }); found++; }
+          });
+          if (!found) break;
+        } catch { break; }
+        await new Promise(rs => setTimeout(rs, 700));
+      }
     }
     const todo = candidates.filter(c => !known.has(c.link.replace(/\/$/, "")));
     discState.total = todo.length;
@@ -594,9 +600,10 @@ app.all("/api/discover", async (req, res) => {
     return res.type("text/plain").send(
       `Discovery running: ${discState.done}/${discState.total} posts checked, ${discState.added} recipes added, ${discState.skipped} skipped.`);
   }
+  const deep = "deep" in req.query;
   res.type("text/plain").send(
-    `Discovery started — reading all 7 blog feeds for new recipes. Reopen this page for progress; pull to refresh the app when done. (Library so far: ${Object.keys(discovered).length} discovered recipes.)`);
-  discoverNew().catch(e => console.error("[discover]", e.message));
+    `Discovery started${deep ? " in DEEP mode — walking back through up to 5 pages of every blog's feed (10-20 min)" : " — reading all 7 blog feeds for new recipes"}. Reopen this page for progress; pull to refresh the app when done. (Library so far: ${Object.keys(discovered).length} discovered recipes.)`);
+  discoverNew(deep ? 5 : 1).catch(e => console.error("[discover]", e.message));
 });
 
 // ── Featured recipes loader (curated, parsed through the same pipeline) ───────

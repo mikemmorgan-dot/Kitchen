@@ -110,6 +110,12 @@
     color:var(--ink);outline:none;-webkit-appearance:none}
   .url-input:focus{border-color:var(--herb)}
   .url-input::placeholder{color:var(--ink-soft)}
+  /* ── Global recipe search ── */
+  .gs-open{width:100%;display:flex;align-items:center;gap:12px;background:#fff;border:1px solid var(--line,#E8DCC8);
+    border-radius:16px;padding:15px 18px;font-size:1rem;color:var(--ink-soft);cursor:pointer;margin-bottom:16px;text-align:left}
+  .gs-input{width:100%;border:1px solid var(--line,#E8DCC8);border-radius:16px;padding:15px 18px;font-size:1.05rem;
+    font-family:inherit;background:#fff;margin-bottom:14px}
+  .gs-count{margin:6px 2px 12px;color:var(--ink-soft);font-size:.85rem}
   /* ── Spin-to-cook slot machine ── */
   .slot-section{margin-top:18px}
   .slot-open{width:100%;display:flex;align-items:center;gap:14px;background:linear-gradient(120deg,#3F5C3A,#2E4429);
@@ -3434,12 +3440,13 @@ function slotIngRx(w){ // word-boundary match w/ simple plural: "egg" hits "eggs
 }
 function slotPool(){
   const seen=new Set(), pool=[];
-  const push=r=>{ if(!r||!r.title||!(r.ingredients||[]).length) return;
+  const push=(r,course)=>{ if(!r||!r.title||!(r.ingredients||[]).length) return;
+    if(course && !r.course) r.course=course; // remember origin meal for search labels
     const k=recipeKey(r); if(seen.has(k)) return; seen.add(k); pool.push(r); };
-  Object.values(DEMO).forEach(list=>(list||[]).forEach(push));
-  Object.values(S.library||{}).forEach(push);
-  Object.values(S.savedRecipes||{}).forEach(push);
-  Object.values(S.favouriteRecipes||{}).forEach(push);
+  Object.entries(DEMO).forEach(([course,list])=>(list||[]).forEach(r=>push(r,course)));
+  Object.values(S.library||{}).forEach(r=>push(r));
+  Object.values(S.savedRecipes||{}).forEach(r=>push(r));
+  Object.values(S.favouriteRecipes||{}).forEach(r=>push(r));
   return pool;
 }
 function slotMatches(r,sel){
@@ -3456,8 +3463,68 @@ function slotOptions(kind){
   const pool = slotShowable();
   return SLOT_VOCAB[kind].words.filter(w=>pool.some(r=>slotIngRx(w).test((r.ingredients||[]).join(" "))));
 }
-function drawSlots(){
+/* ── Global recipe search: every meal, pastes, saved and discovered at once ── */
+const GS = { q:"", pool:[], fetched:false };
+function drawSearch(){
   S.view="cook"; setNav(); S.meal=null; S.fromSlots=false;
+  window.scrollTo(0,0);
+  GS.pool = slotPool();
+  app.innerHTML=`
+   <div class="back" onclick="home()">← back</div>
+   <section class="hero fade"><h1 class="display">Search <span class="italic">everything</span> 🔍</h1></section>
+   <input class="gs-input" id="gsInput" type="search" placeholder="Recipe, blog or ingredient…"
+     value="${GS.q.replace(/"/g,"&quot;")}" oninput="gsType(this.value)" autocomplete="off">
+   <div id="gsResults"></div>`;
+  // pull all four menus so server-side (discovered) recipes are searchable too
+  if(!GS.fetched && API !== null){
+    GS.fetched = true;
+    ["breakfast","lunch","dinner","salad"].forEach(course=>{
+      fetch(`/api/menu/${course}`).then(r=>r.ok?r.json():null).then(fresh=>{
+        if(!Array.isArray(fresh)) return;
+        window._serverAnswered = true;
+        const seen=new Set(GS.pool.map(r=>recipeKey(r)));
+        fresh.forEach(r=>{
+          if(!r||!r.title||!(r.ingredients||[]).length) return;
+          if(!r.course) r.course=course;
+          const k=recipeKey(r); if(seen.has(k)) return; seen.add(k); GS.pool.push(r);
+        });
+        gsRender();
+      }).catch(()=>{});
+    });
+  }
+  const inp=document.getElementById("gsInput"); if(inp) inp.focus();
+  gsRender();
+}
+function gsType(q){ GS.q=q; gsRender(); }
+function gsRender(){
+  const out=document.getElementById("gsResults"); if(!out) return;
+  const q=(GS.q||"").trim().toLowerCase();
+  if(q.length<2){ out.innerHTML=`<p class="gs-count">Type at least 2 letters — searching titles, blogs and ingredients across every meal.</p>`; return; }
+  const showable = window._serverAnswered ? GS.pool.filter(r=>r.image||r.thumb) : GS.pool;
+  const hits = showable.filter(r=>
+    (r.title||"").toLowerCase().includes(q) ||
+    (r.blog||"").toLowerCase().includes(q) ||
+    (r.ingredients||[]).some(i=>i.toLowerCase().includes(q))
+  ).slice(0,40);
+  if(!hits.length){ out.innerHTML=`<p class="gs-count">Nothing matches "${GS.q}".</p>`; return; }
+  const em={breakfast:"🍳",lunch:"🥗",dinner:"🍲",salad:"🥙"};
+  out.innerHTML = `<div class="gs-count">${hits.length} recipe${hits.length>1?"s":""}</div>` +
+    hits.map((r,i)=>`
+      <div class="slot-row" onclick="gsOpen(${i})">
+        <div style="flex:1"><b>${r.title}</b><div class="meta">${r.blog||""} · 💪 ${r.nutrition?.protein_g||"?"}g</div></div>
+        <div class="hit hit-1">${em[r.course]||""} ${r.course||""}</div>
+      </div>`).join("");
+  GS._hits = hits;
+}
+function gsOpen(i){
+  const r=GS._hits?.[i]; if(!r) return;
+  S.course="main"; S.picks.main=r; LISTS.main=[r];
+  S.fromSearch = true;
+  drawRecipe(r); window.scrollTo({top:0,behavior:"smooth"});
+}
+
+function drawSlots(){
+  S.view="cook"; setNav(); S.meal=null; S.fromSlots=false; S.fromSearch=false;
   window.scrollTo(0,0); // always open at the top (reels first, results below)
   SLOT.pool = slotPool();
   for(const k of ["p","v","k"]) if(!SLOT.sel[k]){ const o=slotOptions(k); SLOT.sel[k]=o[Math.floor(Math.random()*o.length)]||null; }
@@ -3541,6 +3608,7 @@ function home(){
      <h1 class="display">What should we<br><span class="italic">cook</span> today?</h1>
      <p>Pick a meal and choose from a hand-picked menu — because life shouldn't be wasted scrolling through endless food blogs!</p>
    </section>
+   <button class="gs-open fade" onclick="drawSearch()">🔍 Search every recipe…</button>
    <div class="meals stagger">
      ${Object.entries(MEALS).map(([k,m])=>`
        <button class="meal" onclick="openMeal('${k}')">
@@ -4062,7 +4130,9 @@ async function openRecipe(course,i){
   // New server-scraped recipes only have title/url/image — fetch full data before rendering
   if(!r.ingredients && r.source_url && API !== null){
     app.innerHTML=`
-      ${S.fromSlots
+      ${S.fromSearch
+        ? `<div class="back" onclick="S.fromSearch=false;drawSearch()">← search</div>`
+        : S.fromSlots
         ? `<div class="back" onclick="S.fromSlots=false;drawSlots()">← spin results</div>`
         : S.meal
           ? `<div class="back" onclick="openMeal('${S.meal}')">← ${S.meal} menu</div>`
