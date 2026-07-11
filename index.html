@@ -3143,6 +3143,10 @@ async function getMenu(course){
 
       // Enrich DEMO recipes with server-fetched images
       const serverImg  = new Map(fresh.map(r=>[r.source_url, r.image||r.thumb||""]));
+      // ...and write them back into the MASTER recipe objects, so global search
+      // and the slot machine (which build their pools from the originals, not
+      // this menu's copies) see the photos too.
+      demo.forEach(r=>{ const im=serverImg.get(r.source_url); if(im && !r.image && !r.thumb) r.image=im; });
       const enriched   = demo.map(r=>
         (!r.image && r.source_url && serverImg.has(r.source_url))
           ? {...r, image: serverImg.get(r.source_url)} : r);
@@ -3438,9 +3442,10 @@ const SLOT = { sel:{p:null,v:null,k:null}, locked:{p:false,v:false,k:false}, poo
 function slotIngRx(w){ // word-boundary match w/ simple plural: "egg" hits "eggs" not "eggplant"
   return new RegExp("\\b"+w.replace(/[.*+?^${}()|[\]\\]/g,"\\$&")+"(e?s)?\\b","i");
 }
-function slotPool(){
+function slotPool(needIngredients=true){
   const seen=new Set(), pool=[];
-  const push=(r,course)=>{ if(!r||!r.title||!(r.ingredients||[]).length) return;
+  const push=(r,course)=>{ if(!r||!r.title) return;
+    if(needIngredients && !(r.ingredients||[]).length) return;
     if(course && !r.course) r.course=course; // remember origin meal for search labels
     const k=recipeKey(r); if(seen.has(k)) return; seen.add(k); pool.push(r); };
   Object.entries(DEMO).forEach(([course,list])=>(list||[]).forEach(r=>push(r,course)));
@@ -3468,7 +3473,7 @@ const GS = { q:"", pool:[], fetched:false };
 function drawSearch(){
   S.view="cook"; setNav(); S.meal=null; S.fromSlots=false;
   window.scrollTo(0,0);
-  GS.pool = slotPool();
+  GS.pool = slotPool(false); // search needs a title, not full ingredients
   app.innerHTML=`
    <div class="back" onclick="home()">← back</div>
    <section class="hero fade"><h1 class="display">Search <span class="italic">everything</span> 🔍</h1></section>
@@ -3482,9 +3487,13 @@ function drawSearch(){
       fetch(`/api/menu/${course}`).then(r=>r.ok?r.json():null).then(fresh=>{
         if(!Array.isArray(fresh)) return;
         window._serverAnswered = true;
+        // apply server-harvested photos to pool entries (stubs carry image+url)
+        const imgBy=new Map();
+        fresh.forEach(r=>{ if(r&&r.source_url&&(r.image||r.thumb)) imgBy.set(normUrl(r.source_url), r.image||r.thumb); });
+        GS.pool.forEach(r=>{ if(!(r.image||r.thumb)){ const im=imgBy.get(normUrl(r.source_url||"")); if(im) r.image=im; } });
         const seen=new Set(GS.pool.map(r=>recipeKey(r)));
         fresh.forEach(r=>{
-          if(!r||!r.title||!(r.ingredients||[]).length) return;
+          if(!r||!r.title) return; // scraped recipes lack ingredients but are searchable by title
           if(!r.course) r.course=course;
           const k=recipeKey(r); if(seen.has(k)) return; seen.add(k); GS.pool.push(r);
         });
@@ -3500,7 +3509,7 @@ function gsRender(){
   const out=document.getElementById("gsResults"); if(!out) return;
   const q=(GS.q||"").trim().toLowerCase();
   if(q.length<2){ out.innerHTML=`<p class="gs-count">Type at least 2 letters — searching titles, blogs and ingredients across every meal.</p>`; return; }
-  const showable = window._serverAnswered ? GS.pool.filter(r=>r.image||r.thumb) : GS.pool;
+  const showable = dedupeRecipes(window._serverAnswered ? GS.pool.filter(r=>r.image||r.thumb) : GS.pool);
   const hits = showable.filter(r=>
     (r.title||"").toLowerCase().includes(q) ||
     (r.blog||"").toLowerCase().includes(q) ||
