@@ -3469,11 +3469,17 @@ function slotOptions(kind){
   return SLOT_VOCAB[kind].words.filter(w=>pool.some(r=>slotIngRx(w).test((r.ingredients||[]).join(" "))));
 }
 /* ── Global recipe search: every meal, pastes, saved and discovered at once ── */
-const GS = { q:"", pool:[], fetched:false };
+const GS = { q:"", pool:[], serverItems:[] };
 function drawSearch(){
   S.view="cook"; setNav(); S.meal=null; S.fromSlots=false;
   window.scrollTo(0,0);
   GS.pool = slotPool(false); // search needs a title, not full ingredients
+  // re-merge server recipes remembered from earlier fetches (they'd otherwise
+  // vanish when the pool is rebuilt on every visit to this screen)
+  {
+    const seen=new Set(GS.pool.map(r=>recipeKey(r)));
+    (GS.serverItems||[]).forEach(r=>{ const k=recipeKey(r); if(!seen.has(k)){ seen.add(k); GS.pool.push(r); } });
+  }
   app.innerHTML=`
    <div class="back" onclick="home()">← back</div>
    <section class="hero fade"><h1 class="display">Search <span class="italic">everything</span> 🔍</h1></section>
@@ -3481,8 +3487,7 @@ function drawSearch(){
      value="${GS.q.replace(/"/g,"&quot;")}" oninput="gsType(this.value)" autocomplete="off">
    <div id="gsResults"></div>`;
   // pull all four menus so server-side (discovered) recipes are searchable too
-  if(!GS.fetched && API !== null){
-    GS.fetched = true;
+  if(API !== null){
     ["breakfast","lunch","dinner","salad"].forEach(course=>{
       fetch(`/api/menu/${course}`).then(r=>r.ok?r.json():null).then(fresh=>{
         if(!Array.isArray(fresh)) return;
@@ -3495,7 +3500,9 @@ function drawSearch(){
         fresh.forEach(r=>{
           if(!r||!r.title) return; // scraped recipes lack ingredients but are searchable by title
           if(!r.course) r.course=course;
-          const k=recipeKey(r); if(seen.has(k)) return; seen.add(k); GS.pool.push(r);
+          const k=recipeKey(r); if(seen.has(k)) return; seen.add(k);
+          GS.pool.push(r);
+          GS.serverItems.push(r); // survive pool rebuilds on future visits
         });
         gsRender();
       }).catch(()=>{});
@@ -3711,6 +3718,8 @@ async function loadFromUrl(){
 }
 
 async function openMeal(meal){
+  if(!meal || meal==="null"){ home(); return; } // never render a null menu
+  S.fromSearch=false; S.fromSlots=false;
   const cached = _menuMem[meal]; // will exist if she's coming back from a recipe
   S.meal=meal; S.course="main"; S.blogFilter=null; S.proteinFilter=null;
   S.fullMenuList=[]; S.searchQuery=null; S.favFilter=false; S.newFilter=false;
@@ -4280,7 +4289,15 @@ function drawRecipe(r){
   const protLabel = (protein != null && protein > 0) ? `${protein}g protein` : `calculating…`;
   const protMeta  = (protein != null && protein > 0) ? `${protein}g` : `…`;
   app.innerHTML=`
-   <div class="back" onclick="${S.recipeOrigin==='plan'?`go('plan')`:`openMeal('${S.meal}')`}">← ${S.recipeOrigin==='plan'?'meal plan':S.meal+' menu'}</div>
+   ${S.fromSearch
+      ? `<div class="back" onclick="S.fromSearch=false;drawSearch()">← search</div>`
+      : S.fromSlots
+      ? `<div class="back" onclick="S.fromSlots=false;drawSlots()">← spin results</div>`
+      : S.recipeOrigin==='plan'
+      ? `<div class="back" onclick="go('plan')">← meal plan</div>`
+      : S.meal
+      ? `<div class="back" onclick="openMeal('${S.meal}')">← ${S.meal} menu</div>`
+      : `<div class="back" onclick="home()">← back</div>`}
    <div class="r-hero fade">
      ${imgEl(r.image,r.title,"",1000,r.blog,true)}
      <div class="grad"></div>
