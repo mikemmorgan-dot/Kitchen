@@ -767,6 +767,64 @@ app.get("/api/dead-links", async (_, res) => {
   res.json({ count: Object.keys(deadLinks).length, urls: Object.keys(deadLinks) });
 });
 
+// ── Sitemap harvesting ────────────────────────────────────────────────────────
+// Search feeds (?s=) are often blocked, but every WordPress blog publishes a
+// sitemap listing every post it has ever run. Static XML, rarely protected, and
+// it covers the full archive rather than the last few pages of a feed.
+const sitemapCache = new Map();   // host -> [urls]
+
+async function fetchXml(url) {
+  const tries = [
+    () => fetch(url, { headers: { "User-Agent": BF_UA, Accept: "application/xml,text/xml,*/*" },
+                       redirect: "follow", signal: AbortSignal.timeout(15000) }),
+    () => fetch("https://api.allorigins.win/raw?url=" + encodeURIComponent(url),
+                { signal: AbortSignal.timeout(15000) }),
+  ];
+  for (const t of tries) {
+    try {
+      const r = await t();
+      if (!r.ok) continue;
+      const body = await r.text();
+      if (/<(urlset|sitemapindex)[\s>]/i.test(body)) return body;
+    } catch {}
+  }
+  return null;
+}
+
+async function blogPostUrls(host) {
+  if (sitemapCache.has(host)) return sitemapCache.get(host);
+  const roots = [
+    `https://www.${host}/wp-sitemap.xml`,
+    `https://www.${host}/sitemap_index.xml`,
+    `https://www.${host}/sitemap.xml`,
+  ];
+  const urls = new Set();
+  for (const root of roots) {
+    const xml = await fetchXml(root);
+    if (!xml) continue;
+    const $ = cheerio.load(xml, { xmlMode: true });
+    if (/<sitemapindex[\s>]/i.test(xml)) {
+      // index of sub-sitemaps — take the ones holding posts
+      const subs = $("sitemap > loc").map((_, e) => $(e).text().trim()).get()
+        .filter(u => /post|page|recipe/i.test(u) && !/(category|tag|author|image)/i.test(u))
+        .slice(0, 8);
+      for (const sub of subs) {
+        const sx = await fetchXml(sub);
+        if (!sx) continue;
+        const $s = cheerio.load(sx, { xmlMode: true });
+        $s("url > loc").each((_, e) => urls.add($s(e).text().trim()));
+        await new Promise(r => setTimeout(r, 400));
+      }
+    } else {
+      $("url > loc").each((_, e) => urls.add($(e).text().trim()));
+    }
+    if (urls.size) break;
+  }
+  const list = [...urls];
+  sitemapCache.set(host, list);
+  return list;
+}
+
 // ── Targeted recipe search ────────────────────────────────────────────────────
 // WordPress exposes search results as a feed (?s=term&feed=rss2), so we can ask
 // every blog for a specific ingredient and pull in what they have.
@@ -826,6 +884,22 @@ app.all("/api/find", async (req, res) => {
         }
         await new Promise(rs => setTimeout(rs, 500));
        }
+       // Search feeds gave nothing for this blog (commonly blocked) — fall back
+       // to its sitemap and match the search terms against post slugs.
+       if (!candidates.some(c => c.link.includes(host))) {
+         try {
+           const slugTerms = terms.map(t => t.toLowerCase().replace(/\s+/g, "-"));
+           const posts = await blogPostUrls(host);
+           for (const u of posts) {
+             let path = "";
+             try { path = new URL(u).pathname.toLowerCase(); } catch { continue; }
+             if (!slugTerms.some(t => path.includes(t))) continue;
+             const slugWords = path.replace(/\/+$/, "").split("/").pop().replace(/-/g, " ");
+             candidates.push({ link: u, ft: slugWords, cats: [slugWords] });
+           }
+           console.log(`[find] ${host}: sitemap gave ${posts.length} posts`);
+         } catch (e) { console.error("[find] sitemap", host, e.message); }
+       }
       }
       const seenLinks = new Set();
       const todo = candidates
@@ -865,6 +939,34 @@ app.all("/api/find", async (req, res) => {
       console.log(`[find] "${q}": +${findState.added}, ${findState.skipped} skipped`);
     }
   })().catch(e => { findState.running = false; console.error("[find]", e.message); });
+});
+
+// One-tap diagnostic for targeted search: what does each blog actually give us?
+app.get("/api/find-check", async (req, res) => {
+  const q = (req.query.q || "beef").trim();
+  const lines = [];
+  for (const host of FEED_BLOGS) {
+    let searchItems = 0, searchNote = "blocked/none";
+    try {
+      const r = await fetch(`https://www.${host}/?s=${encodeURIComponent(q)}&feed=rss2&nocache=${Date.now()}`,
+        { headers: { "User-Agent": BF_UA, Accept: "application/rss+xml,text/xml,*/*" },
+          signal: AbortSignal.timeout(12000) });
+      const body = r.ok ? await r.text() : "";
+      if (r.ok && /<rss[\s>]|<feed[\s>]/i.test(body)) {
+        searchItems = (body.match(/<item[\s>]/gi) || []).length;
+        searchNote = `${searchItems} results`;
+      } else searchNote = `HTTP ${r.status}`;
+    } catch { searchNote = "error"; }
+
+    let mapNote = "none";
+    try {
+      const posts = await blogPostUrls(host);
+      const hits = posts.filter(u => u.toLowerCase().includes(q.toLowerCase().replace(/\s+/g, "-")));
+      mapNote = `${posts.length} posts, ${hits.length} match "${q}"`;
+    } catch { mapNote = "error"; }
+    lines.push(`${host}\n   search feed: ${searchNote}\n   sitemap:     ${mapNote}`);
+  }
+  res.type("text/plain").send(`TARGETED SEARCH CHECK for "${q}"\n\n` + lines.join("\n\n"));
 });
 
 // ── Featured recipes loader (curated, parsed through the same pipeline) ───────
