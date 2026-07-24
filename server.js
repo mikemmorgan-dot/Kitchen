@@ -370,7 +370,7 @@ app.get("/sw.js", (_, res) => {
   res.set("Content-Type", "application/javascript");
   res.set("Cache-Control", "no-cache");
   res.send(`
-const CACHE = "morgans-kitchen-v65";
+const CACHE = "morgans-kitchen-v66";
 
 self.addEventListener("install", e => {
   e.waitUntil(caches.open(CACHE).then(c => c.add("/")));
@@ -520,10 +520,29 @@ const discoveredLoaded = kvGet("discovered_recipes")
 const FEED_BLOGS = ["skinnytaste.com","eatingbirdfood.com","themediterraneandish.com",
   "pinchofyum.com","detoxinista.com","theeastcoastkitchen.com","fufuskitchen.com"];
 
-const SKIP_CATS = /dessert|snack|drink|cocktail|smoothie bowl cake|sweets|baking|cookie|cake|muffin|brownie/i;
+const SKIP_CATS = /dessert|sweets?\b|treats?\b|baking|snacks?\b|drinks?\b|beverage|cocktail|condiment|sauces?\b|dips?\b|dressing/i;
+const DESSERT_RX = /\b(ice cream|sorbet|gelato|popsicles?|cupcakes?|cakes?|cookies?|brownies?|blondies?|fudge|frosting|icing|candy|truffles?|donuts?|doughnuts?|cheesecake|puddings?|cobbler|crumble|macarons?|meringue|s'?mores|pies?)\b/i;
+const DESSERT_OK = /\b(crab|salmon|fish|potato|rice|corn|zucchini|quinoa) cakes?\b|pot pies?|shepherd'?s pie|tamale pie|pancakes?/i;
+const DRINK_RX   = /\b(smoothies?|milkshakes?|shakes?|juice|lattes?|lemonade|cocktails?|mocktails?|margaritas?|iced tea|hot chocolate)\b/i;
+const CONDIMENT_RX = /\b(dip|sauce|dressing|aioli|marinade|salsa|hummus|syrup|jam|jelly|relish|chutney|seasoning|pesto|tzatziki|guacamole)s?\b/i;
+
+// Decide whether a post is a real MEAL for the app. Returns a reason string
+// if it should be skipped, or null if it's a keeper.
+function unwantedRecipe(title, cats) {
+  const t = (title || "").toLowerCase().trim();
+  if (!t || t === "null" || t.length < 3) return "no-title";
+  const c = (cats || []).filter(Boolean).join(" ").toLowerCase();
+  if (SKIP_CATS.test(c)) return "category";
+  if (DESSERT_RX.test(t) && !DESSERT_OK.test(t)) return "dessert";
+  if (DRINK_RX.test(t) && !/breakfast|brunch/.test(c)) return "drink"; // smoothies allowed as breakfast only
+  // condiments: short titles whose HEAD NOUN is the condiment ("Bang Bang Sauce"),
+  // not dishes that merely mention one ("Shrimp Pasta in Light Tomato Sauce")
+  const words = t.replace(/\(.*?\)/g, "").replace(/ recipe$/,"").trim().split(/\s+/);
+  if (words.length <= 4 && CONDIMENT_RX.test(words[words.length - 1] || "")) return "condiment";
+  return null;
+}
 function feedCourse(cats) {
   const c = cats.join(" ").toLowerCase();
-  if (SKIP_CATS.test(c)) return null;            // not a meal — skip
   if (/breakfast|brunch/.test(c)) return "breakfast";
   if (/salad/.test(c))            return "salad";
   if (/lunch|sandwich|wrap/.test(c)) return "lunch";
@@ -538,6 +557,13 @@ async function discoverNew(pages = 1) {
   discState = { running: true, done: 0, total: 0, added: 0, skipped: 0, lastRun: new Date().toISOString() };
   try {
     const { parseRecipeFromHtml } = await import("./recipe-parser.js");
+    // Self-heal: sweep out any previously-saved recipe the (improved) filters
+    // now consider junk — desserts, drinks, condiments, titleless parses.
+    let pruned = 0;
+    for (const [u, r] of Object.entries(discovered)) {
+      if (unwantedRecipe(r?.title, [r?.course])) { delete discovered[u]; pruned++; }
+    }
+    if (pruned) { await kvSet("discovered_recipes", discovered); console.log(`[discover] pruned ${pruned} junk entries`); }
     // URLs the app already has: DEMO entries + previously discovered
     const known = new Set(Object.keys(discovered));
     try {
@@ -560,7 +586,8 @@ async function discoverNew(pages = 1) {
           $("item").each((_, el) => {
             const link = $(el).find("link").first().text().trim();
             const cats = $(el).find("category").map((_, c) => $(c).text()).get();
-            if (link) { candidates.push({ link, cats }); found++; }
+            const ft = $(el).find("title").first().text().trim();
+            if (link) { candidates.push({ link, cats, ft }); found++; }
           });
           if (!found) break;
         } catch { break; }
@@ -569,16 +596,17 @@ async function discoverNew(pages = 1) {
     }
     const todo = candidates.filter(c => !known.has(c.link.replace(/\/$/, "")));
     discState.total = todo.length;
-    for (const { link, cats } of todo) {
+    for (const { link, cats, ft } of todo) {
       try {
+        if (unwantedRecipe(ft, cats)) { discState.skipped++; discState.done++; continue; }
         const course = feedCourse(cats);
-        if (!course) { discState.skipped++; discState.done++; continue; }
         const { html } = await bfFetchPage(link);
         const rec = html ? parseRecipeFromHtml(html, link) : null;
-        if (rec?.title && rec.ingredients?.length) {
+        if (rec?.title && rec.ingredients?.length && !unwantedRecipe(rec.title, [course, ...cats])) {
           rec.course = course;
           rec.added = Date.now();
           rec.blog = rec.blog || new URL(link).hostname.replace(/^www\./, "").split(".")[0];
+          await withEstimatedNutrition(rec);
           discovered[link] = rec;
           discState.added++;
           await kvSet("discovered_recipes", discovered);
@@ -604,6 +632,201 @@ app.all("/api/discover", async (req, res) => {
   res.type("text/plain").send(
     `Discovery started${deep ? " in DEEP mode — walking back through up to 5 pages of every blog's feed (10-20 min)" : " — reading all 7 blog feeds for new recipes"}. Reopen this page for progress; pull to refresh the app when done. (Library so far: ${Object.keys(discovered).length} discovered recipes.)`);
   discoverNew(deep ? 5 : 1).catch(e => console.error("[discover]", e.message));
+});
+
+// ── Estimated nutrition ───────────────────────────────────────────────────────
+// Some blogs (e.g. fufuskitchen) don't publish nutrition facts. Rather than
+// showing blanks, approximate per-serving values from the ingredient list and
+// flag them as estimates so nothing is passed off as the blog's own numbers.
+async function withEstimatedNutrition(rec) {
+  try {
+    if (!rec || !Array.isArray(rec.ingredients) || !rec.ingredients.length) return rec;
+    const { estimateNutrition, needsNutrition } = await import("./nutrition-estimator.js");
+    if (!needsNutrition(rec)) return rec;
+    const est = estimateNutrition(rec.ingredients, rec.servings || 4);
+    if (est) { rec.nutrition = { ...(rec.nutrition || {}), ...est }; rec.nutrition_estimated = true; }
+  } catch (e) { console.error("[nutrition-est]", e.message); }
+  return rec;
+}
+
+// One-shot: add estimates to everything already stored that's missing nutrition.
+app.all("/api/estimate-nutrition", async (_, res) => {
+  await discoveredLoaded;
+  const { estimateNutrition, needsNutrition } = await import("./nutrition-estimator.js");
+  let filled = 0, skipped = 0;
+  for (const r of Object.values(discovered)) {
+    if (!needsNutrition(r)) continue;
+    const est = estimateNutrition(r.ingredients || [], r.servings || 4);
+    if (est) { r.nutrition = { ...(r.nutrition || {}), ...est }; r.nutrition_estimated = true; filled++; }
+    else skipped++;
+  }
+  if (filled) await kvSet("discovered_recipes", discovered);
+  res.type("text/plain").send(
+    `Nutrition estimated for ${filled} recipes. ${skipped} couldn't be estimated confidently (left blank on purpose). Pull to refresh the app.`);
+});
+
+// ── Dead link checking ────────────────────────────────────────────────────────
+// Verifies that recipe pages still exist. Only an explicit 404/410 counts as
+// dead — a Cloudflare 403 means "we can't see it from here", not "it's gone".
+let deadLinks = {};
+const deadLinksLoaded = kvGet("dead_links")
+  .then(d => { if (d && typeof d === "object") deadLinks = d; }).catch(() => {});
+
+async function checkLink(url) {
+  const opts = { headers: { "User-Agent": BF_UA, Accept: "text/html" }, redirect: "follow",
+                 signal: AbortSignal.timeout(12000) };
+  try {
+    const r = await fetch(url, opts);
+    if (r.status === 404 || r.status === 410) return "dead";
+    if (r.ok) return "alive";
+  } catch {}
+  // Blocked or errored from here — confirm through a proxy before condemning it
+  try {
+    const r = await fetch("https://api.allorigins.win/raw?url=" + encodeURIComponent(url),
+      { signal: AbortSignal.timeout(12000) });
+    if (r.status === 404 || r.status === 410) return "dead";
+    if (r.ok) {
+      const t = await r.text();
+      if (/page not found|404 error|nothing found|doesn'?t exist/i.test(t.slice(0, 4000))) return "dead";
+      return "alive";
+    }
+  } catch {}
+  return "unknown";
+}
+
+let linkState = { running: false, done: 0, total: 0, dead: 0, alive: 0, unknown: 0 };
+
+app.all("/api/check-links", async (req, res) => {
+  if (linkState.running) {
+    return res.type("text/plain").send(
+      `Checking links: ${linkState.done}/${linkState.total} — ${linkState.dead} dead, ${linkState.alive} alive, ${linkState.unknown} unclear.`);
+  }
+  await Promise.all([deadLinksLoaded, discoveredLoaded]);
+  const blog = (req.query.blog || "").toLowerCase();
+  const urls = new Set();
+  try {
+    const html = readFileSync("./index.html", "utf8");
+    for (const m of html.matchAll(/["']?source_url["']?\s*:\s*"(https?:\/\/[^"]+)"/g)) urls.add(m[1]);
+  } catch {}
+  Object.keys(discovered).forEach(u => urls.add(u));
+  const todo = [...urls].filter(u => (!blog || u.toLowerCase().includes(blog)) && !deadLinks[u]);
+  if (!todo.length) {
+    return res.type("text/plain").send(
+      `Nothing to check${blog ? " for " + blog : ""}. ${Object.keys(deadLinks).length} dead links already recorded and hidden.`);
+  }
+  linkState = { running: true, done: 0, total: todo.length, dead: 0, alive: 0, unknown: 0 };
+  res.type("text/plain").send(
+    `Checking ${todo.length} ${blog || "recipe"} links — reopen this page for progress. Dead ones get hidden automatically; pull to refresh the app when it finishes.`);
+  (async () => {
+    for (const u of todo) {
+      const verdict = await checkLink(u);
+      if (verdict === "dead") {
+        deadLinks[u] = Date.now();
+        delete discovered[u];              // don't keep serving a dead recipe
+        linkState.dead++;
+        await kvSet("dead_links", deadLinks);
+      } else linkState[verdict === "alive" ? "alive" : "unknown"]++;
+      linkState.done++;
+      const SELF = process.env.RENDER_EXTERNAL_URL || "";
+      if (SELF && linkState.done % 10 === 0) fetch(SELF + "/api/status").catch(() => {});
+      await new Promise(r => setTimeout(r, 800));
+    }
+    await kvSet("discovered_recipes", discovered);
+    linkState.running = false;
+    console.log(`[links] ${linkState.dead} dead, ${linkState.alive} alive, ${linkState.unknown} unknown`);
+  })().catch(e => { linkState.running = false; console.error("[links]", e.message); });
+});
+
+app.get("/api/dead-links", async (_, res) => {
+  await deadLinksLoaded;
+  res.json({ count: Object.keys(deadLinks).length, urls: Object.keys(deadLinks) });
+});
+
+// ── Targeted recipe search ────────────────────────────────────────────────────
+// WordPress exposes search results as a feed (?s=term&feed=rss2), so we can ask
+// every blog for a specific ingredient and pull in what they have.
+let findState = { running: false, done: 0, total: 0, added: 0, skipped: 0, q: "" };
+
+app.all("/api/find", async (req, res) => {
+  const q = (req.query.q || "").trim();
+  if (!q) return res.status(400).type("text/plain").send("Add a search term, e.g. /api/find?q=beef");
+  if (findState.running) {
+    return res.type("text/plain").send(
+      `Searching for "${findState.q}": ${findState.done}/${findState.total} checked, ${findState.added} added, ${findState.skipped} skipped.`);
+  }
+  await Promise.all([discoveredLoaded, deadLinksLoaded]);
+  const forced = (req.query.course || "").toLowerCase();
+  const max = Math.min(60, Number(req.query.max) || 40);
+  findState = { running: true, done: 0, total: 0, added: 0, skipped: 0, q };
+  res.type("text/plain").send(
+    `Searching all 7 blogs for "${q}" recipes — reopen this page for progress, then pull to refresh the app.`);
+  (async () => {
+    try {
+      const { parseRecipeFromHtml } = await import("./recipe-parser.js");
+      const known = new Set(Object.keys(discovered));
+      try {
+        const html = readFileSync("./index.html", "utf8");
+        for (const m of html.matchAll(/["']?source_url["']?\s*:\s*"(https?:\/\/[^"]+)"/g)) known.add(m[1].replace(/\/$/, ""));
+      } catch {}
+      const candidates = [];
+      for (const host of FEED_BLOGS) {
+        for (const feedUrl of [
+          `https://www.${host}/?s=${encodeURIComponent(q)}&feed=rss2&nocache=${Date.now()}`,
+          `https://www.${host}/search/${encodeURIComponent(q)}/feed/`,
+        ]) {
+          try {
+            const r = await fetch(feedUrl, {
+              headers: { "User-Agent": BF_UA, Accept: "application/rss+xml,text/xml,*/*", "Cache-Control": "no-cache" },
+              signal: AbortSignal.timeout(12000) });
+            if (!r.ok) continue;
+            const body = await r.text();
+            if (!/<rss[\s>]|<feed[\s>]/i.test(body)) continue;
+            const $ = cheerio.load(body, { xmlMode: true });
+            let found = 0;
+            $("item").each((_, el) => {
+              const link = $(el).find("link").first().text().trim();
+              const ft = $(el).find("title").first().text().trim();
+              const cats = $(el).find("category").map((_, c) => $(c).text()).get();
+              if (link) { candidates.push({ link, ft, cats }); found++; }
+            });
+            if (found) break;   // this feed style worked — don't try the other
+          } catch {}
+        }
+        await new Promise(rs => setTimeout(rs, 600));
+      }
+      const todo = candidates
+        .filter(c => !known.has(c.link.replace(/\/$/, "")) && !deadLinks[c.link])
+        .slice(0, max);
+      findState.total = todo.length;
+      for (const { link, ft, cats } of todo) {
+        try {
+          if (unwantedRecipe(ft, cats)) { findState.skipped++; findState.done++; continue; }
+          const course = forced || feedCourse(cats);
+          const { html } = await bfFetchPage(link);
+          const rec = html ? parseRecipeFromHtml(html, link) : null;
+          if (rec?.title && rec.ingredients?.length && !unwantedRecipe(rec.title, [course, ...cats])) {
+            // only keep recipes that genuinely feature the search term
+            const hay = (rec.title + " " + rec.ingredients.join(" ")).toLowerCase();
+            if (!hay.includes(q.toLowerCase())) { findState.skipped++; findState.done++; continue; }
+            rec.course = course;
+            rec.added = Date.now();
+            rec.blog = rec.blog || new URL(link).hostname.replace(/^www\./, "").split(".")[0];
+            await withEstimatedNutrition(rec);
+            discovered[link] = rec;
+            findState.added++;
+            await kvSet("discovered_recipes", discovered);
+          } else findState.skipped++;
+        } catch { findState.skipped++; }
+        findState.done++;
+        const SELF = process.env.RENDER_EXTERNAL_URL || "";
+        if (SELF && findState.done % 5 === 0) fetch(SELF + "/api/status").catch(() => {});
+        await new Promise(rs => setTimeout(rs, 1800));
+      }
+    } finally {
+      findState.running = false;
+      console.log(`[find] "${q}": +${findState.added}, ${findState.skipped} skipped`);
+    }
+  })().catch(e => { findState.running = false; console.error("[find]", e.message); });
 });
 
 // ── Featured recipes loader (curated, parsed through the same pipeline) ───────
@@ -641,6 +864,7 @@ app.all("/api/add-featured", async (req, res) => {
           rec.course = course;
           rec.added = Date.now();
           rec.blog = rec.blog || new URL(url).hostname.replace(/^www\./, "").split(".")[0];
+          await withEstimatedNutrition(rec);
           discovered[url] = rec;
           featState.added++;
           await kvSet("discovered_recipes", discovered);
@@ -730,7 +954,7 @@ app.get("/api/menu/:meal", (req, res) => {
   const have = new Set(recipes.map(r => r.source_url));
   // Recipes auto-discovered from the blogs' RSS feeds (full details parsed)
   const disc = Object.values(discovered).filter(r =>
-    (r.course || "dinner") === meal && !have.has(r.source_url));
+    (r.course || "dinner") === meal && !have.has(r.source_url) && !deadLinks[r.source_url]);
   disc.forEach(r => have.add(r.source_url));
   const stubs = Object.entries(demoImages)
     .filter(([u]) => !have.has(u))
@@ -739,7 +963,9 @@ app.get("/api/menu/:meal", (req, res) => {
       try { blog = new URL(u).hostname.replace(/^www\./, "").split(".")[0]; } catch {}
       return { source_url: u, image: img, title: "", blog };
     });
-  res.json([...recipes, ...disc, ...stubs]);
+  // Dead-link markers: the app hides any card whose recipe page no longer exists
+  const deadMarkers = Object.keys(deadLinks).map(u => ({ source_url: u, dead: true, title: "" }));
+  res.json([...recipes.filter(r => !deadLinks[r.source_url]), ...disc, ...stubs, ...deadMarkers]);
 });
 
 // Trigger a manual refresh (useful right after first deploy)
@@ -836,7 +1062,9 @@ app.get("/api/recipe", async (req, res) => {
     const { parseRecipeFromHtml } = await import("./recipe-parser.js");
     const { html } = await bfFetchPage(url);
     if (!html) return res.status(502).json({ error: "Could not reach that page from any route" });
-    res.json(parseRecipeFromHtml(html, url));
+    const rec = parseRecipeFromHtml(html, url);
+    await withEstimatedNutrition(rec);   // blogs that publish no nutrition get an estimate
+    res.json(rec);
   } catch (e) {
     res.status(502).json({ error: e.message });
   }

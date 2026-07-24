@@ -3139,6 +3139,7 @@ async function getMenu(course){
     .then(fresh=>{
       if(!Array.isArray(fresh)||!fresh.length) return;
       window._serverAnswered = true; // server is alive — photo-hiding may apply now
+      fresh.forEach(x=>{ if(x&&x.dead&&x.source_url) window._deadLinks.add(normUrl(x.source_url)); });
       if(S.meal!==course||!document.getElementById("cards")) return; // navigated away
 
       // Enrich DEMO recipes with server-fetched images
@@ -3459,8 +3460,10 @@ function slotMatches(r,sel){
   return Object.values(sel).filter(w=>w && slotIngRx(w).test(ing)).length;
 }
 function slotShowable(){
-  // exactly the set results can display (photo rule matches the menus)
-  return window._serverAnswered ? SLOT.pool.filter(r=>r.image||r.thumb) : SLOT.pool;
+  // exactly the set results can display (photo + dead-link rules match the menus)
+  return window._serverAnswered
+    ? SLOT.pool.filter(r=>(r.image||r.thumb) && !isDeadRecipe(r))
+    : SLOT.pool;
 }
 function slotOptions(kind){
   // only offer ingredients that hit ≥1 recipe results can actually SHOW —
@@ -3492,6 +3495,7 @@ function drawSearch(){
       fetch(`/api/menu/${course}`).then(r=>r.ok?r.json():null).then(fresh=>{
         if(!Array.isArray(fresh)) return;
         window._serverAnswered = true;
+        fresh.forEach(x=>{ if(x&&x.dead&&x.source_url) window._deadLinks.add(normUrl(x.source_url)); });
         // apply server-harvested photos to pool entries (stubs carry image+url)
         const imgBy=new Map();
         fresh.forEach(r=>{ if(r&&r.source_url&&(r.image||r.thumb)) imgBy.set(normUrl(r.source_url), r.image||r.thumb); });
@@ -3516,7 +3520,8 @@ function gsRender(){
   const out=document.getElementById("gsResults"); if(!out) return;
   const q=(GS.q||"").trim().toLowerCase();
   if(q.length<2){ out.innerHTML=`<p class="gs-count">Type at least 2 letters — searching titles, blogs and ingredients across every meal.</p>`; return; }
-  const showable = dedupeRecipes(window._serverAnswered ? GS.pool.filter(r=>r.image||r.thumb) : GS.pool);
+  const showable = dedupeRecipes(window._serverAnswered
+    ? GS.pool.filter(r=>(r.image||r.thumb) && !isDeadRecipe(r)) : GS.pool);
   const hits = showable.filter(r=>
     (r.title||"").toLowerCase().includes(q) ||
     (r.blog||"").toLowerCase().includes(q) ||
@@ -4045,6 +4050,11 @@ function renderCardItems(list, course){
 // Collapse entries that are the same recipe reached by cosmetically different
 // URLs (trailing slash, www, http/https) or identical titles. Display-only —
 // does NOT change recipeKey or anything stored. Prefers the copy that has a photo.
+// URLs the server has confirmed are 404 — their cards are hidden everywhere.
+window._deadLinks = window._deadLinks || new Set();
+function isDeadRecipe(r){
+  return !!(r && r.source_url && window._deadLinks.has(normUrl(r.source_url)));
+}
 function normUrl(u){
   return (u||"").trim().toLowerCase()
     .replace(/^https?:\/\//,"").replace(/^www\./,"")
@@ -4089,7 +4099,7 @@ function renderCards(list, course){
   // with image data. If the server is down/slow, hiding here would blank ~90% of
   // the library (photos are server-supplied), so we show everything until then.
   if(window._serverAnswered){
-    list = list.filter(r => r.image || r.thumb);
+    list = list.filter(r => (r.image || r.thumb) && !isDeadRecipe(r));
   }
   S.fullMenuList = list; S.blogFilter = null; S.proteinFilter = null;
   LISTS[course] = list;
