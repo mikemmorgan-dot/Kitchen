@@ -839,7 +839,7 @@ app.all("/api/find", async (req, res) => {
   }
   await Promise.all([discoveredLoaded, deadLinksLoaded]);
   const forced = (req.query.course || "").toLowerCase();
-  const max = Math.min(60, Number(req.query.max) || 40);
+  const max = Math.min(150, Number(req.query.max) || 60);
   findState = { running: true, done: 0, total: 0, added: 0, skipped: 0, q };
   res.type("text/plain").send(
     `Searching all 7 blogs for "${q}" recipes — reopen this page for progress, then pull to refresh the app.`);
@@ -851,55 +851,27 @@ app.all("/api/find", async (req, res) => {
         const html = readFileSync("./index.html", "utf8");
         for (const m of html.matchAll(/["']?source_url["']?\s*:\s*"(https?:\/\/[^"]+)"/g)) known.add(m[1].replace(/\/$/, ""));
       } catch {}
-      // "beef,steak,brisket" — searched separately, and a recipe qualifies if it
-      // mentions ANY of them (so "flank steak" counts for a beef hunt).
+      // Blogs ignore ?s= search feeds (they just return the standard latest-posts
+      // feed), so go straight to sitemaps — they list every post ever published.
       const terms = q.split(",").map(t => t.trim()).filter(Boolean);
-      const pages = Math.min(4, Number(req.query.pages) || 2);
+      const slugTerms = terms.map(t => t.toLowerCase().replace(/\s+/g, "-"));
       const candidates = [];
       for (const host of FEED_BLOGS) {
-       for (const term of terms) {
-        for (let pg = 1; pg <= pages; pg++) {
-        for (const feedUrl of [
-          `https://www.${host}/?s=${encodeURIComponent(term)}&feed=rss2&paged=${pg}&nocache=${Date.now()}`,
-          `https://www.${host}/search/${encodeURIComponent(term)}/feed/?paged=${pg}`,
-        ]) {
-          try {
-            const r = await fetch(feedUrl, {
-              headers: { "User-Agent": BF_UA, Accept: "application/rss+xml,text/xml,*/*", "Cache-Control": "no-cache" },
-              signal: AbortSignal.timeout(12000) });
-            if (!r.ok) continue;
-            const body = await r.text();
-            if (!/<rss[\s>]|<feed[\s>]/i.test(body)) continue;
-            const $ = cheerio.load(body, { xmlMode: true });
-            let found = 0;
-            $("item").each((_, el) => {
-              const link = $(el).find("link").first().text().trim();
-              const ft = $(el).find("title").first().text().trim();
-              const cats = $(el).find("category").map((_, c) => $(c).text()).get();
-              if (link) { candidates.push({ link, ft, cats }); found++; }
-            });
-            if (found) break;   // this feed style worked — don't try the other
-          } catch {}
-        }
-        }
-        await new Promise(rs => setTimeout(rs, 500));
-       }
-       // Search feeds gave nothing for this blog (commonly blocked) — fall back
-       // to its sitemap and match the search terms against post slugs.
-       if (!candidates.some(c => c.link.includes(host))) {
-         try {
-           const slugTerms = terms.map(t => t.toLowerCase().replace(/\s+/g, "-"));
-           const posts = await blogPostUrls(host);
-           for (const u of posts) {
-             let path = "";
-             try { path = new URL(u).pathname.toLowerCase(); } catch { continue; }
-             if (!slugTerms.some(t => path.includes(t))) continue;
-             const slugWords = path.replace(/\/+$/, "").split("/").pop().replace(/-/g, " ");
-             candidates.push({ link: u, ft: slugWords, cats: [slugWords] });
-           }
-           console.log(`[find] ${host}: sitemap gave ${posts.length} posts`);
-         } catch (e) { console.error("[find] sitemap", host, e.message); }
-       }
+        try {
+          const posts = await blogPostUrls(host);
+          let hits = 0;
+          for (const u of posts) {
+            let path = "";
+            try { path = new URL(u).pathname.toLowerCase(); } catch { continue; }
+            if (!slugTerms.some(t => path.includes(t))) continue;
+            // slug doubles as the title for screening and as the course hint
+            const slugWords = path.replace(/\/+$/, "").split("/").pop().replace(/-/g, " ");
+            candidates.push({ link: u, ft: slugWords, cats: [slugWords] });
+            hits++;
+          }
+          console.log(`[find] ${host}: ${posts.length} posts, ${hits} match`);
+        } catch (e) { console.error("[find] sitemap", host, e.message); }
+        await new Promise(rs => setTimeout(rs, 400));
       }
       const seenLinks = new Set();
       const todo = candidates
@@ -932,7 +904,7 @@ app.all("/api/find", async (req, res) => {
         findState.done++;
         const SELF = process.env.RENDER_EXTERNAL_URL || "";
         if (SELF && findState.done % 5 === 0) fetch(SELF + "/api/status").catch(() => {});
-        await new Promise(rs => setTimeout(rs, 1800));
+        await new Promise(rs => setTimeout(rs, 1500));
       }
     } finally {
       findState.running = false;
