@@ -672,25 +672,50 @@ let deadLinks = {};
 const deadLinksLoaded = kvGet("dead_links")
   .then(d => { if (d && typeof d === "object") deadLinks = d; }).catch(() => {});
 
+// A status code isn't enough: WordPress commonly answers a missing slug with a
+// 200 — either a soft-404 page or a redirect to the homepage. So judge the
+// CONTENT: a live recipe page carries Recipe structured data. Anything short of
+// clear evidence is "unknown", never "dead" — we don't delete on a hunch.
+const SOFT_404 = /(page (you (requested|are looking for) )?(could not be|cannot be|was not|not) found)|nothing found|no results found|error 404|404 error|sorry,? (but )?(nothing|that page)/i;
+
+function pageVerdict(html, url) {
+  if (!html || html.length < 200) return "unknown";
+  const head = html.slice(0, 200000);
+  const hasRecipe = /"@type"\s*:\s*(\[[^\]]*)?"Recipe"/i.test(head) ||
+                    /recipeIngredient|wprm-recipe-container|tasty-recipes/i.test(head);
+  if (hasRecipe) return "alive";                    // it's a real recipe page
+  if (SOFT_404.test(head.slice(0, 8000))) return "dead";
+  // No recipe data at all — check whether we simply landed on the site's front
+  // page (classic "unknown slug redirects home" behaviour).
+  let slugWords = [];
+  try {
+    slugWords = new URL(url).pathname.toLowerCase().split(/[\/-]/).filter(w => w.length > 3);
+  } catch {}
+  const title = (head.match(/<title[^>]*>([^<]{0,200})/i) || [])[1] || "";
+  const ogTitle = (head.match(/property=["']og:title["'][^>]*content=["']([^"']{0,200})/i) || [])[1] || "";
+  const hay = (title + " " + ogTitle).toLowerCase();
+  if (slugWords.length && !slugWords.some(w => hay.includes(w))) return "dead";  // landed somewhere else
+  return "unknown";
+}
+
 async function checkLink(url) {
-  const opts = { headers: { "User-Agent": BF_UA, Accept: "text/html" }, redirect: "follow",
-                 signal: AbortSignal.timeout(12000) };
-  try {
-    const r = await fetch(url, opts);
-    if (r.status === 404 || r.status === 410) return "dead";
-    if (r.ok) return "alive";
-  } catch {}
-  // Blocked or errored from here — confirm through a proxy before condemning it
-  try {
-    const r = await fetch("https://api.allorigins.win/raw?url=" + encodeURIComponent(url),
-      { signal: AbortSignal.timeout(12000) });
-    if (r.status === 404 || r.status === 410) return "dead";
-    if (r.ok) {
-      const t = await r.text();
-      if (/page not found|404 error|nothing found|doesn'?t exist/i.test(t.slice(0, 4000))) return "dead";
-      return "alive";
-    }
-  } catch {}
+  // Live routes only — a Wayback snapshot would "prove" a deleted page exists.
+  const attempts = [
+    () => fetch(url, { headers: { "User-Agent": BF_UA, Accept: "text/html" },
+                       redirect: "follow", signal: AbortSignal.timeout(15000) }),
+    () => fetch("https://api.allorigins.win/raw?url=" + encodeURIComponent(url),
+                { signal: AbortSignal.timeout(15000) }),
+  ];
+  for (const attempt of attempts) {
+    try {
+      const r = await attempt();
+      if (r.status === 404 || r.status === 410) return "dead";
+      if (!r.ok) continue;
+      const html = await r.text();
+      const verdict = pageVerdict(html, url);
+      if (verdict !== "unknown") return verdict;
+    } catch {}
+  }
   return "unknown";
 }
 
@@ -768,11 +793,17 @@ app.all("/api/find", async (req, res) => {
         const html = readFileSync("./index.html", "utf8");
         for (const m of html.matchAll(/["']?source_url["']?\s*:\s*"(https?:\/\/[^"]+)"/g)) known.add(m[1].replace(/\/$/, ""));
       } catch {}
+      // "beef,steak,brisket" — searched separately, and a recipe qualifies if it
+      // mentions ANY of them (so "flank steak" counts for a beef hunt).
+      const terms = q.split(",").map(t => t.trim()).filter(Boolean);
+      const pages = Math.min(4, Number(req.query.pages) || 2);
       const candidates = [];
       for (const host of FEED_BLOGS) {
+       for (const term of terms) {
+        for (let pg = 1; pg <= pages; pg++) {
         for (const feedUrl of [
-          `https://www.${host}/?s=${encodeURIComponent(q)}&feed=rss2&nocache=${Date.now()}`,
-          `https://www.${host}/search/${encodeURIComponent(q)}/feed/`,
+          `https://www.${host}/?s=${encodeURIComponent(term)}&feed=rss2&paged=${pg}&nocache=${Date.now()}`,
+          `https://www.${host}/search/${encodeURIComponent(term)}/feed/?paged=${pg}`,
         ]) {
           try {
             const r = await fetch(feedUrl, {
@@ -792,10 +823,17 @@ app.all("/api/find", async (req, res) => {
             if (found) break;   // this feed style worked — don't try the other
           } catch {}
         }
-        await new Promise(rs => setTimeout(rs, 600));
+        }
+        await new Promise(rs => setTimeout(rs, 500));
+       }
       }
+      const seenLinks = new Set();
       const todo = candidates
-        .filter(c => !known.has(c.link.replace(/\/$/, "")) && !deadLinks[c.link])
+        .filter(c => {
+          const k = c.link.replace(/\/$/, "");
+          if (seenLinks.has(k) || known.has(k) || deadLinks[c.link]) return false;
+          seenLinks.add(k); return true;
+        })
         .slice(0, max);
       findState.total = todo.length;
       for (const { link, ft, cats } of todo) {
@@ -807,7 +845,7 @@ app.all("/api/find", async (req, res) => {
           if (rec?.title && rec.ingredients?.length && !unwantedRecipe(rec.title, [course, ...cats])) {
             // only keep recipes that genuinely feature the search term
             const hay = (rec.title + " " + rec.ingredients.join(" ")).toLowerCase();
-            if (!hay.includes(q.toLowerCase())) { findState.skipped++; findState.done++; continue; }
+            if (!terms.some(t => hay.includes(t.toLowerCase()))) { findState.skipped++; findState.done++; continue; }
             rec.course = course;
             rec.added = Date.now();
             rec.blog = rec.blog || new URL(link).hostname.replace(/^www\./, "").split(".")[0];
