@@ -3380,6 +3380,7 @@ const NAME_SYNONYMS=[
   [/\bcilantro\b/g,          "coriander"],   // one herb, two names
   [/\bscallions?\b/g,        "green onions"],
   [/\btahini\s+(dressing|sauce)\b/g, "tahini sauce"],  // one jar, two names
+  [/\bwhole-(grains?|wheat)\b/g,     "whole $1"],
   [/\bveg\s+(broth|stock)\b/g,       "vegetable broth"],
 ];
 // The shop sells breast, thigh and leg. Recipes say tenders, cutlets,
@@ -3397,12 +3398,14 @@ function cleanName(s){
     .replace(/\([^)]*\)/g,"")            // "(6 oz each)" → ""
     .replace(/,.*$/,"")                   // ", diced and minced" → ""
     .replace(/\b(to serve|to top|for topping|for serving|of choice|as needed|to taste)\b.*/gi,"")
+    .replace(/\bwhole\s+(grains?|wheat)\b/gi,"whole-$1")  // protect from the modifier strip
     .replace(/^.*\s+or\s+/i,"")          // "cilantro or parsley" → keep the head noun
     .trim().toLowerCase();
   let prev;                               // strip stacked modifiers, not just one
   do { prev=s; s=s.replace(NAME_MODIFIERS,""); } while(s!==prev);
   for(const [rx,to] of NAME_SYNONYMS) s=s.replace(rx,to);
   s=chickenCut(s.trim());
+  if(s==="vanilla") s="vanilla extract";   // the bottle is labelled extract
   return s.trim().replace(/\s+/g," ");
 }
 
@@ -3460,6 +3463,17 @@ function fmtItem(qty,unit,displayName){
 /* ---- unit conversion for aggregation ----
    Volume items accumulate in ml, weight in g, countable in their own bucket.
    This means "1/4 cup + 1 tbsp maple syrup" → 5 tbsp maple syrup. */
+// One recipe weighs its chicken, another counts it. Adding those needs a
+// typical piece weight, otherwise the list says "4 lb + 16 chicken thighs"
+// and leaves you doing arithmetic at the butcher counter.
+const PIECE_G={
+  "chicken thigh":130, "chicken breast":174, "chicken leg":150, "chicken":174,
+  "salmon fillet":170, "cod fillet":170, "fish fillet":170,
+  "pork chop":150, "lamb chop":90, "sausage":75, "bacon":10,
+  "egg":50, "potato":170, "sweet potato":130, "onion":150, "tomato":120,
+  "lemon":100, "lime":67, "avocado":200, "banana":118, "carrot":61,
+  "bell pepper":120, "cucumber":300, "zucchini":200, "garlic clove":5,
+};
 const VOL_TO_ML={tsp:4.93,tbsp:14.79,cup:236.59,ml:1,l:1000};
 const WT_TO_G={g:1,kg:1000,oz:28.35,lb:453.59};
 function mlToBest(ml){
@@ -3484,10 +3498,20 @@ function gToBest(g){
 // A bare "rice" line is not shoppable — brown, jasmine and basmati are
 // different bags. The variety is often named elsewhere in the same recipe
 // (title, another ingredient, or the method), so look there before giving up.
-const RICE_GRAINS=/\b(brown|white|jasmine|basmati|arborio|sushi|wild|black|red|long.grain|short.grain)[\s-]+rice\b/i;
-function riceGrain(r){
+// A bare "rice", "mushrooms" or "grains" is not shoppable — they are different
+// bags. The variety is often named elsewhere in the same recipe (title, another
+// ingredient line, or the method), so look there before giving up.
+const VARIETIES={
+  "rice":      /\b(brown|white|jasmine|basmati|arborio|sushi|wild|black|red|long.grain|short.grain)[\s-]+rice\b/i,
+  "mushroom":  /\b(cremini|crimini|button|portobello|portabella|shiitake|oyster|porcini|chestnut|enoki|maitake)\s+mushrooms?\b/i,
+  "onion":     /\b(red|yellow|white|sweet|spanish|vidalia)\s+onions?\b/i,
+  "potato":    /\b(russet|yukon|yukon.gold|red|baby|new|fingerling|sweet)\s+potatoe?s?\b/i,
+  "whole grain": /\b(farro|barley|bulgur|freekeh|quinoa|couscous|spelt|millet|buckwheat)\b/i,
+};
+function namedVariety(r, canon){
+  const rx=VARIETIES[canon]; if(!rx) return "";
   const hay=[r.title||"", ...(r.ingredients||[]), ...(r.instructions||[])].join(" ; ");
-  const m=hay.match(RICE_GRAINS);
+  const m=hay.match(rx);
   return m ? m[1].toLowerCase().replace(/[\s-]+/g,"-") : "";
 }
 function buildShoppingList(){
@@ -3500,11 +3524,15 @@ function buildShoppingList(){
         mealCount++;
         const r=entry.recipe||{}, base=r.servings||entry.servings||1;
         const factor=entry.servings/base;
-        const grain=riceGrain(r);
         (r.ingredients||[]).forEach(line=>{
           const p=parseIngredient(line);
           if(!p.canon) return;
-          if(p.canon==="rice" && grain){ p.canon=grain+" rice"; p.displayName=grain+" rice"; }
+          const variety=namedVariety(r, p.canon);
+          if(variety){
+            // "whole grain" + farro reads as "farro", not "farro whole grain"
+            const named = p.canon==="whole grain" ? variety : variety+" "+p.canon;
+            p.canon=named; p.displayName=named;
+          }
           // Not shopping items: tap water, and the salt/pepper every kitchen
           // already has. Recipes phrase the latter six different ways, which
           // used to put five seasoning lines on the list.
@@ -3542,13 +3570,28 @@ function buildShoppingList(){
     let label;
     if(v.hasVol)      { const b=mlToBest(v.volMl); label=fmtItem(b.qty,b.unit,v.displayName); }
     else if(v.hasWt && v.hasCount){
-      // One recipe weighs it, another counts it ("4 lb chicken thighs" +
-      // "8 chicken thighs"). Pretending otherwise loses food, so say both.
-      const b=gToBest(v.wtG);
-      label=`${pretty(b.qty)} ${unitDisplay(b.unit,b.qty)} + ${pretty(v.count)} ${pluralName(v.displayName,v.count)}`;
+      // One recipe weighs it, another counts it. Where we know what a piece
+      // weighs, add them into a single number you can take to the counter and
+      // show the piece count as a hint; otherwise fall back to naming both.
+      const per=PIECE_G[singular(v.displayName)];
+      if(per){
+        const b=gToBest(v.wtG + v.count*per);
+        const approx=Math.round((v.wtG+v.count*per)/per);
+        label=`${pretty(b.qty)} ${unitDisplay(b.unit,b.qty)} ${pluralName(v.displayName,approx)} (about ${approx})`;
+      } else {
+        const b=gToBest(v.wtG);
+        label=`${pretty(b.qty)} ${unitDisplay(b.unit,b.qty)} + ${pretty(v.count)} ${pluralName(v.displayName,v.count)}`;
+      }
     }
     else if(v.hasWt)  { const b=gToBest(v.wtG);    label=fmtItem(b.qty,b.unit,v.displayName); }
-    else if(v.hasCount){ label=fmtItem(v.count,v.countUnit||"",v.displayName); }
+    else if(v.hasCount){
+      const per=PIECE_G[singular(v.displayName)];
+      // Meat is sold by weight, so "16 chicken thighs" becomes a weight too.
+      if(per && v.cat==="Meat & fish" && !v.countUnit){
+        const b=gToBest(v.count*per);
+        label=`${pretty(b.qty)} ${unitDisplay(b.unit,b.qty)} ${pluralName(v.displayName,v.count)} (about ${pretty(v.count)})`;
+      } else label=fmtItem(v.count,v.countUnit||"",v.displayName);
+    }
     else              { label=cap(v.displayName); }
     (cats[v.cat]=cats[v.cat]||[]).push({k,label,name:v.displayName});
   });
