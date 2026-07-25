@@ -289,7 +289,10 @@
   nav.tabbar button[aria-current="true"]{color:var(--herb-deep);background:#E7EFDD}
 
   /* ---------- larger screens: iPad & desktop ---------- */
-  .plan-grid{display:grid;gap:14px}
+  /* Gutters either side of the plan list. The drag handle sits at the left
+     edge of each card, so without this a thumb scrolling near the screen edge
+     lands on it and moves the meal instead of scrolling the page. */
+  .plan-grid{display:grid;gap:14px;padding:0 14px}
   @media (min-width:740px){
     .wrap{max-width:920px;padding:0 30px 132px}
     .bar{max-width:920px;padding:12px 26px}
@@ -300,7 +303,7 @@
     .hero p{font-size:18px;max-width:48ch}
     .meals{grid-template-columns:1fr 1fr;gap:18px}
     .cards{grid-template-columns:repeat(3,1fr);gap:18px}
-    .plan-grid{grid-template-columns:1fr 1fr;gap:16px;align-items:start}
+    .plan-grid{grid-template-columns:1fr 1fr;gap:16px;align-items:start;padding:0}
     .r-hero img{max-height:440px}
     .sec h3{font-size:24px}
     nav.tabbar{gap:10px}
@@ -2876,10 +2879,10 @@ const proteinToday = ()=>proteinOn(today());
    Shared    : plan, shopping list checklist                                  */
 
 function findRecipeByKey(key){
-  for(const course of Object.keys(DEMO)){
-    const r=(DEMO[course]||[]).find(r=>recipeKey(r)===key);
-    if(r) return r;
-  }
+  // Canonical lookup first: where a dish has more than one record, this always
+  // returns the same preferred copy rather than whichever course sorted first.
+  const hit = resolveDish(key);
+  if(hit) return hit;
   return S.library?.[key] || S.savedRecipes?.[key] || S.favouriteRecipes?.[key] || null;
 }
 
@@ -2996,7 +2999,16 @@ function applyShared(data){
     Object.entries(data.plan).forEach(([day,meals])=>{
       S.plan[day]={};
       Object.entries(meals||{}).forEach(([m,list])=>{
-        S.plan[day][m]=(list||[]).map(e=>({...e,recipe:findRecipeByKey(e.key)}));
+        S.plan[day][m]=(list||[]).map(e=>{
+          const recipe=resolveDish(e)||findRecipeByKey(e.key);
+          // The entry keeps a copy of protein from when it was added, and the
+          // plan badge/cards read that copy. If the recipe has since been
+          // corrected (re-estimated nutrition, say), trust the recipe instead —
+          // otherwise a fixed figure never reaches the plan. Logged meals are
+          // left alone on purpose: those record what was actually eaten.
+          const live=recipe?.nutrition?.protein_g;
+          return {...e, recipe, protein:(live>0?live:e.protein)};
+        });
       });
     });
   }
@@ -3159,12 +3171,25 @@ async function getMenu(course){
         'eatingbirdfood','themediterraneandish','skinnytaste',
         'detoxinista','pinchofyum','theeastcoastkitchen'
       ]);
-      const demoURLs   = new Set(demo.map(r=>r.source_url||r.title));
-      const demoTitles = new Set(demo.map(r=>r.title.toLowerCase().trim()));
+      // Dedupe against EVERY course, not just this one. The seed copy of a
+      // dish may sit under dinner while the scraper files its copy under
+      // lunch — they never met, which is how one dish reached the plan twice
+      // with two different protein figures. Match on canonical URL (protocol,
+      // www., trailing slash and query stripped) and on title+blog, so a
+      // second scrape at a slightly different address is still recognised.
+      const known = new Set();
+      ["breakfast","lunch","dinner","salad"].forEach(c=>(DEMO[c]||[]).forEach(r=>{
+        const u=canonKey(r); if(u) known.add(u);
+        const t=titleKey(r); if(t) known.add(t);
+      }));
+      Object.values(S.library||{}).forEach(r=>{
+        const u=canonKey(r); if(u) known.add(u);
+        const t=titleKey(r); if(t) known.add(t);
+      });
       const newOnly    = fresh.filter(r=>
         r.title &&  // skip image-only stubs from the backfill
-        !demoURLs.has(r.source_url||r.title) &&
-        !demoTitles.has((r.title||"").toLowerCase().trim()) &&
+        !known.has(canonKey(r)) &&
+        !known.has(titleKey(r)) &&
         ((r.ingredients||[]).length > 0 || !CLOUDFLARE_BLOGS.has(r.blog||""))
       );
       const merged     = [...enriched, ...newOnly];
@@ -3184,6 +3209,58 @@ async function getMenu(course){
   return demo; // instant
 }
 function recipeKey(r){return (r.source_url||r.title);}
+
+/* ---------------- one dish, one record ----------------
+   The same dish can exist twice: the seed copy and one the scraper found later
+   at a slightly different URL, or the same URL filed under two courses. The
+   copies carry different nutrition, so the plan could show one dish at two
+   different protein figures. Everything below collapses them onto a canonical
+   identity and always prefers real published nutrition over an estimate.     */
+function canonKey(x){
+  const url = typeof x === "string" ? x : (x && x.source_url) || "";
+  const n = normUrl(url);
+  if(n) return n;
+  if(typeof x === "string") return x.toLowerCase().trim();
+  return titleKey(x);
+}
+function titleKey(r){
+  if(!r) return "";
+  return `${(r.title||"").toLowerCase().trim()}|${(r.blog||"").toLowerCase().trim()}`;
+}
+function isPublished(r){
+  return !!(r && r.nutrition && !r.nutrition_estimated && r.nutrition.protein_g > 0);
+}
+// Which of two records for the same dish should win.
+function betterRecipe(a,b){
+  if(!a) return b||null;
+  if(!b) return a;
+  if(isPublished(a)!==isPublished(b)) return isPublished(a)?a:b;   // real figures win
+  const ia=(a.ingredients||[]).length, ib=(b.ingredients||[]).length;
+  if(ia!==ib) return ia>ib?a:b;                                    // then the fuller record
+  return a;
+}
+// DEMO is a const and never reassigned, so this index can be built once.
+let _dishIndex=null;
+function dishIndex(){
+  if(_dishIndex) return _dishIndex;
+  const byUrl=new Map(), byTitle=new Map();
+  ["breakfast","lunch","dinner","salad"].forEach(c=>(DEMO[c]||[]).forEach(r=>{
+    const u=canonKey(r), t=titleKey(r);
+    if(u) byUrl.set(u, betterRecipe(byUrl.get(u), r));
+    if(t) byTitle.set(t, betterRecipe(byTitle.get(t), r));
+  }));
+  _dishIndex={byUrl, byTitle};
+  return _dishIndex;
+}
+// Resolve a stored plan entry to the single best record for its dish.
+function resolveDish(entry){
+  const {byUrl, byTitle} = dishIndex();
+  const key = typeof entry === "string" ? entry : entry?.key;
+  let best = byUrl.get(canonKey(key)) || null;
+  if(entry && typeof entry === "object") best = betterRecipe(best, byTitle.get(titleKey(entry)));
+  const direct = key ? (S.library?.[key] || S.savedRecipes?.[key] || S.favouriteRecipes?.[key]) : null;
+  return betterRecipe(best, direct) || null;
+}
 
 /* ---------------- meal plan ---------------- */
 function planEntry(r,meal,servings){
