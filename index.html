@@ -3339,7 +3339,10 @@ function singular(n){
   if(!n) return n;
   if(n.endsWith("ies") && n.length>4) return n.slice(0,-3)+"y";  // berries→berry
   if(n.endsWith("oes") && n.length>4) return n.slice(0,-2);      // tomatoes→tomato
-  if(n.endsWith("ves") && n.length>4) return n.slice(0,-3)+"f";  // leaves→leaf
+  // Only genuine -f plurals. Without this guard "olives" became "olif" and
+  // "chives" became "chif", so neither ever matched the produce list.
+  if(/(^|\s)(lea|hal|loa|shel|cal|wol)ves$/.test(n)) return n.replace(/ves$/,"f");
+  if(/(^|\s)(kni|wi)ves$/.test(n))                    return n.replace(/ves$/,"fe");
   if(n.endsWith("s")  && !n.endsWith("ss") && n.length>3) return n.slice(0,-1);
   return n;
 }
@@ -3349,7 +3352,7 @@ const UNCOUNTABLE=/^(milk|oil|water|broth|stock|vinegar|honey|syrup|rice|quinoa|
 
 // Pluralise a display name when there's no unit and qty > 1
 function pluralName(name,qty){
-  if(qty<=1||UNCOUNTABLE.test(name)) return name;
+  if(qty<=1||UNCOUNTABLE.test(name)||UNCOUNTABLE.test(name.split(" ").pop())) return name;
   if(name.endsWith("berry")) return name.slice(0,-5)+"berries";
   if(name.endsWith("tomato")||name.endsWith("potato")) return name+"es";
   if(name.endsWith("y") && !/[aeiou]y$/i.test(name)) return name.slice(0,-1)+"ies";
@@ -3359,15 +3362,30 @@ function pluralName(name,qty){
 }
 
 // Strip noise from an ingredient string to get a canonical display name
+// One shelf item per ingredient, however the recipe author phrased it. The
+// old cleaner stripped a single leading adjective, so "chopped fresh parsley",
+// "fresh parsley" and "parsley" became three list entries — and "extra virgin
+// olive oil" never merged with "olive oil" at all.
+const NAME_MODIFIERS=/^(large|medium|small|fresh|freshly ground|frozen|ripe|raw|cooked|canned|dried|chopped|diced|minced|sliced|shredded|crumbled|grated|rolled|instant|quick|old.fashioned|extra.virgin|virgin|boneless|skinless|bone.in|skin.on|lean|roasted|mixed|baby|whole|light|reduced.fat|low.fat|plain|organic)\s+/i;
+const NAME_SYNONYMS=[
+  [/\bvanilla\s+extract\b/g, "vanilla"],
+  [/\brolled\s+oats?\b/g,    "oats"],
+  [/\bveggies?\b|\bveg\b/g,  "vegetables"],
+  [/\bprotein\s+shake\b/g,   "protein powder"],
+  [/\bcilantro\b/g,          "coriander"],   // one herb, two names
+  [/\bscallions?\b/g,        "green onions"],
+];
 function cleanName(s){
-  return s
+  s = s
     .replace(/\([^)]*\)/g,"")            // "(6 oz each)" → ""
     .replace(/,.*$/,"")                   // ", diced and minced" → ""
     .replace(/\b(to serve|to top|for topping|for serving|of choice|as needed|to taste)\b.*/gi,"")
-    .replace(/^(large|medium|small|fresh|frozen|ripe|raw|cooked|canned|dried|chopped|rolled|instant|quick|old.fashioned)\s+/gi,"")
-    .replace(/\bvanilla\s+extract\b/gi,"vanilla")   // vanilla extract ≡ vanilla
-    .replace(/\brolled\s+oats?\b/gi,"oats")         // rolled oats ≡ oats
-    .trim().toLowerCase().replace(/\s+/g," ");
+    .replace(/^.*\s+or\s+/i,"")          // "cilantro or parsley" → keep the head noun
+    .trim().toLowerCase();
+  let prev;                               // strip stacked modifiers, not just one
+  do { prev=s; s=s.replace(NAME_MODIFIERS,""); } while(s!==prev);
+  for(const [rx,to] of NAME_SYNONYMS) s=s.replace(rx,to);
+  return s.trim().replace(/\s+/g," ");
 }
 
 function parseIngredient(text){
@@ -3381,21 +3399,31 @@ function parseIngredient(text){
   if(w && UNIT_SET.has(w[1].toLowerCase())){
     unit=unitNorm(w[1].toLowerCase()); rest=rest.slice(w[0].length);
   }
-  const displayName=cleanName(rest), canon=singular(displayName);
+  let displayName=cleanName(rest), canon=singular(displayName);
+  // "3 garlic cloves" and "3 cloves garlic" are the same thing; fold the
+  // clove into the unit so both land on the garlic key.
+  if(canon==="garlic clove"){ canon="garlic"; displayName="garlic"; unit=unit||"clove"; }
   return {qty:parseQty(m[1]), unit, displayName, canon};
 }
 
 function category(name){
   const has=(...w)=>w.some(x=>name.includes(x));
-  if(has("chicken","turkey","beef","salmon","tuna","shrimp","tofu","tempeh","fillet","meatball")) return "Meat & fish";
+  // Check made-up things first: "lemon vinaigrette" is not produce, and
+  // "chili powder" is not a chilli.
+  if(has("dressing","vinaigrette","sauce","paste","powder","spray","seasoning",
+         "mayo","tzatziki","hummus","salsa","syrup","butter ")) return "Pantry";
+  if(has("chicken","turkey","beef","salmon","tuna","shrimp","tofu","tempeh","fillet","meatball","steak","pork","cod","halibut","tilapia","fish","lamb","bacon","sausage","prawn")) return "Meat & fish";
   if(has("egg","milk","yogurt","feta","cheese","mozzarella","parmesan","cream","butter","hummus","cottage")) return "Dairy & eggs";
   if(has("lemon","lime","tomato","cucumber","onion","garlic","ginger","spinach","kale","green","avocado",
          "banana","berry","broccoli","pepper","basil","parsley","dill","thyme","rhubarb","arugula",
-         "romaine","mushroom","carrot","zucchini","asparagus","olive","edamame","vegetable")) return "Produce";
+         "romaine","mushroom","carrot","zucchini","asparagus","olive","edamame","vegetable",
+         "potato","radish","cabbage","slaw","mint","celery","cauliflower","corn","chive","coriander")) return "Produce";
   if(has("oat","chia","flour","pasta","rice","quinoa","broth","oil","vinegar","syrup","honey","sugar",
          "baking","vanilla","soy","tamari","sesame","breadcrumb","marinara","bean","chickpea","tortilla",
          "granola","almond","nut","seed","protein","paprika","cumin","oregano","cinnamon","dressing",
-         "pesto","salt","spice","crumb")) return "Pantry";
+         "pesto","salt","spice","crumb","lentil","chili","chilli","pea","corn","olive oil",
+         "sauce","paste","mayo","sriracha","tahini","tzatziki","curry","harissa","baharat","grain",
+         "bread","toast","pita","bun")) return "Pantry";
   return "Other";
 }
 
@@ -3403,6 +3431,7 @@ function category(name){
 function fmtItem(qty,unit,displayName){
   if(qty==null||qty===0) return cap(displayName);
   const q=pretty(qty);
+  if(unit==="fillet") return `${q} ${pluralName(displayName+" fillet",qty)}`; // "8 cod fillets"
   if(unit) return `${q} ${unitDisplay(unit,qty)} ${displayName}`;
   return `${q} ${pluralName(displayName,qty)}`;
 }
@@ -3436,16 +3465,34 @@ function buildShoppingList(){
         (r.ingredients||[]).forEach(line=>{
           const p=parseIngredient(line);
           if(!p.canon) return;
+          // Not shopping items: tap water, and the salt/pepper every kitchen
+          // already has. Recipes phrase the latter six different ways, which
+          // used to put five seasoning lines on the list.
+          if(/^(water|ice|ice cube)$/.test(p.canon)) return;
+          if(/^(kosher |sea |table |flaky )?salt( and (freshly ground )?(black |white )?pepper)?$|^(freshly ground )?(black |white )?pepper$|^salt & pepper$/.test(p.canon)){
+            const kk="Pantry|salt & pepper";
+            if(!bag[kk]) bag[kk]={cat:"Pantry", displayName:"salt & pepper", volMl:0, wtG:0, count:0,
+                                  hasVol:false, hasWt:false, hasCount:false, noQty:true, countUnit:null};
+            return;
+          }
           const cat=category(p.canon);
           const k=`${cat}|${p.canon}`;             // unit excluded from key
           if(!bag[k]) bag[k]={cat, displayName:p.displayName, volMl:0, wtG:0, count:0,
-                               hasVol:false, hasWt:false, hasCount:false, noQty:false};
+                               hasVol:false, hasWt:false, hasCount:false, noQty:false, countUnit:null};
           if(p.qty==null){ bag[k].noQty=true; return; }
           const q=p.qty*factor;
           const vRate=VOL_TO_ML[p.unit], wRate=WT_TO_G[p.unit];
           if(vRate)      { bag[k].volMl+=q*vRate; bag[k].hasVol=true; }
           else if(wRate) { bag[k].wtG  +=q*wRate; bag[k].hasWt=true;  }
-          else           { bag[k].count+=q;        bag[k].hasCount=true; }
+          else {
+            // Keep the counting word ("18 cloves garlic", "2 cans coconut
+            // milk") — dropping it is how the list said "18 garlic". If two
+            // recipes count the same item in different words, fall back to a
+            // bare number rather than guess.
+            bag[k].count+=q; bag[k].hasCount=true;
+            if(bag[k].countUnit===null) bag[k].countUnit=p.unit||"";
+            else if(bag[k].countUnit!==(p.unit||"")) bag[k].countUnit="";
+          }
         });
       });
     });
@@ -3454,8 +3501,14 @@ function buildShoppingList(){
     if(!v.displayName) return;
     let label;
     if(v.hasVol)      { const b=mlToBest(v.volMl); label=fmtItem(b.qty,b.unit,v.displayName); }
+    else if(v.hasWt && v.hasCount){
+      // One recipe weighs it, another counts it ("4 lb chicken thighs" +
+      // "8 chicken thighs"). Pretending otherwise loses food, so say both.
+      const b=gToBest(v.wtG);
+      label=`${pretty(b.qty)} ${unitDisplay(b.unit,b.qty)} + ${pretty(v.count)} ${pluralName(v.displayName,v.count)}`;
+    }
     else if(v.hasWt)  { const b=gToBest(v.wtG);    label=fmtItem(b.qty,b.unit,v.displayName); }
-    else if(v.hasCount){ label=fmtItem(v.count,"",v.displayName); }
+    else if(v.hasCount){ label=fmtItem(v.count,v.countUnit||"",v.displayName); }
     else              { label=cap(v.displayName); }
     (cats[v.cat]=cats[v.cat]||[]).push({k,label,name:v.displayName});
   });
