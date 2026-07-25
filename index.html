@@ -3351,8 +3351,13 @@ function singular(n){
 const UNCOUNTABLE=/^(milk|oil|water|broth|stock|vinegar|honey|syrup|rice|quinoa|pasta|flour|sugar|butter|cream|hummus|pesto|marinara|tamari|soy|garlic|feta|parmesan|mozzarella|cottage cheese|yogurt|dressing|seasoning|spinach|kale|arugula|coleslaw|ginger|tahini|protein powder|almond flour|cinnamon|paprika|cumin|oregano|vanilla|salt|pepper|baking|chicken|turkey|beef|salmon|tuna|tofu|tempeh|edamame|peanut butter|almond butter|basil|parsley|dill|thyme|oats|chia|olive oil|sesame oil|coconut oil|avocado oil)\b/;
 
 // Pluralise a display name when there's no unit and qty > 1
+const COUNTABLE_PARTS=/(thighs?|breasts?|legs?|drumsticks?|wings?|fillets?|cloves?|wedges?|slices?|sprigs?|stalks?|heads?)$/;
 function pluralName(name,qty){
-  if(qty<=1||UNCOUNTABLE.test(name)||UNCOUNTABLE.test(name.split(" ").pop())) return name;
+  if(qty<=1) return name;
+  // "chicken" is uncountable but "chicken thigh" is not — the cut is the head
+  // noun and it pluralises, so check that before the uncountable list.
+  if(!COUNTABLE_PARTS.test(name) &&
+     (UNCOUNTABLE.test(name)||UNCOUNTABLE.test(name.split(" ").pop()))) return name;
   if(name.endsWith("berry")) return name.slice(0,-5)+"berries";
   if(name.endsWith("tomato")||name.endsWith("potato")) return name+"es";
   if(name.endsWith("y") && !/[aeiou]y$/i.test(name)) return name.slice(0,-1)+"ies";
@@ -3374,7 +3379,19 @@ const NAME_SYNONYMS=[
   [/\bprotein\s+shake\b/g,   "protein powder"],
   [/\bcilantro\b/g,          "coriander"],   // one herb, two names
   [/\bscallions?\b/g,        "green onions"],
+  [/\btahini\s+(dressing|sauce)\b/g, "tahini sauce"],  // one jar, two names
+  [/\bveg\s+(broth|stock)\b/g,       "vegetable broth"],
 ];
+// The shop sells breast, thigh and leg. Recipes say tenders, cutlets,
+// tenderloins, whole birds, "grilled chicken" — all of which were landing on
+// the list as separate things to buy.
+function chickenCut(n){
+  if(!/\bchicken\b|\bdrumsticks?\b/.test(n)) return n;
+  if(/broth|stock|bouillon|powder|seasoning|sausage|salt|bacon/.test(n)) return n; // not meat
+  if(/\bthighs?\b/.test(n))                            return "chicken thigh";
+  if(/\bdrumsticks?\b|\blegs?\b|\bquarters?\b/.test(n)) return "chicken leg";
+  return "chicken breast";   // breast, tenders, tenderloins, cutlets, whole, shredded
+}
 function cleanName(s){
   s = s
     .replace(/\([^)]*\)/g,"")            // "(6 oz each)" → ""
@@ -3385,6 +3402,7 @@ function cleanName(s){
   let prev;                               // strip stacked modifiers, not just one
   do { prev=s; s=s.replace(NAME_MODIFIERS,""); } while(s!==prev);
   for(const [rx,to] of NAME_SYNONYMS) s=s.replace(rx,to);
+  s=chickenCut(s.trim());
   return s.trim().replace(/\s+/g," ");
 }
 
@@ -3431,6 +3449,9 @@ function category(name){
 function fmtItem(qty,unit,displayName){
   if(qty==null||qty===0) return cap(displayName);
   const q=pretty(qty);
+  // Pluralise off the number actually shown: 16 tbsp converts to 1.0002 cups,
+  // which printed as "1 cups".
+  qty=Math.round(qty*8)/8;
   if(unit==="fillet") return `${q} ${pluralName(displayName+" fillet",qty)}`; // "8 cod fillets"
   if(unit) return `${q} ${unitDisplay(unit,qty)} ${displayName}`;
   return `${q} ${pluralName(displayName,qty)}`;
@@ -3442,7 +3463,15 @@ function fmtItem(qty,unit,displayName){
 const VOL_TO_ML={tsp:4.93,tbsp:14.79,cup:236.59,ml:1,l:1000};
 const WT_TO_G={g:1,kg:1000,oz:28.35,lb:453.59};
 function mlToBest(ml){
-  if(ml>=177) return {qty:ml/236.59, unit:"cup"};   // ≥ 3/4 cup
+  // A clean quarter-cup step is easier to shop than a tablespoon count:
+  // 4 tbsp is 1/4 cup, 8 tbsp is 1/2 cup. Odd amounts (5, 7, 11 tbsp) stay in
+  // tablespoons rather than becoming an unreadable fraction of a cup.
+  const tbsp = ml/14.79, quarters = Math.round(tbsp/4);
+  // Compare against the rounded quarter, not tbsp>=4: adding 2 tbsp twice
+  // lands on 3.9992 and a >=4 test would miss it.
+  if(quarters>=1 && Math.abs(tbsp - quarters*4) < 0.1)
+    return {qty:ml/236.59, unit:"cup"};
+  if(ml>=236.59) return {qty:ml/236.59, unit:"cup"};  // a full cup or more reads as cups
   if(ml>=29)  return {qty:ml/14.79,  unit:"tbsp"};  // ≥ 2 tbsp
   return            {qty:ml/4.93,   unit:"tsp"};
 }
@@ -3452,6 +3481,15 @@ function gToBest(g){
   return           {qty:g,         unit:"g"};
 }
 
+// A bare "rice" line is not shoppable — brown, jasmine and basmati are
+// different bags. The variety is often named elsewhere in the same recipe
+// (title, another ingredient, or the method), so look there before giving up.
+const RICE_GRAINS=/\b(brown|white|jasmine|basmati|arborio|sushi|wild|black|red|long.grain|short.grain)[\s-]+rice\b/i;
+function riceGrain(r){
+  const hay=[r.title||"", ...(r.ingredients||[]), ...(r.instructions||[])].join(" ; ");
+  const m=hay.match(RICE_GRAINS);
+  return m ? m[1].toLowerCase().replace(/[\s-]+/g,"-") : "";
+}
 function buildShoppingList(){
   const order=["Produce","Meat & fish","Dairy & eggs","Pantry","Other"];
   // key = cat|canon (NO unit) — volumes and weights convert to common base
@@ -3462,9 +3500,11 @@ function buildShoppingList(){
         mealCount++;
         const r=entry.recipe||{}, base=r.servings||entry.servings||1;
         const factor=entry.servings/base;
+        const grain=riceGrain(r);
         (r.ingredients||[]).forEach(line=>{
           const p=parseIngredient(line);
           if(!p.canon) return;
+          if(p.canon==="rice" && grain){ p.canon=grain+" rice"; p.displayName=grain+" rice"; }
           // Not shopping items: tap water, and the salt/pepper every kitchen
           // already has. Recipes phrase the latter six different ways, which
           // used to put five seasoning lines on the list.
