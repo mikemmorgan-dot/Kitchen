@@ -350,6 +350,15 @@ cron.schedule("0 3 * * 0", () => {
   scrapeAll().catch(e => console.error("[cron] Scrape failed:", e.message));
 });
 
+// Canonical form of a recipe URL, matching normUrl() in index.html. Without
+// this, https://www.blog.com/x/ and http://blog.com/x?utm=1 look like two
+// different recipes and the same dish gets discovered and stored twice.
+function canonUrl(u) {
+  return (u || "").trim().toLowerCase()
+    .replace(/^https?:\/\//, "").replace(/^www\./, "")
+    .replace(/[?#].*$/, "").replace(/\/+$/, "");
+}
+
 // ── Express app ───────────────────────────────────────────────────────────────
 const app = express();
 app.use(compression());          // gzip all responses — shrinks index.html ~5x
@@ -565,10 +574,10 @@ async function discoverNew(pages = 1) {
     }
     if (pruned) { await kvSet("discovered_recipes", discovered); console.log(`[discover] pruned ${pruned} junk entries`); }
     // URLs the app already has: DEMO entries + previously discovered
-    const known = new Set(Object.keys(discovered));
+    const known = new Set(Object.keys(discovered).map(canonUrl));
     try {
       const html = readFileSync("./index.html", "utf8");
-      for (const m of html.matchAll(/["']?source_url["']?\s*:\s*"(https?:\/\/[^"]+)"/g)) known.add(m[1].replace(/\/$/, ""));
+      for (const m of html.matchAll(/["']?source_url["']?\s*:\s*"(https?:\/\/[^"]+)"/g)) known.add(canonUrl(m[1]));
     } catch {}
     // Collect candidate posts from all feeds
     const candidates = [];
@@ -594,7 +603,7 @@ async function discoverNew(pages = 1) {
         await new Promise(rs => setTimeout(rs, 700));
       }
     }
-    const todo = candidates.filter(c => !known.has(c.link.replace(/\/$/, "")));
+    const todo = candidates.filter(c => !known.has(canonUrl(c.link)));
     discState.total = todo.length;
     for (const { link, cats, ft } of todo) {
       try {
@@ -850,10 +859,10 @@ app.all("/api/find", async (req, res) => {
   (async () => {
     try {
       const { parseRecipeFromHtml } = await import("./recipe-parser.js");
-      const known = new Set(Object.keys(discovered));
+      const known = new Set(Object.keys(discovered).map(canonUrl));
       try {
         const html = readFileSync("./index.html", "utf8");
-        for (const m of html.matchAll(/["']?source_url["']?\s*:\s*"(https?:\/\/[^"]+)"/g)) known.add(m[1].replace(/\/$/, ""));
+        for (const m of html.matchAll(/["']?source_url["']?\s*:\s*"(https?:\/\/[^"]+)"/g)) known.add(canonUrl(m[1]));
       } catch {}
       // Blogs ignore ?s= search feeds (they just return the standard latest-posts
       // feed), so go straight to sitemaps — they list every post ever published.
@@ -881,7 +890,7 @@ app.all("/api/find", async (req, res) => {
       const todo = candidates
         .filter(c => {
           const k = c.link.replace(/\/$/, "");
-          if (seenLinks.has(k) || known.has(k) || deadLinks[c.link]) return false;
+          if (seenLinks.has(k) || known.has(canonUrl(k)) || deadLinks[c.link]) return false;
           seenLinks.add(k); return true;
         })
         .slice(0, max);
