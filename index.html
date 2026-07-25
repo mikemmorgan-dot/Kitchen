@@ -3795,7 +3795,7 @@ function proteinType(r){
   const t=((r.title||"")+" "+(r.ingredients||[]).join(" ")).toLowerCase();
   if(/salmon|tuna|cod|shrimp|sardine|seafood|halibut|crab|lobster|anchov|poke|clam|mussel|tilapia|haddock/.test(t)) return "seafood";
   if(/chicken|turkey|poultry/.test(t)) return "chicken";
-  if(/\bbeef\b|ground beef|steak|brisket|burger|bison/.test(t)) return "beef";
+  if(/\bbeef\b|ground beef|steak|brisket|bison|hamburger|cheeseburger/.test(t)) return "beef";
   if(/\bpork\b|bacon|ham\b|prosciutto|chorizo|sausage|pork chop/.test(t)) return "pork";
   return "vegetarian";
 }
