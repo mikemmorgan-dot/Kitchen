@@ -650,12 +650,16 @@ async function withEstimatedNutrition(rec) {
 }
 
 // One-shot: add estimates to everything already stored that's missing nutrition.
-app.all("/api/estimate-nutrition", async (_, res) => {
+app.all("/api/estimate-nutrition", async (req, res) => {
   await discoveredLoaded;
   const { estimateNutrition, needsNutrition } = await import("./nutrition-estimator.js");
+  // ?force=1 redoes estimates we produced ourselves — used after fixing the
+  // estimator, since a wrong figure still counts as "has nutrition" and would
+  // otherwise be skipped forever. Published blog nutrition is never touched.
+  const force = req.query.force === "1";
   let filled = 0, skipped = 0;
   for (const r of Object.values(discovered)) {
-    if (!needsNutrition(r)) continue;
+    if (force ? !r.nutrition_estimated : !needsNutrition(r)) continue;
     const est = estimateNutrition(r.ingredients || [], r.servings || 4);
     if (est) { r.nutrition = { ...(r.nutrition || {}), ...est }; r.nutrition_estimated = true; filled++; }
     else skipped++;
