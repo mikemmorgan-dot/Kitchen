@@ -1,0 +1,275 @@
+<!doctype html>
+<html lang="en"><head>
+<meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<meta name="color-scheme" content="only light">
+<title>Load week into Morgan's Kitchen</title>
+<link rel="preconnect" href="https://fonts.googleapis.com"><link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Fraunces:ital,opsz,wght@0,9..144,400;0,9..144,600;1,9..144,400&family=Hanken+Grotesk:wght@400;500;600;700&display=swap" rel="stylesheet">
+<style>
+:root{
+  --paper:#FBF6EC; --paper-2:#EFE6D2; --card:#fff;
+  --ink:#211E18; --ink-soft:#5C564A;
+  --herb:#3F5C3A; --herb-deep:#2E4429; --terra:#C2693F; --line:#E6DCC7;
+}
+*{box-sizing:border-box;-webkit-tap-highlight-color:transparent}
+body{margin:0;background:var(--paper);color:var(--ink);
+  font-family:'Hanken Grotesk',system-ui,sans-serif;line-height:1.5;
+  padding:28px 18px 120px;max-width:680px;margin-inline:auto}
+h1{font-family:'Fraunces',Georgia,serif;font-weight:600;font-size:clamp(28px,7vw,40px);margin:0 0 6px;line-height:1.1}
+.lede{color:var(--ink-soft);font-size:15px;margin:0 0 4px}
+.target{font-size:13.5px;color:var(--ink-soft);border-left:2px solid var(--terra);
+  padding:6px 0 6px 12px;margin:18px 0 26px}
+.day{background:var(--card);border:1px solid var(--line);border-radius:18px;
+  padding:16px 16px 8px;margin-bottom:14px;box-shadow:0 18px 40px -30px rgba(60,45,20,.5)}
+.day header{display:flex;align-items:baseline;gap:9px;flex-wrap:wrap;margin-bottom:10px}
+.day h2{font-family:'Fraunces',Georgia,serif;font-weight:600;font-size:21px;margin:0}
+.date{color:var(--ink-soft);font-size:13px}
+.emph{margin-left:auto;font-size:11px;letter-spacing:.06em;text-transform:uppercase;
+  color:var(--herb-deep);background:#E9EFE4;border-radius:999px;padding:3px 9px;white-space:nowrap}
+.slot{display:flex;gap:12px;align-items:flex-start;padding:11px 0;border-top:1px solid var(--line)}
+.meal{font-size:10.5px;letter-spacing:.08em;text-transform:uppercase;color:var(--ink-soft);
+  width:62px;flex:none;padding-top:3px}
+.pair{flex:1;min-width:0}
+.src{margin:0;font-size:12.5px;color:var(--ink-soft);font-style:italic}
+.src::before{content:"from the manual · "}
+.pick{margin:3px 0 0;font-size:15.5px;font-weight:600;color:var(--herb-deep)}
+.blog{display:block;font-size:11.5px;font-weight:400;color:var(--ink-soft);letter-spacing:.02em}
+.prot{font-family:'Fraunces',Georgia,serif;font-size:19px;color:var(--terra);flex:none;padding-top:2px}
+.prot span{font-size:11px;color:var(--ink-soft)}
+.note{margin:0 0 10px;padding:8px 11px;background:var(--paper-2);border-radius:10px;
+  font-size:12.5px;color:var(--ink-soft)}
+.bar{position:fixed;left:0;right:0;bottom:0;background:rgba(251,246,236,.94);
+  backdrop-filter:blur(8px);border-top:1px solid var(--line);padding:14px 18px calc(14px + env(safe-area-inset-bottom))}
+.bar-in{max-width:680px;margin-inline:auto;display:flex;gap:12px;align-items:center}
+button{flex:1;font-family:inherit;font-size:16px;font-weight:600;color:#FDF8EE;
+  background:var(--herb-deep);border:0;border-radius:14px;padding:15px;cursor:pointer}
+button:active{transform:scale(.99)}
+button:disabled{opacity:.45;cursor:default}
+button:focus-visible{outline:3px solid var(--terra);outline-offset:2px}
+#status{font-size:13.5px;color:var(--ink-soft);flex:1;margin:0}
+#status.ok{color:var(--herb-deep);font-weight:600}
+#status.err{color:#9b2c2c}
+@media (prefers-reduced-motion:reduce){*{transition:none!important}}
+</style></head><body>
+
+<h1>This week, in your plan</h1>
+<p class="lede">Twenty meals from the nutrition plan, matched to recipes already in Morgan's Kitchen.</p>
+<p class="target">Sunday 26 July through Saturday 1 August. Writing this merges the seven days into your shared plan — other days, your library and the shopping list are left alone.</p>
+
+<article class="day">
+    <header><h2>Sunday</h2><span class="date">Jul 26</span><span class="emph">Recovery / hydration</span></header>
+    <div class="slot">
+      <div class="meal">breakfast</div>
+      <div class="pair">
+        <p class="src">Post-fast: eggs/turkey or fish, toast/oats, fruit</p>
+        <p class="pick">High Protein Omelet<span class="blog">skinnytaste</span></p>
+      </div>
+      <div class="prot">30<span>g</span></div>
+    </div><div class="slot">
+      <div class="meal">dinner</div>
+      <div class="pair">
+        <p class="src">Roast chicken, potatoes, large salad, lentils</p>
+        <p class="pick">One Pan Roasted Chicken and Potatoes<span class="blog">fufuskitchen</span></p>
+      </div>
+      <div class="prot">40<span>g</span></div>
+    </div><p class="note">Lunch left empty — the plan says light snack only if brunch runs late.</p>
+  </article><article class="day">
+    <header><h2>Monday</h2><span class="date">Jul 27</span><span class="emph">Fish / fibre</span></header>
+    <div class="slot">
+      <div class="meal">breakfast</div>
+      <div class="pair">
+        <p class="src">Overnight oats, berries, chia, protein</p>
+        <p class="pick">High Protein Overnight Oats<span class="blog">theeastcoastkitchen</span></p>
+      </div>
+      <div class="prot">34<span>g</span></div>
+    </div><div class="slot">
+      <div class="meal">lunch</div>
+      <div class="pair">
+        <p class="src">Chicken-quinoa-chickpea bowl, greens</p>
+        <p class="pick">Protein Power Bowl<span class="blog">theeastcoastkitchen</span></p>
+      </div>
+      <div class="prot">42<span>g</span></div>
+    </div><div class="slot">
+      <div class="meal">dinner</div>
+      <div class="pair">
+        <p class="src">Salmon, roasted potatoes, broccoli</p>
+        <p class="pick">Sheet-Pan Salmon & Veg<span class="blog">skinnytaste</span></p>
+      </div>
+      <div class="prot">40<span>g</span></div>
+    </div>
+  </article><article class="day">
+    <header><h2>Tuesday</h2><span class="date">Jul 28</span><span class="emph">Iron from food</span></header>
+    <div class="slot">
+      <div class="meal">breakfast</div>
+      <div class="pair">
+        <p class="src">Turkey-avocado whole-grain toast, fruit</p>
+        <p class="pick">Poached Egg & Avocado Toast<span class="blog">pinchofyum</span></p>
+      </div>
+      <div class="prot">28<span>g</span></div>
+    </div><div class="slot">
+      <div class="meal">lunch</div>
+      <div class="pair">
+        <p class="src">Lentil soup + tuna salad</p>
+        <p class="pick">Greek Red Lentil Soup<span class="blog">themediterraneandish</span></p>
+      </div>
+      <div class="prot">18<span>g</span></div>
+    </div><div class="slot">
+      <div class="meal">dinner</div>
+      <div class="pair">
+        <p class="src">Lean beef, peppers, mushrooms, brown rice</p>
+        <p class="pick">Beef Stir Fry<span class="blog">theeastcoastkitchen</span></p>
+      </div>
+      <div class="prot">32<span>g</span></div>
+    </div>
+  </article><article class="day">
+    <header><h2>Wednesday</h2><span class="date">Jul 29</span><span class="emph">Legumes / fish</span></header>
+    <div class="slot">
+      <div class="meal">breakfast</div>
+      <div class="pair">
+        <p class="src">Smoothie: protein, berries, oats, spinach, flax</p>
+        <p class="pick">Blueberry Protein Smoothie<span class="blog">theeastcoastkitchen</span></p>
+      </div>
+      <div class="prot">32<span>g</span></div>
+    </div><div class="slot">
+      <div class="meal">lunch</div>
+      <div class="pair">
+        <p class="src">Chickpea-chicken salad wrap</p>
+        <p class="pick">Greek Pita Wrap<span class="blog">themediterraneandish</span></p>
+      </div>
+      <div class="prot">34<span>g</span></div>
+    </div><div class="slot">
+      <div class="meal">dinner</div>
+      <div class="pair">
+        <p class="src">Cod, white beans, greens, quinoa</p>
+        <p class="pick">Baked Cod with Lemon and Garlic<span class="blog">themediterraneandish</span></p>
+      </div>
+      <div class="prot">34<span>g</span></div>
+    </div>
+  </article><article class="day">
+    <header><h2>Thursday</h2><span class="date">Jul 30</span><span class="emph">Dairy-egg test day</span></header>
+    <div class="slot">
+      <div class="meal">breakfast</div>
+      <div class="pair">
+        <p class="src">Eggs, or turkey/tofu scramble, oats</p>
+        <p class="pick">Mushroom Spinach Scrambled Eggs<span class="blog">skinnytaste</span></p>
+      </div>
+      <div class="prot">24<span>g</span></div>
+    </div><div class="slot">
+      <div class="meal">lunch</div>
+      <div class="pair">
+        <p class="src">Leftover cod/bean bowl</p>
+        <p class="pick">Baked Cod with Herbs<span class="blog">themediterraneandish</span></p>
+      </div>
+      <div class="prot">34<span>g</span></div>
+    </div><div class="slot">
+      <div class="meal">dinner</div>
+      <div class="pair">
+        <p class="src">Turkey and black-bean chilli, avocado</p>
+        <p class="pick">Turkey Chili<span class="blog">skinnytaste</span></p>
+      </div>
+      <div class="prot">36<span>g</span></div>
+    </div>
+  </article><article class="day">
+    <header><h2>Friday</h2><span class="date">Jul 31</span><span class="emph">Omega-3 / spices</span></header>
+    <div class="slot">
+      <div class="meal">breakfast</div>
+      <div class="pair">
+        <p class="src">Oats, pumpkin seeds, berries, protein</p>
+        <p class="pick">Banana Nut Protein Oats<span class="blog">skinnytaste</span></p>
+      </div>
+      <div class="prot">28<span>g</span></div>
+    </div><div class="slot">
+      <div class="meal">lunch</div>
+      <div class="pair">
+        <p class="src">Salmon or sardine whole-grain wrap, salad</p>
+        <p class="pick">Salmon Cobb Salad<span class="blog">skinnytaste</span></p>
+      </div>
+      <div class="prot">38<span>g</span></div>
+    </div><div class="slot">
+      <div class="meal">dinner</div>
+      <div class="pair">
+        <p class="src">Chicken curry with lentils and vegetables, rice</p>
+        <p class="pick">Slow Cooker Chicken Curry<span class="blog">pinchofyum</span></p>
+      </div>
+      <div class="prot">36<span>g</span></div>
+    </div>
+  </article><article class="day">
+    <header><h2>Saturday</h2><span class="date">Aug 1</span><span class="emph">Flexible family meal</span></header>
+    <div class="slot">
+      <div class="meal">breakfast</div>
+      <div class="pair">
+        <p class="src">Dairy-free or Greek yogurt + protein + fruit</p>
+        <p class="pick">Caramelized Banana Yogurt Bowl<span class="blog">eatingbirdfood</span></p>
+      </div>
+      <div class="prot">31<span>g</span></div>
+    </div><div class="slot">
+      <div class="meal">lunch</div>
+      <div class="pair">
+        <p class="src">Beef-lentil bowl with greens</p>
+        <p class="pick">Greek Meatball Bowls<span class="blog">themediterraneandish</span></p>
+      </div>
+      <div class="prot">34<span>g</span></div>
+    </div><div class="slot">
+      <div class="meal">dinner</div>
+      <div class="pair">
+        <p class="src">Shrimp, vegetables and rice</p>
+        <p class="pick">Bang Bang Shrimp Bowl<span class="blog">skinnytaste</span></p>
+      </div>
+      <div class="prot">32<span>g</span></div>
+    </div>
+  </article>
+
+<div class="bar"><div class="bar-in">
+  <p id="status">Ready to write.</p>
+  <button id="go">Write week to plan</button>
+</div></div>
+
+<script>
+const API = "https://manooshas-kitchen.onrender.com";
+const PAYLOAD = {"plan":{"2026-07-26":{"breakfast":[{"key":"https://www.skinnytaste.com/high-protein-omelet/","title":"High Protein Omelet","blog":"skinnytaste","protein":30,"meal":"breakfast","servings":1}],"dinner":[{"key":"https://www.fufuskitchen.com/one-pan-roasted-chicken-and-potatoes/","title":"One Pan Roasted Chicken and Potatoes","blog":"fufuskitchen","protein":40,"meal":"dinner","servings":4}]},"2026-07-27":{"breakfast":[{"key":"https://theeastcoastkitchen.com/high-protein-overnight-oats-the-breakfast-game-changer/","title":"High Protein Overnight Oats","blog":"theeastcoastkitchen","protein":34,"meal":"breakfast","servings":1}],"lunch":[{"key":"https://theeastcoastkitchen.com/protein-power-bowl/","title":"Protein Power Bowl","blog":"theeastcoastkitchen","protein":42,"meal":"lunch","servings":4}],"dinner":[{"key":"https://www.skinnytaste.com/sheet-pan-salmon/","title":"Sheet-Pan Salmon & Veg","blog":"skinnytaste","protein":40,"meal":"dinner","servings":4}]},"2026-07-28":{"breakfast":[{"key":"https://pinchofyum.com/simple-poached-egg-avocado-toast","title":"Poached Egg & Avocado Toast","blog":"pinchofyum","protein":28,"meal":"breakfast","servings":1}],"lunch":[{"key":"https://www.themediterraneandish.com/red-lentil-soup-recipe/","title":"Greek Red Lentil Soup","blog":"themediterraneandish","protein":18,"meal":"lunch","servings":6}],"dinner":[{"key":"https://theeastcoastkitchen.com/beef-stir-fry/","title":"Beef Stir Fry","blog":"theeastcoastkitchen","protein":32,"meal":"dinner","servings":4}]},"2026-07-29":{"breakfast":[{"key":"https://theeastcoastkitchen.com/blueberry-protein-smoothie-that-tastes-like-cheesecake/","title":"Blueberry Protein Smoothie","blog":"theeastcoastkitchen","protein":32,"meal":"breakfast","servings":1}],"lunch":[{"key":"https://www.themediterraneandish.com/greek-stuffed-pita/","title":"Greek Pita Wrap","blog":"themediterraneandish","protein":34,"meal":"lunch","servings":2}],"dinner":[{"key":"https://www.themediterraneandish.com/baked-cod-recipe-lemon-garlic/","title":"Baked Cod with Lemon and Garlic","blog":"themediterraneandish","protein":34,"meal":"dinner","servings":4}]},"2026-07-30":{"breakfast":[{"key":"https://www.skinnytaste.com/mushroom-spinach-scrambled-eggs/","title":"Mushroom Spinach Scrambled Eggs","blog":"skinnytaste","protein":24,"meal":"breakfast","servings":1}],"lunch":[{"key":"https://www.themediterraneandish.com/baked-cod-recipe/","title":"Baked Cod with Herbs","blog":"themediterraneandish","protein":34,"meal":"lunch","servings":4}],"dinner":[{"key":"https://www.skinnytaste.com/turkey-chili/","title":"Turkey Chili","blog":"skinnytaste","protein":36,"meal":"dinner","servings":6}]},"2026-07-31":{"breakfast":[{"key":"https://www.skinnytaste.com/banana-nut-protein-oats/","title":"Banana Nut Protein Oats","blog":"skinnytaste","protein":28,"meal":"breakfast","servings":1}],"lunch":[{"key":"https://www.skinnytaste.com/salmon-salad/","title":"Salmon Cobb Salad","blog":"skinnytaste","protein":38,"meal":"lunch","servings":4}],"dinner":[{"key":"https://pinchofyum.com/slow-cooker-chicken-curry","title":"Slow Cooker Chicken Curry","blog":"pinchofyum","protein":36,"meal":"dinner","servings":6}]},"2026-08-01":{"breakfast":[{"key":"https://www.eatingbirdfood.com/caramelized-banana-yogurt-bowl/","title":"Caramelized Banana Yogurt Bowl","blog":"eatingbirdfood","protein":31,"meal":"breakfast","servings":1}],"lunch":[{"key":"https://www.themediterraneandish.com/greek-meatballs/","title":"Greek Meatball Bowls","blog":"themediterraneandish","protein":34,"meal":"lunch","servings":4}],"dinner":[{"key":"https://www.skinnytaste.com/bangin-good-shrimp/","title":"Bang Bang Shrimp Bowl","blog":"skinnytaste","protein":32,"meal":"dinner","servings":4}]}},"savedRecipes":{"https://www.skinnytaste.com/high-protein-omelet/":{"title":"High Protein Omelet","blog":"skinnytaste","source_url":"https://www.skinnytaste.com/high-protein-omelet/","image":"https://www.skinnytaste.com/wp-content/uploads/2025/01/High-Protein-Omelet-12.jpg","servings":1,"times":{"prep":"5 mins","cook":"5 mins","total":"10 mins"},"ingredients":["2 eggs","3 egg whites","1 cup mixed vegetables","2 tbsp shredded cheese","olive oil spray","salt and pepper"],"instructions":[{"name":null,"steps":["Whisk eggs, whites and vegetables.","Cook in a hot skillet; fold with cheese."]}],"nutrition":{"calories":260,"protein_g":30,"carbs_g":5,"fat_g":14,"fiber_g":1},"video":null,"rating":{"value":4.8,"count":112}},"https://www.fufuskitchen.com/one-pan-roasted-chicken-and-potatoes/":{"title":"One Pan Roasted Chicken and Potatoes","blog":"fufuskitchen","source_url":"https://www.fufuskitchen.com/one-pan-roasted-chicken-and-potatoes/","image":"","servings":4,"times":{"prep":"15 mins","cook":"45 mins","total":"60 mins"},"ingredients":["8 bone-in chicken thighs","4 potatoes, wedged","4 cloves garlic","1 lemon, sliced","3 tbsp olive oil","1.5 tsp cumin","1 tsp oregano","1 tsp paprika","salt and pepper"],"instructions":[{"name":null,"steps":["Toss chicken and potatoes with olive oil, garlic and spices on a sheet pan.","Arrange lemon slices over the top.","Roast at 425°F for 40–45 min until skin is crispy and potatoes are golden."]}],"nutrition":{"calories":500,"protein_g":40,"carbs_g":30,"fat_g":24,"fiber_g":3},"video":null,"rating":{"value":5,"count":35}},"https://theeastcoastkitchen.com/high-protein-overnight-oats-the-breakfast-game-changer/":{"title":"High Protein Overnight Oats","blog":"theeastcoastkitchen","source_url":"https://theeastcoastkitchen.com/high-protein-overnight-oats-the-breakfast-game-changer/","image":"","servings":1,"times":{"prep":"5 mins","cook":null,"total":"5 mins"},"ingredients":["1/2 cup rolled oats","2/3 cup Greek yogurt","1/3 cup milk","1 scoop vanilla protein powder","1 tbsp honey","1 tbsp chia seeds","fresh berries to top"],"instructions":[{"name":null,"steps":["Mix oats, yogurt, milk, protein powder, honey and chia seeds.","Refrigerate overnight (at least 6 hours).","Top with fresh berries before eating."]}],"nutrition":{"calories":380,"protein_g":34,"carbs_g":42,"fat_g":6,"fiber_g":6},"video":null,"rating":{"value":4.9,"count":164}},"https://theeastcoastkitchen.com/protein-power-bowl/":{"title":"Protein Power Bowl","blog":"theeastcoastkitchen","source_url":"https://theeastcoastkitchen.com/protein-power-bowl/","image":"","servings":4,"times":{"prep":"15 mins","cook":"20 mins","total":"35 mins"},"ingredients":["1.5 lb chicken","2 cups quinoa","roasted veg","avocado","tahini dressing"],"instructions":[{"name":null,"steps":["Cook chicken and quinoa.","Roast vegetables.","Build bowls; top with avocado and tahini."]}],"nutrition":{"calories":480,"protein_g":42,"carbs_g":44,"fat_g":16,"fiber_g":8},"video":null,"rating":{"value":4.9,"count":128}},"https://www.skinnytaste.com/sheet-pan-salmon/":{"title":"Sheet-Pan Salmon & Veg","blog":"skinnytaste","source_url":"https://www.skinnytaste.com/sheet-pan-salmon/","image":"","servings":4,"times":{"prep":"10 mins","cook":"20 mins","total":"30 mins"},"ingredients":["4 salmon fillets (6 oz each)","1 lb broccoli florets","2 tbsp olive oil","2 cloves garlic","1 lemon","salt and pepper"],"instructions":[{"name":null,"steps":["Toss broccoli with oil and garlic on a sheet pan; roast 8 min.","Add salmon, season, and roast 12 min more.","Finish with lemon."]}],"nutrition":{"calories":430,"protein_g":40,"carbs_g":12,"fat_g":24,"fiber_g":4},"video":null,"rating":{"value":4.85,"count":301}},"https://pinchofyum.com/simple-poached-egg-avocado-toast":{"title":"Poached Egg & Avocado Toast","blog":"pinchofyum","source_url":"https://pinchofyum.com/simple-poached-egg-avocado-toast","image":"","servings":1,"times":{"prep":"3 mins","cook":"5 mins","total":"8 mins"},"ingredients":["3 eggs","1 tbsp cream cheese","2 oz smoked salmon","1 tsp butter","fresh chives and dill","salt and white pepper","sourdough toast"],"instructions":[{"name":null,"steps":["Whisk eggs with cream cheese, salt and white pepper until smooth.","Melt butter in a pan over low; add eggs and fold gently 3–4 min.","Remove while slightly underdone; top with salmon and fresh herbs."]}],"nutrition":{"calories":340,"protein_g":28,"carbs_g":6,"fat_g":22,"fiber_g":0},"video":null,"rating":{"value":4.9,"count":142}},"https://www.themediterraneandish.com/red-lentil-soup-recipe/":{"title":"Greek Red Lentil Soup","blog":"themediterraneandish","source_url":"https://www.themediterraneandish.com/red-lentil-soup-recipe/","image":"https://www.themediterraneandish.com/wp-content/uploads/2020/01/greek-red-lentil-soup-recipe-5.jpg","servings":6,"times":{"prep":"10 mins","cook":"30 mins","total":"40 mins"},"ingredients":["1.5 cups red lentils","1 onion","3 cloves garlic","1 tsp cumin","1 can crushed tomatoes","6 cups broth","olive oil","lemon"],"instructions":[{"name":null,"steps":["Sauté onion and garlic in olive oil; add cumin.","Add lentils, tomatoes and broth; simmer 25–30 min.","Blend partially, adjust seasoning and finish with lemon."]}],"nutrition":{"calories":280,"protein_g":18,"carbs_g":44,"fat_g":5,"fiber_g":16},"video":null,"rating":{"value":4.9,"count":220}},"https://theeastcoastkitchen.com/beef-stir-fry/":{"title":"Beef Stir Fry","blog":"theeastcoastkitchen","source_url":"https://theeastcoastkitchen.com/beef-stir-fry/","image":"","servings":4,"times":{"prep":"15 mins","cook":"15 mins","total":"30 mins"},"ingredients":["1 lb flank steak","mixed veg","garlic, ginger","soy sauce, oyster sauce","rice"],"instructions":[{"name":null,"steps":["Sear beef; set aside.","Stir-fry veg with garlic and ginger.","Return beef; add sauce. Serve over rice."]}],"nutrition":{"calories":380,"protein_g":32,"carbs_g":28,"fat_g":16,"fiber_g":4},"video":null,"rating":{"value":4.8,"count":124}},"https://theeastcoastkitchen.com/blueberry-protein-smoothie-that-tastes-like-cheesecake/":{"title":"Blueberry Protein Smoothie","blog":"theeastcoastkitchen","source_url":"https://theeastcoastkitchen.com/blueberry-protein-smoothie-that-tastes-like-cheesecake/","image":"","servings":1,"times":{"prep":"5 mins","cook":null,"total":"5 mins"},"ingredients":["1 scoop vanilla protein powder","1 frozen banana","1/2 cup frozen berries","1/4 cup Greek yogurt","1/4 cup milk","granola, nuts and fruit to top"],"instructions":[{"name":null,"steps":["Blend protein powder, banana, berries, yogurt and milk until thick and smooth.","Pour into bowl — consistency should be thick, not pourable.","Top with granola, nuts and fresh fruit."]}],"nutrition":{"calories":400,"protein_g":32,"carbs_g":48,"fat_g":8,"fiber_g":6},"video":null,"rating":{"value":4.8,"count":106}},"https://www.themediterraneandish.com/greek-stuffed-pita/":{"title":"Greek Pita Wrap","blog":"themediterraneandish","source_url":"https://www.themediterraneandish.com/greek-stuffed-pita/","image":"","servings":2,"times":{"prep":"10 mins","cook":null,"total":"10 mins"},"ingredients":["2 pita breads","6 oz grilled chicken","4 tbsp tzatziki","1 cup romaine","1/2 cup cherry tomatoes","1/4 cucumber","1/4 cup feta","10 olives"],"instructions":[{"name":null,"steps":["Warm pita.","Spread tzatziki inside.","Fill with chicken, lettuce, tomatoes, cucumber, feta and olives."]}],"nutrition":{"calories":400,"protein_g":34,"carbs_g":38,"fat_g":12,"fiber_g":4},"video":null,"rating":{"value":4.8,"count":194}},"https://www.themediterraneandish.com/baked-cod-recipe-lemon-garlic/":{"title":"Baked Cod with Lemon and Garlic","blog":"themediterraneandish","source_url":"https://www.themediterraneandish.com/baked-cod-recipe-lemon-garlic/","image":"https://www.themediterraneandish.com/wp-content/uploads/2017/10/Mediterranean-Baked-Cod-Recipe-Lemon-Garlic-The-Mediterranean-Dish-1.jpg","servings":4,"times":{"prep":"5 mins","cook":"12 mins","total":"17 mins"},"ingredients":["4 cod fillets","3 tbsp olive oil","3 cloves garlic, minced","1 lemon, sliced","1 tsp paprika","fresh parsley"],"instructions":[{"name":null,"steps":["Whisk olive oil with garlic, paprika and lemon juice.","Place cod in a dish; spoon sauce over and add lemon slices.","Bake at 400°F for 10–12 min until it flakes."]}],"nutrition":{"calories":260,"protein_g":34,"carbs_g":3,"fat_g":12,"fiber_g":1},"video":null,"rating":{"value":4.9,"count":890}},"https://www.skinnytaste.com/mushroom-spinach-scrambled-eggs/":{"title":"Mushroom Spinach Scrambled Eggs","blog":"skinnytaste","source_url":"https://www.skinnytaste.com/mushroom-spinach-scrambled-eggs/","image":"","servings":1,"times":{"prep":"5 mins","cook":"8 mins","total":"13 mins"},"ingredients":["2 eggs","1 egg white","1 cup sliced mushrooms","1 cup baby spinach","1/4 cup diced onion","olive oil spray","salt and pepper"],"instructions":[{"name":null,"steps":["Sauté onion and mushrooms until golden.","Add spinach; wilt. Add eggs and scramble gently."]}],"nutrition":{"calories":200,"protein_g":24,"carbs_g":6,"fat_g":10,"fiber_g":2},"video":null,"rating":{"value":4.8,"count":96}},"https://www.themediterraneandish.com/baked-cod-recipe/":{"title":"Baked Cod with Herbs","blog":"themediterraneandish","source_url":"https://www.themediterraneandish.com/baked-cod-recipe/","image":"","servings":4,"times":{"prep":"10 mins","cook":"15 mins","total":"25 mins"},"ingredients":["4 cod fillets","4 cloves garlic","1 lemon","3 tbsp olive oil","1 tsp paprika","1/2 tsp cumin","parsley, salt, pepper"],"instructions":[{"name":null,"steps":["Preheat oven 400F.","Mix oil, garlic and spices; brush over cod.","Top with lemon; bake 15 min until flaky."]}],"nutrition":{"calories":220,"protein_g":34,"carbs_g":3,"fat_g":9,"fiber_g":0},"video":null,"rating":{"value":4.9,"count":328}},"https://www.skinnytaste.com/turkey-chili/":{"title":"Turkey Chili","blog":"skinnytaste","source_url":"https://www.skinnytaste.com/turkey-chili/","image":"","servings":6,"times":{"prep":"15 mins","cook":"35 mins","total":"50 mins"},"ingredients":["1.5 lb ground turkey","2 cans kidney beans","1 can crushed tomatoes","1 onion","2 tbsp chili powder","1 tsp cumin","salt and pepper"],"instructions":[{"name":null,"steps":["Brown turkey with onion.","Add tomatoes, beans, chili powder and cumin.","Simmer 30 min; adjust seasoning."]}],"nutrition":{"calories":340,"protein_g":36,"carbs_g":30,"fat_g":10,"fiber_g":10},"video":null,"rating":{"value":4.9,"count":890}},"https://www.skinnytaste.com/banana-nut-protein-oats/":{"title":"Banana Nut Protein Oats","blog":"skinnytaste","source_url":"https://www.skinnytaste.com/banana-nut-protein-oats/","image":"https://www.skinnytaste.com/wp-content/uploads/2021/08/Banana-Nut-Protein-Oats-7.jpg","servings":1,"times":{"prep":"2 mins","cook":"8 mins","total":"10 mins"},"ingredients":["1/2 cup rolled oats","1/2 banana, mashed + 1/2 sliced","1/4 cup egg whites","1/2 cup vanilla protein shake","2 tbsp chopped walnuts","1 tsp maple syrup"],"instructions":[{"name":null,"steps":["Combine oats, protein shake, egg whites and mashed banana in a small pot.","Cook over medium-low, stirring constantly, until thick, about 5 min.","Pour into a bowl; top with sliced banana, walnuts and maple syrup."]}],"nutrition":{"calories":380,"protein_g":28,"carbs_g":48,"fat_g":8,"fiber_g":6},"video":null,"rating":{"value":4.8,"count":168}},"https://www.skinnytaste.com/salmon-salad/":{"title":"Salmon Cobb Salad","blog":"skinnytaste","source_url":"https://www.skinnytaste.com/salmon-salad/","image":"","servings":4,"times":{"prep":"15 mins","cook":"15 mins","total":"30 mins"},"ingredients":["6 cups greens","4 salmon fillets","2 eggs","1 avocado","cherry tomatoes","cucumber","lemon vinaigrette"],"instructions":[{"name":null,"steps":["Bake salmon; hard boil eggs.","Arrange over greens with avocado, tomatoes and cucumber.","Top with salmon and eggs; drizzle vinaigrette."]}],"nutrition":{"calories":420,"protein_g":38,"carbs_g":12,"fat_g":26,"fiber_g":6},"video":null,"rating":{"value":4.9,"count":236}},"https://pinchofyum.com/slow-cooker-chicken-curry":{"title":"Slow Cooker Chicken Curry","blog":"pinchofyum","source_url":"https://pinchofyum.com/slow-cooker-chicken-curry","image":"","servings":6,"times":{"prep":"15 mins","cook":"4 hr","total":"4 hr 15 mins"},"ingredients":["2 lb chicken thighs","1 can coconut milk","curry paste","onion, garlic, ginger","spinach","rice"],"instructions":[{"name":null,"steps":["Place chicken, coconut milk and curry paste in slow cooker.","Cook Low 4 hr.","Stir in spinach; serve over rice."]}],"nutrition":{"calories":400,"protein_g":36,"carbs_g":18,"fat_g":22,"fiber_g":3},"video":null,"rating":{"value":4.9,"count":234}},"https://www.eatingbirdfood.com/caramelized-banana-yogurt-bowl/":{"title":"Caramelized Banana Yogurt Bowl","blog":"eatingbirdfood","source_url":"https://www.eatingbirdfood.com/caramelized-banana-yogurt-bowl/","image":"","servings":1,"times":{"prep":"5 mins","cook":"5 mins","total":"10 mins"},"ingredients":["1 cup Greek yogurt","1 scoop vanilla protein powder","1 banana","1 tsp coconut oil","1 tsp maple syrup","2 tbsp walnuts","1 tbsp peanut butter"],"instructions":[{"name":null,"steps":["Caramelize banana slices in coconut oil and maple syrup.","Mix yogurt with protein powder.","Top with banana, walnuts and peanut butter."]}],"nutrition":{"calories":450,"protein_g":31,"carbs_g":58,"fat_g":11,"fiber_g":4},"video":null,"rating":{"value":5,"count":64}},"https://www.themediterraneandish.com/greek-meatballs/":{"title":"Greek Meatball Bowls","blog":"themediterraneandish","source_url":"https://www.themediterraneandish.com/greek-meatballs/","image":"","servings":4,"times":{"prep":"20 mins","cook":"20 mins","total":"40 mins"},"ingredients":["1.5 lb ground beef","feta, mint","oregano","2 cups rice","tzatziki, cucumber"],"instructions":[{"name":null,"steps":["Mix beef with feta, mint and oregano; form balls.","Bake 400F 20 min.","Serve over rice with tzatziki and cucumber."]}],"nutrition":{"calories":440,"protein_g":34,"carbs_g":32,"fat_g":20,"fiber_g":2},"video":null,"rating":{"value":4.9,"count":196}},"https://www.skinnytaste.com/bangin-good-shrimp/":{"title":"Bang Bang Shrimp Bowl","blog":"skinnytaste","source_url":"https://www.skinnytaste.com/bangin-good-shrimp/","image":"https://www.skinnytaste.com/wp-content/uploads/2011/05/Banging-Good-Shrimp-1-4.jpg","servings":4,"times":{"prep":"15 mins","cook":"12 mins","total":"27 mins"},"ingredients":["1.5 lb shrimp","bang bang sauce","2 cups rice","cabbage slaw","green onions"],"instructions":[{"name":null,"steps":["Crisp shrimp in air fryer.","Toss in bang bang sauce.","Serve over rice with slaw."]}],"nutrition":{"calories":400,"protein_g":32,"carbs_g":42,"fat_g":12,"fiber_g":3},"video":null,"rating":{"value":4.9,"count":268}}}};
+const btn = document.getElementById("go"), st = document.getElementById("status");
+
+function say(msg, cls){ st.textContent = msg; st.className = cls || ""; }
+
+btn.addEventListener("click", async () => {
+  btn.disabled = true;
+  try {
+    say("Reading current plan…");
+    let shared = {};
+    const r = await fetch(API + "/api/state/shared", {cache:"no-store"});
+    if (r.ok) shared = await r.json() || {};
+
+    shared.plan = shared.plan || {};
+    shared.savedRecipes = shared.savedRecipes || {};
+    let added = 0, skipped = 0;
+
+    for (const [day, meals] of Object.entries(PAYLOAD.plan)) {
+      shared.plan[day] = shared.plan[day] || {};
+      for (const [meal, list] of Object.entries(meals)) {
+        shared.plan[day][meal] = shared.plan[day][meal] || [];
+        for (const entry of list) {
+          if (shared.plan[day][meal].some(e => e.key === entry.key)) { skipped++; continue; }
+          shared.plan[day][meal].push(entry);
+          added++;
+        }
+      }
+    }
+    Object.assign(shared.savedRecipes, PAYLOAD.savedRecipes);
+
+    say("Saving…");
+    const w = await fetch(API + "/api/state/shared", {
+      method: "POST",
+      headers: {"Content-Type": "application/json"},
+      body: JSON.stringify(shared)
+    });
+    if (!w.ok) throw new Error("Server returned " + w.status);
+
+    say(added + " meals added" + (skipped ? ", " + skipped + " already there" : "") + ". Reopen the app and pull to refresh.", "ok");
+    btn.textContent = "Done";
+  } catch (e) {
+    say("Could not write: " + e.message + ". Check the app is awake, then try again.", "err");
+    btn.disabled = false;
+  }
+});
+</script>
+</body></html>
