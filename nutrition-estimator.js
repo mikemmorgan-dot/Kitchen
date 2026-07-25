@@ -15,24 +15,25 @@ const FOODS = [
   // ── meat & poultry ────────────────────────────────────────────────────────
   ["ground beef|beef mince|minced beef",      [250, 17.7, 0, 20, 0]],
   ["chuck roast|braising steak|stew(ing)? beef|brisket", [217, 19, 0, 15, 0]],
-  ["steak|sirloin|ribeye|flank",              [217, 22, 0, 14, 0]],
+  ["steak|sirloin|ribeye|flank",              [217, 22, 0, 14, 0],   { gUnit: 225 }],
   ["beef",                                     [217, 19, 0, 15, 0]],
   ["ground lamb|lamb mince",                   [282, 17, 0, 23, 0]],
   ["lamb|leg of lamb|lamb shoulder",           [258, 18, 0, 21, 0]],
   ["ground turkey|turkey mince",               [189, 27, 0, 8, 0]],
   ["turkey",                                   [189, 27, 0, 8, 0]],
-  ["chicken breast",                           [165, 31, 0, 3.6, 0]],
-  ["chicken thigh|chicken legs?|drumsticks?",  [209, 26, 0, 11, 0]],
-  ["whole chicken|chicken",                    [190, 27, 0, 9, 0]],
-  ["bacon",                                    [541, 37, 1.4, 42, 0]],
-  ["sausage|chorizo",                          [301, 18, 2, 25, 0]],
+  ["chicken breasts?",                           [165, 31, 0, 3.6, 0], { gUnit: 174 }],
+  ["chicken thighs?|chicken legs?|drumsticks?",  [209, 26, 0, 11, 0],  { gUnit: 95 }],
+  ["whole chicken",                            [190, 27, 0, 9, 0],   { gUnit: 800 }],
+  ["chicken",                                  [190, 27, 0, 9, 0]],
+  ["bacon",                                    [541, 37, 1.4, 42, 0],{ gUnit: 10 }],
+  ["sausage|chorizo",                          [301, 18, 2, 25, 0],  { gUnit: 75 }],
   ["pork|pork loin|pork shoulder",             [242, 26, 0, 14, 0]],
   // ── fish & seafood ────────────────────────────────────────────────────────
-  ["salmon",                                   [208, 20, 0, 13, 0]],
-  ["shrimp|prawns?",                           [99, 24, 0.2, 0.3, 0]],
-  ["tuna",                                     [132, 28, 0, 1, 0]],
-  ["branzino|sea bass|cod|halibut|tilapia|white fish|fish fillets?", [97, 20, 0, 2, 0]],
-  ["crab|lobster",                             [89, 19, 0, 1, 0]],
+  ["salmon fillets?|salmon",                                   [208, 20, 0, 13, 0],  { gUnit: 170 }],
+  ["shrimp|prawns?",                           [99, 24, 0.2, 0.3, 0],{ gUnit: 15 }],
+  ["tuna steaks?|tuna",                        [132, 28, 0, 1, 0],   { gUnit: 150, gCan: 142 }],
+  ["branzino|sea bass|cod|halibut|tilapia|white fish|fish fillets?", [97, 20, 0, 2, 0], { gUnit: 170 }],
+  ["sardines?|crab|lobster",                             [89, 19, 0, 1, 0]],
   // ── dairy & eggs ──────────────────────────────────────────────────────────
   ["eggs?",                                    [143, 12.6, 0.7, 9.5, 0], { gUnit: 50 }],
   ["egg whites?",                              [52, 11, 0.7, 0.2, 0],    { gUnit: 33 }],
@@ -55,7 +56,7 @@ const FOODS = [
   ["white beans|cannellini|navy beans",        [139, 9.7, 25, 0.5, 6.3], { gCup: 179 }],
   ["black beans|kidney beans",                 [132, 8.9, 24, 0.5, 8.7], { gCup: 172 }],
   ["tofu",                                     [76, 8, 1.9, 4.8, 0.3],   { gCup: 248 }],
-  ["tempeh",                                   [192, 20, 7.6, 11, 0]],
+  ["tempeh",                                   [192, 20, 7.6, 11, 0],{ gUnit: 227 }],
   // ── grains & starches ─────────────────────────────────────────────────────
   ["cooked rice",                              [130, 2.7, 28, 0.3, 0.4], { gCup: 158 }],
   ["rice|basmati|jasmine rice",                [360, 7, 79, 0.9, 1.3],   { gCup: 185 }],
@@ -70,7 +71,7 @@ const FOODS = [
   ["pita|flatbread|naan",                      [275, 9, 55, 1.2, 2.2],   { gUnit: 60 }],
   ["bread|toast|baguette",                     [265, 9, 49, 3.2, 2.7],   { gUnit: 30 }],
   ["potatoes?",                                [77, 2, 17, 0.1, 2.2],    { gUnit: 170 }],
-  ["sweet potatoes?",                          [86, 1.6, 20, 0.1, 3],    { gUnit: 130 }],
+  ["sweet potatoes?",                          [86, 1.6, 20, 0.1, 3],    { gUnit: 95 }],
   // ── vegetables ────────────────────────────────────────────────────────────
   ["onions?|shallots?",                        [40, 1.1, 9.3, 0.1, 1.7], { gUnit: 110, gCup: 160 }],
   ["garlic",                                   [149, 6.4, 33, 0.5, 2.1], { gUnit: 3 }],
@@ -119,6 +120,8 @@ const FOODS = [
   ["sugar",                                    [387, 0, 100, 0, 0],      { gCup: 200 }],
   ["pomegranate molasses",                     [280, 0.4, 70, 0, 0]],
   ["lemon juice|lime juice|vinegar|lemons?|limes?", [22, 0.4, 6.9, 0.2, 0.3], { gUnit: 60, gCup: 240 }],
+  ["chicken broth|chicken stock|beef broth|beef stock|vegetable broth|vegetable stock|bone broth",
+                                               [7, 1, 0.5, 0.2, 0],      { gCup: 240 }],
   ["broth|stock",                              [7, 1, 0.5, 0.2, 0],      { gCup: 240 }],
   ["water",                                    [0, 0, 0, 0, 0],          { gCup: 240 }],
 ];
@@ -170,8 +173,8 @@ function gramsFor(qty, unitWord, food) {
   if (/^(tbsp|tablespoons?)$/.test(u)) return qty * ((opts.gCup || 150) / 16);
   if (/^(tsp|teaspoons?)$/.test(u))    return qty * ((opts.gCup || 150) / 48);
   if (/^cloves?$/.test(u))          return qty * 3;
-  if (/^cans?$/.test(u))            return qty * 400;
-  if (/^(slices?|pieces?|sprigs?)$/.test(u)) return qty * (opts.gUnit || 25);
+  if (/^cans?$/.test(u))            return qty * (opts.gCan || 400);
+  if (/^(slices?|pieces?|sprigs?|strips?|rashers?|fillets?|links?)$/.test(u)) return qty * (opts.gUnit || 25);
   if (/^(bunch(es)?|heads?)$/.test(u))       return qty * (opts.gCup || 100);
   // no recognised unit — treat as a count of whole items
   if (opts.gUnit) return qty * opts.gUnit;
@@ -186,7 +189,8 @@ function gramsFor(qty, unitWord, food) {
 export function estimateNutrition(ingredients, servings = 4) {
   if (!Array.isArray(ingredients) || !ingredients.length) return null;
   const n = { calories: 0, protein_g: 0, carbs_g: 0, fat_g: 0, fiber_g: 0 };
-  let understood = 0, sized = 0;
+  let understood = 0, sized = 0, unsizedProtein = 0;
+  const PROTEIN_DENSE = 15;   // g per 100 g — meat, fish, tofu-and-up
 
   for (const raw of ingredients) {
     const line = String(raw || "").trim();
@@ -197,11 +201,20 @@ export function estimateNutrition(ingredients, servings = 4) {
     const food = matchFood(rest || line);
     if (!food) continue;                       // unknown ingredient — skip, don't invent
     understood++;
-    if (qty == null) continue;                 // known food, no amount — count as understood only
+    if (qty == null) {                         // known food, no amount at all
+      if (food[1][1] >= PROTEIN_DENSE) unsizedProtein++;
+      continue;
+    }
 
     const unitWord = (rest.match(/^\s*([a-zA-Z.]+)/) || [])[1] || "";
     const grams = gramsFor(qty, unitWord, food);
-    if (grams == null || !isFinite(grams) || grams <= 0) continue;
+    if (grams == null || !isFinite(grams) || grams <= 0) {
+      // We recognised the food but can't turn it into a weight. Dropping a
+      // protein-dense line silently is how a chicken dinner ends up reading 2 g,
+      // so remember it and refuse to publish a number below.
+      if (food[1][1] >= PROTEIN_DENSE) unsizedProtein++;
+      continue;
+    }
     sized++;
 
     const [, macros] = food;
@@ -216,6 +229,9 @@ export function estimateNutrition(ingredients, servings = 4) {
   const coverage = understood / ingredients.length;
   // Not enough of the recipe recognised, or nothing measurable → no estimate.
   if (coverage < 0.55 || sized < 2) return null;
+  // A main protein we couldn't size means the headline number would be far too
+  // low. Better to return nothing and leave the card blank than to under-claim.
+  if (unsizedProtein) return null;
 
   const per = Math.max(1, Number(servings) || 4);
   const out = {
