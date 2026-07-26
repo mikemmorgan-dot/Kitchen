@@ -401,6 +401,13 @@
   .plan-item .t{font-weight:600;font-size:14px}
   .plan-item .b{color:var(--ink-soft);font-size:11.5px}
   .pi-body{flex:1;min-width:0;cursor:pointer}
+  /* Leftovers toggle: dimmed when the dish is being cooked fresh, filled in
+     when it is coming out of the fridge and so is not on the shopping list. */
+  .lo{flex:none;width:30px;height:30px;border-radius:50%;border:1px solid var(--line);
+      background:var(--card);color:var(--ink-soft);font-size:13px;line-height:1;
+      cursor:pointer;opacity:.45}
+  .lo.on{background:#E9EFE4;border-color:var(--herb);color:var(--herb-deep);opacity:1}
+  .lo:focus-visible{outline:2px solid var(--terra);outline-offset:2px}
   .pi-body:active{opacity:.6}
   .plan-item .rm{margin-left:auto;flex:none;width:30px;height:30px;border-radius:50%;font-size:18px;
     color:var(--ink-soft);background:var(--card);border:1px solid var(--line);line-height:1}
@@ -3263,6 +3270,34 @@ function resolveDish(entry){
 }
 
 /* ---------------- meal plan ---------------- */
+/* ---------------- leftovers ----------------
+   Today's dinner is often tomorrow's lunch. The meal belongs in the plan (it
+   gets eaten, so it counts toward protein) but it must not be shopped for
+   twice — the food already exists from the earlier cook. An entry with no
+   explicit flag is inferred: the first time a dish appears is the cook, any
+   later appearance is leftovers. Tapping the badge overrides it either way. */
+const MEAL_SEQ=["breakfast","lunch","salad","dinner"];
+function isLeftover(day, meal, entry){
+  if(typeof entry.leftovers === "boolean") return entry.leftovers;   // decided by hand
+  const ck=canonKey(entry.key), mi=MEAL_SEQ.indexOf(meal);
+  for(const d of Object.keys(S.plan).sort()){
+    if(d>day) break;
+    for(const m of MEAL_SEQ){
+      if(d===day && MEAL_SEQ.indexOf(m)>=mi) continue;
+      if((S.plan[d]?.[m]||[]).some(e=>canonKey(e.key)===ck)) return true;
+    }
+  }
+  return false;
+}
+function toggleLeftover(day, meal, key){
+  const list=S.plan[day]?.[meal]||[];
+  const e=list.find(x=>x.key===key); if(!e) return;
+  const now=isLeftover(day, meal, e);
+  e.leftovers=!now;
+  save(); go("plan");
+  toast(e.leftovers ? "Leftovers — not added to the shopping list ♻️"
+                    : "Cooking fresh — ingredients added back 🛒");
+}
 function planEntry(r,meal,servings){
   return {key:recipeKey(r), title:r.title, blog:r.blog, protein:r.nutrition?.protein_g||0,
           meal, servings:servings||r.servings||1, recipe:r};
@@ -3517,11 +3552,13 @@ function namedVariety(r, canon){
 function buildShoppingList(){
   const order=["Produce","Meat & fish","Dairy & eggs","Pantry","Other"];
   // key = cat|canon (NO unit) — volumes and weights convert to common base
-  const bag={}, cats={}; order.forEach(c=>cats[c]=[]); let mealCount=0;
+  const bag={}, cats={}; order.forEach(c=>cats[c]=[]); let mealCount=0, leftoverCount=0;
   Object.keys(S.plan).forEach(day=>{
     ["breakfast","lunch","dinner","salad"].forEach(meal=>{
       (S.plan[day]?.[meal]||[]).forEach(entry=>{
         mealCount++;
+        // Already cooked earlier in the week — eat it, don't buy it again.
+        if(isLeftover(day, meal, entry)){ leftoverCount++; return; }
         const r=entry.recipe||{}, base=r.servings||entry.servings||1;
         const factor=entry.servings/base;
         (r.ingredients||[]).forEach(line=>{
@@ -3596,7 +3633,7 @@ function buildShoppingList(){
     (cats[v.cat]=cats[v.cat]||[]).push({k,label,name:v.displayName});
   });
   order.forEach(c=>cats[c].sort((a,b)=>a.name.localeCompare(b.name)));
-  return {cats,order,mealCount};
+  return {cats,order,mealCount,leftoverCount};
 }
 
 /* ---------------- renderers ---------------- */
@@ -4005,10 +4042,21 @@ const BLOG_LABELS = {
    lands in one bucket. "Vegetarian" is the final fallback (covers eggs, dairy,
    legumes, grains, tofu, etc.) */
 function proteinType(r){
-  const t=((r.title||"")+" "+(r.ingredients||[]).join(" ")).toLowerCase();
+  const raw=((r.title||"")+" "+(r.ingredients||[]).join(" ")).toLowerCase();
+  // Stock is a pantry item, not the meat of the dish. Without this a garlic
+  // parmesan pasta made with chicken broth files itself under Chicken, and a
+  // vegetarian soup made with beef stock lands under Beef. Fish sauce and
+  // bouillon powder are the same trick.
+  const t=raw
+    .replace(/\b(chicken|beef|turkey|vegetable|veg|bone)[\s-]+(broth|stock|bouillon|base|consomm[ée])\b/g,"")
+    .replace(/\b(broth|stock|bouillon)\s+(cubes?|powder|granules?|concentrate)\b/g,"")
+    .replace(/\bfish\s+sauce\b/g,"")
+    .replace(/\b(chicken|beef|poultry)\s+(seasoning|salt|powder|rub|spice)\b/g,"");
   if(/salmon|tuna|cod|shrimp|sardine|seafood|halibut|crab|lobster|anchov|poke|clam|mussel|tilapia|haddock/.test(t)) return "seafood";
   if(/chicken|turkey|poultry/.test(t)) return "chicken";
-  if(/\bbeef\b|ground beef|steak|brisket|bison|hamburger|cheeseburger/.test(t)) return "beef";
+  // Name the cuts too. "Chuck roast" never says "beef", so once the broth stops
+  // counting these would otherwise read as vegetarian.
+  if(/\bbeef\b|ground beef|steak|brisket|bison|hamburger|cheeseburger|chuck roast|pot roast|short ribs?|oxtail|stew(ing)? meat|stewing beef|sirloin|ribeye|rib.eye|flank|skirt|\bveal\b/.test(t)) return "beef";
   if(/\bpork\b|bacon|ham\b|prosciutto|chorizo|sausage|pork chop/.test(t)) return "pork";
   return "vegetarian";
 }
@@ -5083,7 +5131,8 @@ function renderPlan(){
       const list=slots[m]||[];
       const itemsHtml=list.map(e=>`<div class="plan-item" data-day="${d.iso}" data-meal="${m}" data-key="${e.key.replace(/"/g,'&quot;')}">
           <span class="drag-handle" aria-label="drag to move">⠿</span>
-          <div class="pi-body" onclick="openPlanRecipe('${d.iso}','${m}','${e.key.replace(/'/g,"\\'")}')"><div class="t">${e.title}</div><div class="b">${e.blog||""} · ${e.protein}g · ${e.servings} servings</div></div>
+          <div class="pi-body" onclick="openPlanRecipe('${d.iso}','${m}','${e.key.replace(/'/g,"\\'")}')"><div class="t">${e.title}</div><div class="b">${e.blog||""} · ${e.protein}g · ${isLeftover(d.iso,m,e)?"leftovers":`${e.servings} servings`}</div></div>
+          <button class="lo${isLeftover(d.iso,m,e)?" on":""}" onclick="toggleLeftover('${d.iso}','${m}','${e.key.replace(/'/g,"\\'")}')" aria-label="${isLeftover(d.iso,m,e)?"leftovers — not shopped for":"cooking fresh — ingredients shopped"}" title="${isLeftover(d.iso,m,e)?"Leftovers":"Cooking fresh"}">♻</button>
           <button class="rm" onclick="removeFromPlan('${d.iso}','${m}','${e.key.replace(/'/g,"\\'")}')" aria-label="remove">×</button></div>`).join("");
       return `<div class="plan-meal${list.length?'':' empty-slot'}" data-day="${d.iso}" data-meal="${m}">
         <span class="pm-label">${cap(m)}</span>
@@ -5291,7 +5340,7 @@ function openInstacart(){
 }
 
 function renderShopping(){
-  const {cats,order,mealCount}=buildShoppingList();
+  const {cats,order,mealCount,leftoverCount}=buildShoppingList();
   const total=order.reduce((s,c)=>s+cats[c].length,0);
   const sections=order.filter(c=>cats[c].length).map(c=>`
     <div class="shop-sec">
@@ -5305,7 +5354,7 @@ function renderShopping(){
     </div>`).join("");
   app.innerHTML=`
     <div class="back" onclick="go('plan')">← meal plan</div>
-    <div class="page-h fade" style="padding-top:6px"><div class="eyebrow">${total} items · ${mealCount} planned meals</div><h2>Shopping list</h2></div>
+    <div class="page-h fade" style="padding-top:6px"><div class="eyebrow">${total} items · ${mealCount} planned meals${leftoverCount?` · ${leftoverCount} from leftovers`:""}</div><h2>Shopping list</h2></div>
     ${total? `
       <div class="export-row">
         <button class="exp-btn exp-share"    onclick="shareList()">📤 Share</button>
