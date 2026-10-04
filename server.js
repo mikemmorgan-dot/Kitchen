@@ -558,12 +558,39 @@ function feedCourse(cats) {
   return "dinner";                                // mains, soups, everything else
 }
 
-let discState = { running: false, done: 0, total: 0, added: 0, skipped: 0, lastRun: null };
+let discState = { running: false, done: 0, total: 0, added: 0, skipped: 0, lastRun: null, feeds: "" };
+
+// Feeds need the same proxy fallbacks as recipe pages. Several of these blogs
+// sit behind Cloudflare and answer a datacenter IP with 403, and the feed fetch
+// below used to be a single direct call inside a catch that swallowed the
+// failure — so discovery reported success while adding nothing, for weeks.
+// Returns the feed XML, or null when every route failed.
+async function fetchFeedXml(host, page) {
+  const feed = `https://www.${host}/feed/?paged=${page}&nocache=${Date.now()}`;
+  const T = () => ({ signal: AbortSignal.timeout(12000) });
+  const looksLikeFeed = t => /<rss[\s>]|<feed[\s>]/i.test(t) && /<item[\s>]|<entry[\s>]/i.test(t);
+  const routes = [
+    () => fetch(feed, { headers: { "User-Agent": BF_UA, Accept: "application/rss+xml,text/xml,*/*",
+                                   "Cache-Control": "no-cache" }, redirect: "follow", ...T() }),
+    () => fetch("https://r.jina.ai/" + feed, { headers: { "X-Return-Format": "html" }, ...T() }),
+    () => fetch("https://api.allorigins.win/raw?url=" + encodeURIComponent(feed), T()),
+    () => fetch("https://api.codetabs.com/v1/proxy?quest=" + encodeURIComponent(feed), T()),
+  ];
+  for (const route of routes) {
+    try {
+      const r = await route();
+      if (!r.ok) continue;
+      const body = await r.text();
+      if (looksLikeFeed(body)) return body;
+    } catch {}
+  }
+  return null;
+}
 
 async function discoverNew(pages = 1) {
   if (discState.running) return;
   await Promise.all([discoveredLoaded, demoImagesLoaded]);
-  discState = { running: true, done: 0, total: 0, added: 0, skipped: 0, lastRun: new Date().toISOString() };
+  discState = { running: true, done: 0, total: 0, added: 0, skipped: 0, lastRun: new Date().toISOString(), feeds: "" };
   try {
     const { parseRecipeFromHtml } = await import("./recipe-parser.js");
     // Self-heal: sweep out any previously-saved recipe the (improved) filters
@@ -581,28 +608,33 @@ async function discoverNew(pages = 1) {
     } catch {}
     // Collect candidate posts from all feeds
     const candidates = [];
+    const feedReport = [];
     for (const host of FEED_BLOGS) {
       // WordPress feeds are paginated (?paged=N) — deep mode walks back through
       // history to bulk-add older recipes; weekly runs read just page 1.
+      let posts = 0, reachable = false;
       for (let p = 1; p <= pages; p++) {
-        try {
-          const r = await fetch(`https://www.${host}/feed/?paged=${p}&nocache=${Date.now()}`,
-            { headers: { "User-Agent": BF_UA, Accept: "application/rss+xml,text/xml,*/*", "Cache-Control": "no-cache" },
-              signal: AbortSignal.timeout(10000) });
-          if (!r.ok) break; // past the last page (WP returns 404) — stop this blog
-          const $ = cheerio.load(await r.text(), { xmlMode: true });
-          let found = 0;
-          $("item").each((_, el) => {
-            const link = $(el).find("link").first().text().trim();
-            const cats = $(el).find("category").map((_, c) => $(c).text()).get();
-            const ft = $(el).find("title").first().text().trim();
-            if (link) { candidates.push({ link, cats, ft }); found++; }
-          });
-          if (!found) break;
-        } catch { break; }
+        const xml = await fetchFeedXml(host, p);
+        if (!xml) break;            // every route failed, or past the last page
+        reachable = true;
+        const $ = cheerio.load(xml, { xmlMode: true });
+        let found = 0;
+        $("item").each((_, el) => {
+          const link = $(el).find("link").first().text().trim();
+          const cats = $(el).find("category").map((_, c) => $(c).text()).get();
+          const ft = $(el).find("title").first().text().trim();
+          if (link) { candidates.push({ link, cats, ft }); found++; }
+        });
+        if (!found) break;
+        posts += found;
         await new Promise(rs => setTimeout(rs, 700));
       }
+      // A blog we cannot read is the difference between "nothing new this week"
+      // and "we have been blind here since July", so say which it was.
+      feedReport.push(`${host.split(".")[0]}:${reachable ? posts : "UNREACHABLE"}`);
+      console.log(`[discover] ${host}: ${reachable ? posts + " posts" : "feed unreachable"}`);
     }
+    discState.feeds = feedReport.join(" ");
     const todo = candidates.filter(c => !known.has(canonUrl(c.link)));
     discState.total = todo.length;
     for (const { link, cats, ft } of todo) {
@@ -628,14 +660,15 @@ async function discoverNew(pages = 1) {
     }
   } finally {
     discState.running = false;
-    console.log(`[discover] done: +${discState.added} recipes, ${discState.skipped} skipped`);
+    console.log(`[discover] done: +${discState.added} recipes, ${discState.skipped} skipped | feeds ${discState.feeds}`);
   }
 }
 
 app.all("/api/discover", async (req, res) => {
   if (discState.running) {
     return res.type("text/plain").send(
-      `Discovery running: ${discState.done}/${discState.total} posts checked, ${discState.added} recipes added, ${discState.skipped} skipped.`);
+      `Discovery running: ${discState.done}/${discState.total} posts checked, ${discState.added} recipes added, ${discState.skipped} skipped.`
+      + (discState.feeds ? `\nFeeds: ${discState.feeds}` : ""));
   }
   const deep = "deep" in req.query;
   res.type("text/plain").send(
@@ -1108,12 +1141,17 @@ app.get("/api/status", (_, res) => {
     discByCourse[c] = (discByCourse[c] || 0) + 1;
   }
   res.set("X-Discovered", String(Object.keys(discovered).length));
+  // Last discovery run, including which feeds were readable — a silently
+  // unreachable feed looks exactly like "no new recipes" without this.
+  const discovery = { running: discState.running, lastRun: discState.lastRun,
+                      added: discState.added, skipped: discState.skipped,
+                      feeds: discState.feeds || null };
   const counts = Object.fromEntries(
     Object.entries(recipeStore)
       .filter(([k]) => k !== "lastUpdated")
       .map(([k, v]) => [k, Array.isArray(v) ? v.length : 0])
   );
-  res.json({ discovered: discByCourse, lastUpdated: recipeStore.lastUpdated || null, counts });
+  res.json({ discovered: discByCourse, discovery, lastUpdated: recipeStore.lastUpdated || null, counts });
 });
 
 // ── Profile management ────────────────────────────────────────────────────────
