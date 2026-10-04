@@ -23,7 +23,7 @@ const FOODS = [
   ["turkey",                                   [189, 27, 0, 8, 0]],
   ["chicken breasts?",                           [165, 31, 0, 3.6, 0], { gUnit: 174 }],
   ["chicken thighs?|chicken legs?|drumsticks?",  [209, 26, 0, 11, 0],  { gUnit: 95 }],
-  ["whole chicken",                            [190, 27, 0, 9, 0],   { gUnit: 800 }],
+  ["whole chicken|young chicken|roasting chicken|fryer chicken|whole bird", [190, 27, 0, 9, 0], { gUnit: 800 }],
   ["chicken",                                  [190, 27, 0, 9, 0]],
   ["bacon",                                    [541, 37, 1.4, 42, 0],{ gUnit: 10 }],
   ["sausage|chorizo",                          [301, 18, 2, 25, 0],  { gUnit: 75 }],
@@ -158,7 +158,12 @@ function matchFood(text) {
   let best = null, bestLen = 0;
   for (const entry of FOODS) {
     const [pattern] = entry;
-    const rx = new RegExp("\\b(" + pattern + ")\\b", "i");
+    // Allow a trailing plural on the whole alternation. Recipes write "2 young
+    // chickens" and "3 carrots"; without this the line matches no food at all,
+    // so the protein is dropped SILENTLY and the under-claim guard never fires
+    // (it only guards foods we recognised but could not weigh). That is how a
+    // two-chicken tray bake came out at 3 g of protein.
+    const rx = new RegExp("\\b(?:" + pattern + ")(?:e?s)?\\b", "i");
     const hit = t.match(rx);
     if (hit && hit[0].length > bestLen) { best = entry; bestLen = hit[0].length; }
   }

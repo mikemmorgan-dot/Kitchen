@@ -533,7 +533,7 @@ const SKIP_CATS = /dessert|sweets?\b|treats?\b|baking|snacks?\b|drinks?\b|bevera
 const DESSERT_RX = /\b(ice cream|sorbet|gelato|popsicles?|cupcakes?|cakes?|cookies?|brownies?|blondies?|fudge|frosting|icing|candy|truffles?|donuts?|doughnuts?|cheesecake|puddings?|cobbler|crumble|macarons?|meringue|s'?mores|pies?)\b/i;
 const DESSERT_OK = /\b(crab|salmon|fish|potato|rice|corn|zucchini|quinoa) cakes?\b|pot pies?|shepherd'?s pie|tamale pie|pancakes?/i;
 const DRINK_RX   = /\b(smoothies?|milkshakes?|shakes?|juice|lattes?|lemonade|cocktails?|mocktails?|margaritas?|iced tea|hot chocolate)\b/i;
-const CONDIMENT_RX = /\b(dip|sauce|dressing|aioli|marinade|salsa|hummus|syrup|jam|jelly|relish|chutney|seasoning|pesto|tzatziki|guacamole)s?\b/i;
+const CONDIMENT_RX = /\b(dip|sauce|dressing|aioli|marinade|salsa|hummus|syrup|jam|jelly|relish|chutney|seasoning|pesto|tzatziki|guacamole|mayo|mayonnaise|butter|compound butter|glaze|rub|vinaigrette|spread)s?\b/i;
 
 // Decide whether a post is a real MEAL for the app. Returns a reason string
 // if it should be skipped, or null if it's a keeper.
@@ -699,16 +699,24 @@ app.all("/api/estimate-nutrition", async (req, res) => {
   // estimator, since a wrong figure still counts as "has nutrition" and would
   // otherwise be skipped forever. Published blog nutrition is never touched.
   const force = req.query.force === "1";
-  let filled = 0, skipped = 0;
+  let filled = 0, skipped = 0, cleared = 0;
   for (const r of Object.values(discovered)) {
     if (force ? !r.nutrition_estimated : !needsNutrition(r)) continue;
     const est = estimateNutrition(r.ingredients || [], r.servings || 4);
     if (est) { r.nutrition = { ...(r.nutrition || {}), ...est }; r.nutrition_estimated = true; filled++; }
+    else if (force) {
+      // The fixed estimator refuses to put a number on this one, but an old
+      // wrong number is already stored. Leaving it would keep showing a figure
+      // we know is bad, so clear it and let the card read blank instead.
+      delete r.nutrition; delete r.nutrition_estimated; cleared++;
+    }
     else skipped++;
   }
-  if (filled) await kvSet("discovered_recipes", discovered);
+  if (filled || cleared) await kvSet("discovered_recipes", discovered);
   res.type("text/plain").send(
-    `Nutrition estimated for ${filled} recipes. ${skipped} couldn't be estimated confidently (left blank on purpose). Pull to refresh the app.`);
+    `Nutrition estimated for ${filled} recipes. ${skipped} couldn't be estimated confidently (left blank on purpose).`
+    + (cleared ? ` ${cleared} stale wrong estimates were cleared.` : "")
+    + ` Pull to refresh the app.`);
 });
 
 // ── Dead link checking ────────────────────────────────────────────────────────
